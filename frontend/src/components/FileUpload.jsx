@@ -1,13 +1,20 @@
-import React, { useState } from "react";
+// src/components/FileUpload.jsx
+import React, { useState, useContext } from "react";
 import { Box, Button, Typography, CircularProgress } from "@mui/material";
 import axios from "axios";
+import { DashboardContext } from "../context/DashboardContext";
 
 const API_URL = "http://127.0.0.1:8000";
 
-const FileUpload = ({ setOriginalData, setColumns }) => {
+const FileUpload = () => {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const {
+    setOriginalData,
+    setColumns,
+    resetDashboardState,
+  } = useContext(DashboardContext);
 
   const handleFileChange = (event) => {
     if (event.target.files && event.target.files[0]) {
@@ -33,7 +40,6 @@ const FileUpload = ({ setOriginalData, setColumns }) => {
           Authorization: `Bearer ${token}`,
         },
       });
-
       setLoading(false);
       setMessage("✅ Файл загружен успешно!");
 
@@ -41,13 +47,11 @@ const FileUpload = ({ setOriginalData, setColumns }) => {
       const previewData = response.data.df_head || [];
       const columnNames = response.data.columns || Object.keys(previewData[0] || {});
 
-      // Обновляем полный набор данных (originalData) – Dashboard самостоятельно разбивает его на filteredData и tableData
-      if (typeof setOriginalData === "function") {
-        setOriginalData(receivedData);
-      }
-      if (typeof setColumns === "function") {
-        setColumns(columnNames);
-      }
+      // Сбрасываем предыдущее состояние
+      resetDashboardState();
+      // Устанавливаем новые данные
+      setOriginalData(receivedData);
+      setColumns(columnNames);
     } catch (error) {
       setLoading(false);
       setMessage("❌ Ошибка загрузки файла. Подробности в консоли.");

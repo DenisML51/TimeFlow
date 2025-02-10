@@ -14,7 +14,7 @@ import {
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
-const TableDisplay = ({ data, onSortAsc, onSortDesc }) => {
+const TableDisplay = ({ data, onSortAsc, onSortDesc, onColumnSelect, selectedColumns }) => {
   if (!data || data.length === 0) {
     return (
       <Box sx={{ textAlign: "center", color: "#fff" }}>
@@ -51,6 +51,7 @@ const TableDisplay = ({ data, onSortAsc, onSortDesc }) => {
                   bgcolor: "#10A37F",
                   whiteSpace: "nowrap",
                   p: 1,
+                  cursor: "pointer",
                 }}
               >
                 <Box
@@ -61,12 +62,24 @@ const TableDisplay = ({ data, onSortAsc, onSortDesc }) => {
                     width: "100%",
                   }}
                 >
-                  <span>{column.replace("_", " ")}</span>
+                  {/* При клике по названию столбца вызываем onColumnSelect */}
+                  <span
+                    onClick={() => onColumnSelect && onColumnSelect(column)}
+                    style={{
+                      color: selectedColumns.includes(column) ? "#FFD700" : "#fff", // выделяем выбранный столбец (например, золотым цветом)
+                      userSelect: "none",
+                    }}
+                  >
+                    {column.replace("_", " ")}
+                  </span>
                   <Box sx={{ display: "flex", gap: 0.5 }}>
                     <Tooltip title="Сортировка по возрастанию">
                       <IconButton
                         size="small"
-                        onClick={() => onSortAsc(column)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSortAsc(column);
+                        }}
                         sx={{ color: "#fff" }}
                       >
                         <ArrowUpwardIcon fontSize="inherit" />
@@ -75,7 +88,10 @@ const TableDisplay = ({ data, onSortAsc, onSortDesc }) => {
                     <Tooltip title="Сортировка по убыванию">
                       <IconButton
                         size="small"
-                        onClick={() => onSortDesc(column)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSortDesc(column);
+                        }}
                         sx={{ color: "#fff" }}
                       >
                         <ArrowDownwardIcon fontSize="inherit" />

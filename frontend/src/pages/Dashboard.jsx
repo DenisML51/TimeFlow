@@ -1,17 +1,31 @@
-import React, { useState, useEffect } from "react";
-import { Box, Grid } from "@mui/material";
+import React, { useContext, useEffect } from "react";
+import { Box, Grid, Button, Typography } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import FileUpload from "../components/FileUpload";
 import FilterPanel from "../components/FilterPanel";
 import TableDisplay from "../components/TableDisplay";
+import { DashboardContext } from "../context/DashboardContext";
 
 const Dashboard = () => {
-  const [originalData, setOriginalData] = useState([]);
-  const [filters, setFilters] = useState({});
-  const [sortColumn, setSortColumn] = useState(null);
-  const [sortDirection, setSortDirection] = useState(null);
-  const [filteredData, setFilteredData] = useState([]);
-  const [tableData, setTableData] = useState([]);
-  const [columns, setColumns] = useState([]);
+  const navigate = useNavigate();
+  const {
+    originalData,
+    setOriginalData,
+    filters,
+    setFilters,
+    sortColumn,
+    setSortColumn,
+    sortDirection,
+    setSortDirection,
+    filteredData,
+    setFilteredData,
+    tableData,
+    setTableData,
+    columns,
+    setColumns,
+    selectedColumns,
+    setSelectedColumns,
+  } = useContext(DashboardContext);
 
   // При изменении исходных данных, фильтров или параметров сортировки пересчитываем результирующий набор
   useEffect(() => {
@@ -41,10 +55,10 @@ const Dashboard = () => {
     }
 
     setFilteredData(data);
-    setTableData(data.slice(0, 5));
-  }, [originalData, filters, sortColumn, sortDirection]);
+    setTableData(data.slice(0, 5)); // Выводим только первые 5 строк
+  }, [originalData, filters, sortColumn, sortDirection, setFilteredData, setTableData]);
 
-  // Обработчики сортировки: просто задаём выбранный столбец и направление
+  // Обработчики сортировки – задаём столбец и направление
   const handleSortAsc = (column) => {
     setSortColumn(column);
     setSortDirection("asc");
@@ -55,14 +69,34 @@ const Dashboard = () => {
     setSortDirection("desc");
   };
 
-  // Функция обновления фильтров, передаётся в FilterPanel
+  // Функция обновления фильтров, передаваемая в FilterPanel
   const updateFilters = (newFilters) => {
     setFilters(newFilters);
   };
 
+  // Функция выбора столбца по клику
+  const handleColumnSelect = (column) => {
+    setSelectedColumns((prevSelected) => {
+      if (prevSelected.includes(column)) {
+        return prevSelected.filter((col) => col !== column);
+      }
+      if (prevSelected.length >= 2) {
+        return prevSelected;
+      }
+      return [...prevSelected, column];
+    });
+  };
+
+  // Переход на вторую страницу, если выбраны ровно 2 столбца
+  const handleConfirmSelection = () => {
+    if (selectedColumns.length === 2) {
+      // Передаём в SelectedColumnsPage выбранные столбцы, отфильтрованные данные и текущие фильтры
+      navigate("/selected", { state: { selectedColumns, filteredData, filters } });
+    }
+  };
+
   return (
     <Grid container spacing={2} justifyContent="center" sx={{ p: 4 }}>
-      {/* Фильтры показываем, когда уже есть исходные данные и список столбцов */}
       {originalData.length > 0 && columns.length > 0 && (
         <Grid item xs={12} md={3}>
           <FilterPanel
@@ -75,21 +109,43 @@ const Dashboard = () => {
       )}
 
       <Grid item xs={12} md={9}>
-        {/* FileUpload обновляет оригинальные данные и список столбцов */}
         <FileUpload
-          setOriginalData={(data) => {
-            setOriginalData(data);
-          }}
+          setOriginalData={setOriginalData}
           setColumns={setColumns}
         />
         {tableData.length > 0 && (
-          <Box mt={4}>
-            <TableDisplay
-              data={tableData}
-              onSortAsc={handleSortAsc}
-              onSortDesc={handleSortDesc}
-            />
-          </Box>
+          <>
+            <Box mt={4}>
+              <TableDisplay
+                data={tableData}
+                onSortAsc={handleSortAsc}
+                onSortDesc={handleSortDesc}
+                onColumnSelect={handleColumnSelect}
+                selectedColumns={selectedColumns}
+              />
+            </Box>
+            {selectedColumns.length > 0 && (
+              <Box mt={2} sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <Typography variant="body1">
+                  {selectedColumns.length >= 1 && `Первый выбранный: ${selectedColumns[0]}`}
+                </Typography>
+                {selectedColumns.length === 2 && (
+                  <Typography variant="body1">
+                    Второй выбранный: {selectedColumns[1]}
+                  </Typography>
+                )}
+                <Button
+                  variant="contained"
+                  color="primary"
+                  sx={{ mt: 1 }}
+                  disabled={selectedColumns.length !== 2}
+                  onClick={handleConfirmSelection}
+                >
+                  Подтвердить
+                </Button>
+              </Box>
+            )}
+          </>
         )}
       </Grid>
     </Grid>

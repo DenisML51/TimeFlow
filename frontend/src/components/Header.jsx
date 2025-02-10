@@ -1,12 +1,16 @@
-import React from "react";
+// src/components/Header.jsx
+import React, { useContext } from "react";
 import { AppBar, Toolbar, Typography, Button } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
+import { DashboardContext } from "../context/DashboardContext";
 
 const Header = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
+  const { resetDashboardState } = useContext(DashboardContext);
 
   const handleLogout = () => {
+    resetDashboardState();
     localStorage.removeItem("token");
     navigate("/login");
   };
@@ -39,7 +43,7 @@ const Header = () => {
                 "&:hover": {
                   transform: "scale(1.1)",
                   backgroundColor: "#0D8F70",
-                  color: "#FFFFFF",
+                  color: "#FFFFFF"
                 },
               }}
             >
@@ -83,7 +87,7 @@ const Header = () => {
                 margin: "0 8px",
                 "&:hover": {
                   backgroundColor: "#D32F2F",
-                  color: "#FFFFFF",
+                  color: "#FFFFFF"
                 },
               }}
             >

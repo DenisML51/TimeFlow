@@ -11,48 +11,29 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Typography
+  Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 const SelectedColumnsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  // Извлекаем данные из state; если их нет – используем пустые значения
-  const { selectedColumns, filteredData, filters } = location.state || { 
-    selectedColumns: [], 
-    filteredData: [], 
-    filters: {} 
+  const { selectedColumns, filteredData, filters } = location.state || {
+    selectedColumns: [],
+    filteredData: [],
+    filters: {},
   };
 
-  // Локальное состояние для контроля анимации
   const [show, setShow] = useState(true);
 
-  // Функция, вызываемая при клике на кнопку "назад"
   const handleBack = () => {
-    setShow(false); // Запускаем выходную анимацию
+    setShow(false);
   };
 
-  // После завершения анимации происходит возврат на предыдущую страницу
   const handleExited = () => {
     navigate(-1);
   };
 
-  // Если данных нет, выводим сообщение с кнопкой возврата
-  if (!selectedColumns.length || !filteredData.length) {
-    return (
-      <Box sx={{ p: 2, backgroundColor: "#121212", minHeight: "100vh", color: "#fff" }}>
-        <Typography variant="h6">
-          Нет данных для отображения. Вернитесь назад и выберите столбцы.
-        </Typography>
-        <IconButton onClick={() => navigate(-1)} sx={{ mt: 2, color: "#fff" }}>
-          <ArrowBackIcon />
-        </IconButton>
-      </Box>
-    );
-  }
-
-  // Формируем строку с информацией по выбранным фильтрам
   const filterInfo = Object.entries(filters)
     .filter(([key, value]) => value)
     .map(([key, value]) => `${key}: ${value}`)
@@ -69,8 +50,15 @@ const SelectedColumnsPage = () => {
 
   return (
     <Slide direction="left" in={show} mountOnEnter unmountOnExit onExited={handleExited}>
-      <Box sx={{ p: 2, backgroundColor: "#121212", minHeight: "100vh", color: "#fff" }}>
-        {/* Кнопка "назад" */}
+      <Box
+        sx={{
+          p: 5,
+          backgroundColor: "#121212",
+        //   minHeight: "100vh",
+          color: "#fff",
+          overflow: "hidden", // Отключаем прокрутку всей страницы
+        }}
+      >
         <IconButton onClick={handleBack} sx={{ mb: 2, color: "#fff" }}>
           <ArrowBackIcon />
         </IconButton>
@@ -85,12 +73,20 @@ const SelectedColumnsPage = () => {
         <TableContainer
           component={Paper}
           sx={{
-            maxHeight: "calc(100vh - 150px)",
-            overflow: "auto",
+            maxHeight: "480px", // Высота, примерно равная 10 строкам
+            overflowY: "auto",
             "&::-webkit-scrollbar": { width: "8px", height: "8px" },
-            "&::-webkit-scrollbar-track": { background: "#2c2c2c", borderRadius: "8px" },
-            "&::-webkit-scrollbar-thumb": { backgroundColor: "#10A37F", borderRadius: "8px" },
-            "&::-webkit-scrollbar-thumb:hover": { backgroundColor: "#0D8F70" },
+            "&::-webkit-scrollbar-track": {
+              background: "#2c2c2c",
+              borderRadius: "8px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: "#10A37F",
+              borderRadius: "8px",
+            },
+            "&::-webkit-scrollbar-thumb:hover": {
+              backgroundColor: "#0D8F70",
+            },
           }}
         >
           <Table stickyHeader>

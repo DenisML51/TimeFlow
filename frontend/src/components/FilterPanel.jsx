@@ -1,48 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Box, Typography, FormControl, InputLabel, MenuItem, Select, Button } from "@mui/material";
 
-const FilterPanel = ({ originalData, setTableData, columns }) => {
-  const [filters, setFilters] = useState({});
-
-  useEffect(() => {
-    console.log("Фильтры обновлены:", filters);
-    applyFilters();
-  }, [filters]);
-
-  // Фильтруем только категориальные (текстовые) столбцы
+const FilterPanel = ({ originalData, columns, filters, updateFilters }) => {
+  // Отбираем те столбцы, где встречаются строковые значения
   const categoricalColumns = columns.filter((col) =>
     originalData.some((row) => typeof row[col] === "string")
   );
 
-  // Функция для обработки изменений фильтра
   const handleFilterChange = (column, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [column]: value === "Все" ? null : value,
-    }));
+    const newFilters = { ...filters, [column]: value === "Все" ? null : value };
+    updateFilters(newFilters);
   };
 
-  // Функция применения фильтров
-  const applyFilters = () => {
-    let filteredData = [...originalData];
-
-    Object.entries(filters).forEach(([column, value]) => {
-      if (value) {
-        filteredData = filteredData.filter((row) => row[column] === value);
-      }
-    });
-
-    setTableData(filteredData.slice(0, 5)); // Показываем только 5 строк
-  };
-
-  // Функция сброса фильтров
   const resetFilters = () => {
-    setFilters({});
-    setTableData(originalData.slice(0, 5)); // Возвращаем исходные данные
+    updateFilters({});
   };
 
   return (
-    <Box sx={{ p: 3, borderRadius: "12px", bgcolor: "rgba(255, 255, 255, 0.05)", backdropFilter: "blur(10px)", boxShadow: 3 }}>
+    <Box
+      sx={{
+        p: 3,
+        borderRadius: "12px",
+        bgcolor: "rgba(255, 255, 255, 0.05)",
+        backdropFilter: "blur(10px)",
+        boxShadow: 3,
+      }}
+    >
       <Typography variant="h6" gutterBottom>
         🔍 Фильтр
       </Typography>
@@ -53,6 +36,27 @@ const FilterPanel = ({ originalData, setTableData, columns }) => {
           <Select
             value={filters[column] || "Все"}
             onChange={(e) => handleFilterChange(column, e.target.value)}
+            label={column}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  maxHeight: 200,
+                  overflowY: "auto",
+                  "&::-webkit-scrollbar": { width: "8px" },
+                  "&::-webkit-scrollbar-track": {
+                    background: "#f1f1f1",
+                    borderRadius: "4px",
+                  },
+                  "&::-webkit-scrollbar-thumb": {
+                    backgroundColor: "#10A37F",
+                    borderRadius: "4px",
+                  },
+                  "&::-webkit-scrollbar-thumb:hover": {
+                    backgroundColor: "#0D8F70",
+                  },
+                },
+              },
+            }}
           >
             <MenuItem value="Все">Все</MenuItem>
             {[...new Set(originalData.map((row) => row[column]))].map((value) => (

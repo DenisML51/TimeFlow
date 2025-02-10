@@ -6,9 +6,9 @@ class Prediction(Base):
     __tablename__ = "predictions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    file_name = Column(String)
-    model_used = Column(String)
-    prediction_result = Column(String)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    file_name = Column(String, nullable=False)
+    model_used = Column(String, nullable=False)
+    prediction_result = Column(String, nullable=False)
 
     user = relationship("User")

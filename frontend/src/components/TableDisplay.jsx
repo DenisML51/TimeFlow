@@ -1,21 +1,88 @@
 import React from "react";
-import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
+import {
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Tooltip,
+} from "@mui/material";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
-const TableDisplay = ({ data }) => {
+const TableDisplay = ({ data, onSortAsc, onSortDesc }) => {
   if (!data || data.length === 0) {
-    return <Box sx={{ textAlign: "center", color: "#fff" }}>Нет данных для отображения</Box>;
+    return (
+      <Box sx={{ textAlign: "center", color: "#fff" }}>
+        Нет данных для отображения
+      </Box>
+    );
   }
 
-  const columns = Object.keys(data[0]); // Получаем заголовки колонок
+  const columns = Object.keys(data[0]);
 
   return (
-    <TableContainer component={Paper} sx={{ borderRadius: "12px", overflow: "hidden", boxShadow: 3 }}>
-      <Table sx={{ minWidth: 600, bgcolor: "#1E1E1E" }}>
+    <TableContainer
+      component={Paper}
+      sx={{
+        borderRadius: "12px",
+        boxShadow: 3,
+        maxHeight: "calc(100vh - 300px)",
+        overflow: "auto",
+        "&::-webkit-scrollbar": { width: "8px", height: "8px" },
+        "&::-webkit-scrollbar-track": { background: "#2c2c2c", borderRadius: "8px" },
+        "&::-webkit-scrollbar-thumb": { backgroundColor: "#10A37F", borderRadius: "8px" },
+        "&::-webkit-scrollbar-thumb:hover": { backgroundColor: "#0D8F70" },
+      }}
+    >
+      <Table sx={{ minWidth: 600, bgcolor: "#1E1E1E" }} stickyHeader>
         <TableHead>
           <TableRow>
             {columns.map((column) => (
-              <TableCell key={column} sx={{ color: "#fff", fontWeight: "bold", bgcolor: "#10A37F" }}>
-                {column.replace("_", " ")}
+              <TableCell
+                key={column}
+                sx={{
+                  color: "#fff",
+                  fontWeight: "bold",
+                  bgcolor: "#10A37F",
+                  whiteSpace: "nowrap",
+                  p: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                  }}
+                >
+                  <span>{column.replace("_", " ")}</span>
+                  <Box sx={{ display: "flex", gap: 0.5 }}>
+                    <Tooltip title="Сортировка по возрастанию">
+                      <IconButton
+                        size="small"
+                        onClick={() => onSortAsc(column)}
+                        sx={{ color: "#fff" }}
+                      >
+                        <ArrowUpwardIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Сортировка по убыванию">
+                      <IconButton
+                        size="small"
+                        onClick={() => onSortDesc(column)}
+                        sx={{ color: "#fff" }}
+                      >
+                        <ArrowDownwardIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Box>
               </TableCell>
             ))}
           </TableRow>
@@ -24,7 +91,7 @@ const TableDisplay = ({ data }) => {
           {data.map((row, rowIndex) => (
             <TableRow key={rowIndex}>
               {columns.map((column) => (
-                <TableCell key={column} sx={{ color: "#fff" }}>
+                <TableCell key={column} sx={{ color: "#fff", whiteSpace: "nowrap" }}>
                   {row[column]}
                 </TableCell>
               ))}

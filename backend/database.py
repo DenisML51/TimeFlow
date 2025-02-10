@@ -5,10 +5,11 @@ DATABASE_URL = "sqlite+aiosqlite:///./app.db"
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
-
 Base = declarative_base()
 
-# Функция get_db для работы с зависимостями в FastAPI
 async def get_db():
+    """
+    Генератор сессии для работы с БД в эндпоинтах FastAPI.
+    """
     async with SessionLocal() as session:
         yield session

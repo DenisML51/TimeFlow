@@ -39,7 +39,7 @@ const Header = () => {
                 "&:hover": {
                   transform: "scale(1.1)",
                   backgroundColor: "#0D8F70",
-                  color: "#FFFFFF"
+                  color: "#FFFFFF",
                 },
               }}
             >
@@ -81,9 +81,10 @@ const Header = () => {
                 borderRadius: "30px",
                 padding: "8px 20px",
                 margin: "0 8px",
-                "&:hover": { backgroundColor: "#D32F2F",
-                             color: "#FFFFFF"
-                 },
+                "&:hover": {
+                  backgroundColor: "#D32F2F",
+                  color: "#FFFFFF",
+                },
               }}
             >
               Выйти

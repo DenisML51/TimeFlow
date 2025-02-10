@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+sqlalchemy
+aiosqlite
+passlib
+python-jose
+pandas

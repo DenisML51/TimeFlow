@@ -1,4 +1,3 @@
-// src/context/DashboardContext.jsx
 import React, { createContext, useState } from 'react';
 
 export const DashboardContext = createContext();

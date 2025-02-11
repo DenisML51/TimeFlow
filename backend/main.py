@@ -9,7 +9,7 @@ app = FastAPI(title="FastAPI Prediction App")
 # Настройка CORS для разрешения запросов с фронтенда
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Разрешаем запросы с любых источников
+    allow_origins=["http://localhost:3000"],  # Разрешаем запросы с любых источников
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

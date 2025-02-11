@@ -1,20 +1,15 @@
-// src/components/FileUpload.jsx
 import React, { useState, useContext } from "react";
 import { Box, Button, Typography, CircularProgress } from "@mui/material";
 import axios from "axios";
+import { HistoryContext } from "../context/HistoryContext";
 import { DashboardContext } from "../context/DashboardContext";
-
-const API_URL = "http://127.0.0.1:8000";
 
 const FileUpload = () => {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const {
-    setOriginalData,
-    setColumns,
-    resetDashboardState,
-  } = useContext(DashboardContext);
+  const { addHistoryItem } = useContext(HistoryContext);
+  const { setOriginalData, setColumns } = useContext(DashboardContext);
 
   const handleFileChange = (event) => {
     if (event.target.files && event.target.files[0]) {
@@ -33,25 +28,21 @@ const FileUpload = () => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.post(`${API_URL}/api/upload`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await axios.post("http://127.0.0.1:8000/api/upload", formData, {
+        withCredentials: true,
       });
       setLoading(false);
       setMessage("✅ Файл загружен успешно!");
 
       const receivedData = response.data.full_data || [];
-      const previewData = response.data.df_head || [];
-      const columnNames = response.data.columns || Object.keys(previewData[0] || {});
+      const columnNames = response.data.columns || [];
 
-      // Сбрасываем предыдущее состояние
-      resetDashboardState();
-      // Устанавливаем новые данные
+      // Обновляем состояние Dashboard
       setOriginalData(receivedData);
       setColumns(columnNames);
+
+      // Добавляем название файла в историю
+      addHistoryItem(file.name);
     } catch (error) {
       setLoading(false);
       setMessage("❌ Ошибка загрузки файла. Подробности в консоли.");
@@ -60,37 +51,20 @@ const FileUpload = () => {
   };
 
   return (
-    <Box
-      sx={{
-        textAlign: "center",
-        p: 4,
-        borderRadius: "12px",
-        bgcolor: "rgba(255, 255, 255, 0.05)",
-        backdropFilter: "blur(10px)",
-        boxShadow: 3,
-      }}
-    >
-      <input
-        type="file"
-        accept=".csv"
-        onChange={handleFileChange}
-        style={{ display: "none" }}
-        id="upload-file"
-      />
+    <Box sx={{ textAlign: "center", p: 4, borderRadius: "12px", bgcolor: "rgba(255, 255, 255, 0.05)", backdropFilter: "blur(10px)", boxShadow: 3 }}>
+      <input type="file" accept=".csv" onChange={handleFileChange} style={{ display: "none" }} id="upload-file" />
       <label htmlFor="upload-file">
         <Button variant="contained" component="span" sx={{ borderRadius: "20px", bgcolor: "#10A37F" }}>
           📂 Выбрать файл
         </Button>
       </label>
-      <br />
-      <br />
+      <br /><br />
       {file && <Typography variant="body1">📁 {file.name}</Typography>}
       <br />
       <Button variant="contained" onClick={handleUpload} sx={{ borderRadius: "20px" }} disabled={loading}>
         🚀 Загрузить
       </Button>
-      <br />
-      <br />
+      <br /><br />
       {loading && <CircularProgress />}
       {message && <Typography variant="body1">{message}</Typography>}
     </Box>

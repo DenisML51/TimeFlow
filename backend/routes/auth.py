@@ -61,6 +61,10 @@ async def login(user_data: UserLogin, response: Response, db: AsyncSession = Dep
         path="/",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
+    # Записываем событие входа в историю
+    new_history = History(user_id=user.id, action="Пользователь вошел в систему")
+    db.add(new_history)
+    await db.commit()
     return {"message": "Успешный вход"}
 
 @auth_router.get("/me")
@@ -76,6 +80,10 @@ async def get_history(db: AsyncSession = Depends(get_db), current_user: User = D
     return [{"action": item.action, "timestamp": item.timestamp} for item in history_items]
 
 @auth_router.post("/logout")
-async def logout(response: Response):
+async def logout(response: Response, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    # Записываем событие выхода в историю
+    new_history = History(user_id=current_user.id, action="Пользователь вышел из системы")
+    db.add(new_history)
+    await db.commit()
     response.delete_cookie("access_token", path="/")
     return {"message": "Вы успешно вышли"}

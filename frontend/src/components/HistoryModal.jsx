@@ -8,7 +8,8 @@ const HistoryModal = ({ open, onClose }) => {
 
   useEffect(() => {
     if (open) {
-      axios.get("http://127.0.0.1:8000/auth/history", { withCredentials: true })
+      // Используем "localhost", чтобы cookie передавались корректно
+      axios.get("http://localhost:8000/auth/history", { withCredentials: true })
         .then(res => setHistory(res.data))
         .catch(err => console.error(err));
     }

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { Container, TextField, Button, Typography, Box, CircularProgress } from "@mui/material";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -9,6 +10,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [loginMessage, setLoginMessage] = useState("");
   const navigate = useNavigate();
+  const { fetchUser } = useContext(AuthContext);
 
   const handleLogin = async (e) => {
     e.preventDefault(); // предотвращаем перезагрузку страницы
@@ -21,6 +23,8 @@ const Login = () => {
         { withCredentials: true }
       );
       setLoginMessage(response.data.message || "Вход выполнен успешно");
+      // Обновляем состояние пользователя в глобальном контексте
+      await fetchUser();
       // Переход на дашборд через короткую задержку, чтобы пользователь увидел сообщение
       setTimeout(() => {
         navigate("/dashboard");

@@ -1,7 +1,9 @@
-fastapi
+fastapi[all]
 uvicorn
 sqlalchemy
 aiosqlite
 passlib
 python-jose
 pandas
+python-multipart
+bcrypt

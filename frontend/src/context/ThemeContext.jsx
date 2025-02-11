@@ -15,9 +15,7 @@ export const CustomThemeProvider = ({ children }) => {
   const theme = useMemo(() => createTheme({
     palette: {
       mode,
-      primary: {
-        main: "#10A37F",
-      },
+      primary: { main: "#10A37F" },
       background: mode === 'dark'
         ? { default: "#121212", paper: "#1e1e1e" }
         : { default: "#fff", paper: "#f5f5f5" },
@@ -27,7 +25,6 @@ export const CustomThemeProvider = ({ children }) => {
   return (
     <ColorModeContext.Provider value={colorMode}>
       <ThemeProvider theme={theme}>
-        {/* Оборачиваем приложение в контейнер с CSS-переходом для плавного изменения фона */}
         <div style={{
           transition: 'background-color 0.5s ease',
           backgroundColor: theme.palette.background.default,

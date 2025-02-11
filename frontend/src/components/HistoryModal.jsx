@@ -1,10 +1,19 @@
-import React, { useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { Modal, Box, Typography, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { HistoryContext } from "../context/HistoryContext";
+import axios from "axios";
 
 const HistoryModal = ({ open, onClose }) => {
-  const { history } = useContext(HistoryContext);
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    if (open) {
+      axios.get("http://127.0.0.1:8000/auth/history", { withCredentials: true })
+        .then(res => setHistory(res.data))
+        .catch(err => console.error(err));
+    }
+  }, [open]);
+
   return (
     <Modal open={open} onClose={onClose}>
       <Box
@@ -31,7 +40,8 @@ const HistoryModal = ({ open, onClose }) => {
         ) : (
           history.map((item, idx) => (
             <Typography key={idx} variant="body2">
-              {item}
+              {item.action} <br />
+              {new Date(item.timestamp).toLocaleString()}
             </Typography>
           ))
         )}

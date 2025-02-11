@@ -28,7 +28,8 @@ const FileUpload = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post("http://127.0.0.1:8000/api/upload", formData, {
+      // Используем URL с "localhost" для согласованности с логином
+      const response = await axios.post("http://localhost:8000/api/upload", formData, {
         withCredentials: true,
       });
       setLoading(false);
@@ -37,11 +38,9 @@ const FileUpload = () => {
       const receivedData = response.data.full_data || [];
       const columnNames = response.data.columns || [];
 
-      // Обновляем состояние Dashboard
       setOriginalData(receivedData);
       setColumns(columnNames);
 
-      // Добавляем название файла в историю
       addHistoryItem(file.name);
     } catch (error) {
       setLoading(false);

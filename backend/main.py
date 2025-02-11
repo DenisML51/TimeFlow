@@ -6,20 +6,17 @@ from database import engine, Base
 
 app = FastAPI(title="FastAPI Prediction App")
 
-# Настройка CORS для разрешения запросов с фронтенда
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Разрешаем запросы с любых источников
+    allow_origins=["http://localhost:3000"],  # точно указываем URL фронтенда
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Подключение роутеров
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(prediction_router, prefix="/api", tags=["Prediction"])
 
-# Создание таблиц при старте приложения
 @app.on_event("startup")
 async def on_startup():
     async with engine.begin() as conn:

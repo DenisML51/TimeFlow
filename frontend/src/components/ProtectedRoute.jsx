@@ -1,24 +1,35 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
+import axios from "axios";
 
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem("token");
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
 
-  if (!token) return <Navigate to="/login" />;
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await axios.get("http://localhost:8000/auth/me", { withCredentials: true });
+        console.log("Auth check response:", response.data);
+        if (response.data && response.data.username) {
+          setAuthenticated(true);
+        } else {
+          setAuthenticated(false);
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        setAuthenticated(false);
+      } finally {
+        setAuthChecked(true);
+      }
+    };
 
-  try {
-    const decoded = jwtDecode(token);
-    if (decoded.exp * 1000 < Date.now()) {
-      localStorage.removeItem("token");
-      return <Navigate to="/login" />;
-    }
-  } catch (error) {
-    localStorage.removeItem("token");
-    return <Navigate to="/login" />;
-  }
+    checkAuth();
+  }, []);
 
-  return children;
+  if (!authChecked) return <div>Loading...</div>;
+
+  return authenticated ? children : <Navigate to="/login" />;
 };
 
 export default ProtectedRoute;

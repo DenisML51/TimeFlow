@@ -26,7 +26,6 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { Line, Bar, Pie } from "react-chartjs-2";
-
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -68,55 +67,41 @@ const SelectedColumnsPage = () => {
 
   // Состояния для панели предобработки
   const [activeAction, setActiveAction] = useState("none");
-  const [outlierThreshold, setOutlierThreshold] = useState(2); // порог выбросов (в std)
-  const [smoothingWindow, setSmoothingWindow] = useState(1); // окно сглаживания
-  const [transformation, setTransformation] = useState("none"); // тип преобразования
+  const [outlierThreshold, setOutlierThreshold] = useState(2);
+  const [smoothingWindow, setSmoothingWindow] = useState(1);
+  const [transformation, setTransformation] = useState("none");
 
-  const handleBack = () => {
-    setShow(false);
-  };
-  const handleExited = () => {
-    navigate(-1);
-  };
+  const handleBack = () => setShow(false);
+  const handleExited = () => navigate(-1);
 
-  // Исходные данные для таблицы (выборка по выбранным столбцам)
+  // Исходные данные для выбранных столбцов
   const dataForDisplay = filteredData.map((row) => {
     const newRow = {};
-    selectedColumns.forEach((col) => {
-      newRow[col] = row[col];
-    });
+    selectedColumns.forEach((col) => { newRow[col] = row[col]; });
     return newRow;
   });
 
-  // Локальная сортировка для таблицы
   const sortedData = useMemo(() => {
     if (!localSortColumn || !localSortDirection) return dataForDisplay;
-    const sorted = [...dataForDisplay].sort((a, b) => {
-      const valA = a[localSortColumn];
-      const valB = b[localSortColumn];
+    return [...dataForDisplay].sort((a, b) => {
+      const valA = a[localSortColumn], valB = b[localSortColumn];
       if (!isNaN(valA) && !isNaN(valB)) {
-        return localSortDirection === "asc"
-          ? Number(valA) - Number(valB)
-          : Number(valB) - Number(valA);
+        return localSortDirection === "asc" ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
       }
       return localSortDirection === "asc"
         ? String(valA).localeCompare(String(valB))
         : String(valB).localeCompare(String(valA));
     });
-    return sorted;
   }, [dataForDisplay, localSortColumn, localSortDirection]);
 
-  // Применяем предобработку, которая реально изменяет данные
-  const finalData = useMemo(() => {
+  // Применение предобработки, влияющей на данные
+  const finalDataResult = useMemo(() => {
     let data = [...sortedData];
-    // Заполнение пропусков (импутация) – средним значением
+    // Импутация
     if (activeAction === "imputation") {
-      const numericValues = data
-        .map((row) => Number(row[selectedColumns[1]]))
-        .filter((val) => !isNaN(val));
-      const mean =
-        numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
-      data = data.map((row) => {
+      const numericValues = data.map(row => Number(row[selectedColumns[1]])).filter(val => !isNaN(val));
+      const mean = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+      data = data.map(row => {
         const value = Number(row[selectedColumns[1]]);
         if (isNaN(value) || row[selectedColumns[1]] === null || row[selectedColumns[1]] === "") {
           return { ...row, [selectedColumns[1]]: mean };
@@ -124,88 +109,54 @@ const SelectedColumnsPage = () => {
         return row;
       });
     }
-    // Фильтрация выбросов – удаляем строки, где значение выходит за пределы ±(outlierThreshold * std)
+    // Фильтрация выбросов
     if (activeAction === "outliers") {
-      const targetValues = data.map((row) => Number(row[selectedColumns[1]]));
-      const mean =
-        targetValues.reduce((a, b) => a + b, 0) / targetValues.length;
-      const std = Math.sqrt(
-        targetValues.reduce((acc, val) => acc + (val - mean) ** 2, 0) /
-          targetValues.length
-      );
-      data = data.filter((row) => {
-        const value = Number(row[selectedColumns[1]]);
-        return Math.abs(value - mean) <= outlierThreshold * std;
-      });
+      const targetValues = data.map(row => Number(row[selectedColumns[1]]));
+      const mean = targetValues.reduce((a, b) => a + b, 0) / targetValues.length;
+      const std = Math.sqrt(targetValues.reduce((acc, val) => acc + (val - mean) ** 2, 0) / targetValues.length);
+      data = data.filter(row => Math.abs(Number(row[selectedColumns[1]]) - mean) <= outlierThreshold * std);
     }
-    // Сглаживание – скользящее среднее
+    // Сглаживание
     if (activeAction === "smoothing" && smoothingWindow > 1) {
       let smoothed = [];
       for (let i = 0; i < data.length; i++) {
-        const windowData = data.slice(
-          Math.max(0, i - smoothingWindow + 1),
-          i + 1
-        );
-        const avg =
-          windowData.reduce(
-            (sum, row) => sum + Number(row[selectedColumns[1]]),
-            0
-          ) / windowData.length;
-        let newRow = { ...data[i] };
-        newRow[selectedColumns[1]] = avg;
-        smoothed.push(newRow);
+        const windowData = data.slice(Math.max(0, i - smoothingWindow + 1), i + 1);
+        const avg = windowData.reduce((sum, row) => sum + Number(row[selectedColumns[1]]), 0) / windowData.length;
+        smoothed.push({ ...data[i], [selectedColumns[1]]: avg });
       }
       data = smoothed;
     }
-    // Преобразование – логарифмическое или разностное
+    // Преобразование
     if (activeAction === "transformation" && transformation !== "none") {
       if (transformation === "log") {
-        data = data.map((row) => {
-          let newRow = { ...row };
-          newRow[selectedColumns[1]] = Math.log(Number(row[selectedColumns[1]]));
-          return newRow;
-        });
+        data = data.map(row => ({ ...row, [selectedColumns[1]]: Math.log(Number(row[selectedColumns[1]])) }));
       } else if (transformation === "difference") {
-        data = data.slice(1).map((row, index) => {
-          let newRow = { ...row };
-          newRow[selectedColumns[1]] =
-            Number(row[selectedColumns[1]]) -
-            Number(data[index][selectedColumns[1]]);
-          return newRow;
-        });
+        data = data.slice(1).map((row, i) => ({
+          ...row,
+          [selectedColumns[1]]: Number(row[selectedColumns[1]]) - Number(data[i][selectedColumns[1]])
+        }));
       }
     }
-    // Декомпозиция – рассчитываем тренд через скользящее среднее, сезонная компонента = оригинал - тренд
+    // Декомпозиция (вычисляем тренд через сглаживание и сезонную компоненту)
     let seasonalValues = null;
     if (activeAction === "decomposition" && smoothingWindow > 1) {
       let trend = [];
       for (let i = 0; i < data.length; i++) {
-        const windowData = data.slice(
-          Math.max(0, i - smoothingWindow + 1),
-          i + 1
-        );
-        const avg =
-          windowData.reduce(
-            (sum, row) => sum + Number(row[selectedColumns[1]]),
-            0
-          ) / windowData.length;
+        const windowData = data.slice(Math.max(0, i - smoothingWindow + 1), i + 1);
+        const avg = windowData.reduce((sum, row) => sum + Number(row[selectedColumns[1]]), 0) / windowData.length;
         trend.push(avg);
       }
-      seasonalValues = data.map(
-        (row, i) => Number(row[selectedColumns[1]]) - trend[i]
-      );
-      // Заменяем целевую переменную трендом
+      seasonalValues = data.map((row, i) => Number(row[selectedColumns[1]]) - trend[i]);
       data = data.map((row, i) => ({ ...row, [selectedColumns[1]]: trend[i] }));
     }
     return { data, seasonalValues };
   }, [sortedData, activeAction, outlierThreshold, smoothingWindow, transformation, selectedColumns]);
 
-  // Используем finalData из результата предобработки
-  const processedData = finalData.data;
+  const finalData = finalDataResult.data;
 
   // Подготовка данных для графика
-  const labels = processedData.map((row) => row[selectedColumns[0]]);
-  const dataValues = processedData.map((row) => Number(row[selectedColumns[1]]));
+  const labels = finalData.map(row => row[selectedColumns[0]]);
+  const dataValues = finalData.map(row => Number(row[selectedColumns[1]]));
   const chartData = {
     labels,
     datasets: [
@@ -224,20 +175,20 @@ const SelectedColumnsPage = () => {
     datasets: [
       {
         data: dataValues,
-        backgroundColor: labels.map(
-          (_, index) => `hsl(${(index * 360) / labels.length}, 70%, 50%)`
+        backgroundColor: labels.map((_, index) =>
+          `hsl(${(index * 360) / labels.length}, 70%, 50%)`
         ),
-        hoverBackgroundColor: labels.map(
-          (_, index) => `hsl(${(index * 360) / labels.length}, 70%, 40%)`
+        hoverBackgroundColor: labels.map((_, index) =>
+          `hsl(${(index * 360) / labels.length}, 70%, 40%)`
         ),
       },
     ],
   };
 
-  // Функция вычисления описательных статистик для целевой переменной из processedData
+  // Описательные статистики
   const computeStats = (data) => {
     if (!data || data.length === 0) return null;
-    const numericData = data.filter((x) => !isNaN(x));
+    const numericData = data.filter(x => !isNaN(x));
     if (numericData.length === 0) return null;
     const count = numericData.length;
     const sum = numericData.reduce((a, b) => a + b, 0);
@@ -245,27 +196,21 @@ const SelectedColumnsPage = () => {
     const sorted = [...numericData].sort((a, b) => a - b);
     const min = sorted[0];
     const max = sorted[sorted.length - 1];
-    const median =
-      count % 2 === 0
-        ? (sorted[count / 2 - 1] + sorted[count / 2]) / 2
-        : sorted[Math.floor(count / 2)];
-    const variance =
-      numericData.reduce((acc, val) => acc + (val - mean) ** 2, 0) / count;
+    const median = count % 2 === 0 ? (sorted[count/2 - 1] + sorted[count/2]) / 2 : sorted[Math.floor(count/2)];
+    const variance = numericData.reduce((acc, val) => acc + (val - mean) ** 2, 0) / count;
     const std = Math.sqrt(variance);
     return { count, mean, median, std, min, max };
   };
 
   const stats = computeStats(dataValues);
-  const statsArray = stats
-    ? [
-        { symbol: "N", tooltip: "Количество", value: stats.count },
-        { symbol: "μ", tooltip: "Математическое ожидание", value: stats.mean.toFixed(2) },
-        { symbol: "Med", tooltip: "Медиана", value: stats.median.toFixed(2) },
-        { symbol: "σ", tooltip: "Стандартное отклонение", value: stats.std.toFixed(2) },
-        { symbol: "min", tooltip: "Минимум", value: stats.min },
-        { symbol: "max", tooltip: "Максимум", value: stats.max },
-      ]
-    : [];
+  const statsArray = stats ? [
+    { symbol: "N", tooltip: "Количество", value: stats.count },
+    { symbol: "μ", tooltip: "Математическое ожидание", value: stats.mean.toFixed(2) },
+    { symbol: "Med", tooltip: "Медиана", value: stats.median.toFixed(2) },
+    { symbol: "σ", tooltip: "Стандартное отклонение", value: stats.std.toFixed(2) },
+    { symbol: "min", tooltip: "Минимум", value: stats.min },
+    { symbol: "max", tooltip: "Максимум", value: stats.max },
+  ] : [];
 
   // Меню действий
   const actions = [
@@ -289,57 +234,40 @@ const SelectedColumnsPage = () => {
           const allCategoricalColumns = filteredData.length
             ? Object.keys(filteredData[0]).filter((col) => typeof filteredData[0][col] === "string")
             : [];
-          const otherCategoricalColumns = allCategoricalColumns.filter(
-            (col) => !selectedColumns.includes(col)
-          );
-          return (
-            otherCategoricalColumns.length > 0 && (
-              <Box sx={{ mb: 2, display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center" }}>
-                {otherCategoricalColumns.map((col) => (
-                  <Box
-                    key={col}
-                    sx={{
-                      p: 1,
-                      border: "1px solid",
-                      borderColor: filters[col] ? "#FFD700" : "#10A37F",
-                      borderRadius: "8px",
-                      minWidth: "150px",
-                    }}
-                  >
-                    <Typography variant="subtitle1" sx={{ mb: 1, textAlign: "center", color: filters[col] ? "#FFD700" : "#10A37F" }}>
-                      {col.replace("_", " ")}
-                    </Typography>
-                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "center" }}>
-                      {[...new Set(filteredData.map((row) => row[col]))].slice(0, 5).map((value, idx) => (
-                        <Chip
-                          key={idx}
-                          label={value}
-                          sx={{
-                            backgroundColor: filters[col] && filters[col] === value ? "#FFD700" : "#10A37F",
-                            color: "#fff",
-                            fontWeight: "bold",
-                            transition: "transform 0.2s, background-color 0.2s",
-                            "&:hover": { backgroundColor: "#0D8F70", transform: "scale(1.05)" },
-                          }}
-                        />
-                      ))}
-                    </Box>
+          const otherCategoricalColumns = allCategoricalColumns.filter(col => !selectedColumns.includes(col));
+          return otherCategoricalColumns.length > 0 && (
+            <Box sx={{ mb: 2, display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center" }}>
+              {otherCategoricalColumns.map((col) => (
+                <Box key={col} sx={{ p: 1, border: "1px solid", borderColor: filters[col] ? "#FFD700" : "#10A37F", borderRadius: "8px", minWidth: "150px" }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1, textAlign: "center", color: filters[col] ? "#FFD700" : "#10A37F" }}>
+                    {col.replace("_", " ")}
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "center" }}>
+                    {[...new Set(filteredData.map(row => row[col]))].slice(0, 5).map((value, idx) => (
+                      <Chip key={idx} label={value} sx={{
+                        backgroundColor: filters[col] && filters[col] === value ? "#FFD700" : "#10A37F",
+                        color: "#fff",
+                        fontWeight: "bold",
+                        transition: "transform 0.2s, background-color 0.2s",
+                        "&:hover": { backgroundColor: "#0D8F70", transform: "scale(1.05)" },
+                      }}/>
+                    ))}
                   </Box>
-                ))}
-              </Box>
-            )
+                </Box>
+              ))}
+            </Box>
           );
         })()}
 
-        {/* Двухколоночный блок: слева – панель предобработки, справа – график */}
+        {/* Двухколоночный блок: слева – панель действий, справа – график */}
         <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-          {/* Левый столбец: меню предобработки */}
+          {/* Левый столбец: панель предобработки */}
           <Box sx={{ width: 300, border: "1px solid #10A37F", borderRadius: "8px", p: 2 }}>
             <Typography variant="h6" sx={{ mb: 1, color: "#10A37F", textAlign: "center" }}>
               Настройки предобработки
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {actions.map((action) => (
+              {actions.map(action => (
                 <Button
                   key={action.value}
                   variant={activeAction === action.value ? "contained" : "outlined"}
@@ -420,7 +348,6 @@ const SelectedColumnsPage = () => {
           </Box>
           {/* Правый столбец: график */}
           <Box sx={{ flex: 1 }}>
-            {/* Блок выбора типа графика */}
             <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
               <ToggleButtonGroup
                 value={chartType}
@@ -451,12 +378,12 @@ const SelectedColumnsPage = () => {
             >
               {chartType === "line" && (
                 <Line
-                  data={activeAction === "decomposition" && finalData.seasonalValues ? {
-                    labels: processedData.map(row => row[selectedColumns[0]]),
+                  data={activeAction === "decomposition" && finalDataResult.seasonalValues ? {
+                    labels: finalDataResult.data.map(row => row[selectedColumns[0]]),
                     datasets: [
                       {
                         label: "Trend",
-                        data: processedData.map(row => Number(row[selectedColumns[1]])),
+                        data: finalDataResult.data.map(row => Number(row[selectedColumns[1]])),
                         fill: false,
                         backgroundColor: "rgba(16, 163, 127, 0.6)",
                         borderColor: "#10A37F",
@@ -464,14 +391,14 @@ const SelectedColumnsPage = () => {
                       },
                       {
                         label: "Seasonal",
-                        data: processedData.map((row, i) => processedData[i][selectedColumns[1]] - (finalData.seasonalValues ? finalData.seasonalValues[i] : 0)),
+                        data: finalDataResult.seasonalValues,
                         fill: false,
                         backgroundColor: "rgba(255, 99, 132, 0.6)",
                         borderColor: "#FF6384",
                         borderWidth: 2,
                         borderDash: [5, 5],
-                      }
-                    ]
+                      },
+                    ],
                   } : chartData}
                   options={{
                     responsive: true,
@@ -520,26 +447,10 @@ const SelectedColumnsPage = () => {
 
         {/* Блок описательных статистик */}
         {stats && (
-          <Box
-            sx={{
-              mb: 2,
-              display: "flex",
-              gap: 2,
-              flexWrap: "wrap",
-              justifyContent: "center",
-            }}
-          >
+          <Box sx={{ mb: 2, display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center" }}>
             {statsArray.map((stat, idx) => (
               <Tooltip key={idx} title={stat.tooltip}>
-                <Box
-                  sx={{
-                    p: 1,
-                    border: "1px solid #10A37F",
-                    borderRadius: "8px",
-                    minWidth: "120px",
-                    textAlign: "center",
-                  }}
-                >
+                <Box sx={{ p: 1, border: "1px solid #10A37F", borderRadius: "8px", minWidth: "120px", textAlign: "center" }}>
                   <Typography variant="h6" sx={{ color: "#10A37F" }}>
                     {stat.symbol}: {stat.value}
                   </Typography>
@@ -549,7 +460,7 @@ const SelectedColumnsPage = () => {
           </Box>
         )}
 
-        {/* Таблица с выбранной подвыборкой и локальной сортировкой */}
+        {/* Таблица с выбранной подвыборкой (10 строк) */}
         <TableContainer
           component={Paper}
           sx={{
@@ -565,36 +476,19 @@ const SelectedColumnsPage = () => {
             <TableHead>
               <TableRow>
                 {selectedColumns.map((col) => (
-                  <TableCell
-                    key={col}
-                    sx={{
-                      bgcolor: "#10A37F",
-                      color: "#fff",
-                      fontWeight: "bold",
-                      whiteSpace: "nowrap",
-                      p: 1,
-                    }}
-                  >
+                  <TableCell key={col} sx={{ bgcolor: "#10A37F", color: "#fff", fontWeight: "bold", whiteSpace: "nowrap", p: 1 }}>
                     <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
                       {col.replace("_", " ")}
                       <IconButton
                         size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setLocalSortColumn(col);
-                          setLocalSortDirection("asc");
-                        }}
+                        onClick={(e) => { e.stopPropagation(); setLocalSortColumn(col); setLocalSortDirection("asc"); }}
                         sx={{ color: "#fff", p: 0.5 }}
                       >
                         <ArrowUpwardIcon fontSize="inherit" />
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setLocalSortColumn(col);
-                          setLocalSortDirection("desc");
-                        }}
+                        onClick={(e) => { e.stopPropagation(); setLocalSortColumn(col); setLocalSortDirection("desc"); }}
                         sx={{ color: "#fff", p: 0.5 }}
                       >
                         <ArrowDownwardIcon fontSize="inherit" />
@@ -605,7 +499,7 @@ const SelectedColumnsPage = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {processedData.slice(0, 10).map((row, index) => (
+              {finalData.slice(0, 10).map((row, index) => (
                 <TableRow key={index}>
                   {selectedColumns.map((col) => (
                     <TableCell key={col} sx={{ whiteSpace: "nowrap", color: "#fff" }}>

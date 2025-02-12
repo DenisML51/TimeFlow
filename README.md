@@ -1,10 +1,10 @@
-# Forecast ML Project
+# Time Series Forecasting Tool
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/your-username/forecast-ml-project)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tech Stack](https://img.shields.io/badge/Tech-FastAPI%20%2B%20React-blueviolet)](https://fastapi.tiangolo.com/)
 
-Forecast ML Project — это современное веб-приложение для прогнозирования временных рядов, объединяющее **мощный бэкенд** на FastAPI с динамичным **фронтендом** на React и Material-UI. Приложение позволяет загружать, анализировать и визуализировать данные, применять сложные методы предобработки и получать качественные прогнозы — всё в одном интуитивно понятном интерфейсе!
+Time Series Forecasting Tool — это современное веб-приложение для прогнозирования временных рядов, объединяющее **мощный бэкенд** на FastAPI с динамичным **фронтендом** на React и Material-UI. Приложение позволяет загружать, анализировать и визуализировать данные, применять сложные методы предобработки и получать качественные прогнозы — всё в одном интуитивно понятном интерфейсе!
 
 ---
 

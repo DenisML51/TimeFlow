@@ -275,7 +275,7 @@ const SelectedColumnsPage = () => {
                         color: "#fff",
                         fontWeight: "bold",
                         transition: "transform 0.2s, background-color 0.2s",
-                        "&:hover": { backgroundColor: "#0D8F70", transform: "scale(1.02)" },
+                        "&:hover": { backgroundColor: filters[col] ? "rgba(255, 99, 132, 0.6)" : "#10A37F", transform: "scale(1.02)" },
                       }}/>
                     ))}
                   </Box>

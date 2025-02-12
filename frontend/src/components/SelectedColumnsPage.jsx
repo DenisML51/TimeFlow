@@ -28,6 +28,7 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
+import SettingsIcon from "@mui/icons-material/Settings";
 import { Line, Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -131,7 +132,7 @@ const SelectedColumnsPage = () => {
   const finalDataResult = useMemo(() => {
     let data = [...sortedData];
     let seasonalValues = null;
-    // 1. Импутация (заполнение пропусков средним значением)
+    // 1. Импутация
     if (processingSteps.imputation) {
       const numericValues = data.map(row => Number(row[selectedColumns[1]]))
         .filter(val => !isNaN(val));
@@ -151,7 +152,7 @@ const SelectedColumnsPage = () => {
       const std = Math.sqrt(targetValues.reduce((acc, val) => acc + (val - mean) ** 2, 0) / targetValues.length);
       data = data.filter(row => Math.abs(Number(row[selectedColumns[1]]) - mean) <= outlierThreshold * std);
     }
-    // 3. Сглаживание (скользящее среднее) – используется smoothingWindow
+    // 3. Сглаживание – используется smoothingWindow
     if (processingSteps.smoothing && smoothingWindow > 1) {
       let smoothed = [];
       for (let i = 0; i < data.length; i++) {
@@ -161,7 +162,7 @@ const SelectedColumnsPage = () => {
       }
       data = smoothed;
     }
-    // 4. Преобразование (логарифмическое или разностное преобразование)
+    // 4. Преобразование – логарифмическое или разностное
     if (processingSteps.transformation && transformation !== "none") {
       if (transformation === "log") {
         data = data.map(row => ({ ...row, [selectedColumns[1]]: Math.log(Number(row[selectedColumns[1]])) }));
@@ -264,14 +265,14 @@ const SelectedColumnsPage = () => {
           return otherCategoricalColumns.length > 0 && (
             <Box sx={{ mb: 3, display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center" }}>
               {otherCategoricalColumns.map(col => (
-                <Box key={col} sx={{ p: 1, border: "1px solid", borderColor: filters[col] ? "#AFD700" : "#10A37F", borderRadius: "12px", minWidth: "150px", backgroundColor: "#18181a" }}>
-                  <Typography variant="subtitle1" sx={{ mb: 1, textAlign: "center", color: filters[col] ? "#FFD700" : "#10A37F" }}>
+                <Box key={col} sx={{ p: 1, border: "1px solid", borderColor: filters[col] ? "rgba(255, 99, 132, 0.6)" : "#10A37F", borderRadius: "12px", minWidth: "150px", backgroundColor: "#18181a" }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1, textAlign: "center", color: filters[col] ? "rgba(255, 99, 133, 0.84)" : "#10A37F" }}>
                     {col.replace("_", " ")}
                   </Typography>
                   <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "center" }}>
                     {[...new Set(filteredData.map(row => row[col]))].slice(0, 5).map((value, idx) => (
                       <Chip key={idx} label={value} sx={{
-                        backgroundColor: filters[col] && filters[col] === value ? "#FFD700" : "#10A37F",
+                        backgroundColor: filters[col] && filters[col] === value ? "rgba(255, 99, 132, 0.6)" : "#10A37F",
                         color: "#fff",
                         fontWeight: "bold",
                         transition: "transform 0.2s, background-color 0.2s",
@@ -285,12 +286,6 @@ const SelectedColumnsPage = () => {
           );
         })()}
 
-        {/* Кнопка для показа/скрытия панели предобработки */}
-        <Box sx={{ textAlign: "center", mb: 3 }}>
-          <Button variant="contained" onClick={togglePreprocessing} sx={{ backgroundColor: "#10A37F", color: "#fff", textTransform: "none" }}>
-            {preprocessingOpen ? "Скрыть настройки предобработки" : "Показать настройки предобработки"}
-          </Button>
-        </Box>
 
         <Grid container spacing={3}>
           {preprocessingOpen && (
@@ -451,9 +446,24 @@ const SelectedColumnsPage = () => {
           <Grid item xs={12} md={preprocessingOpen ? 9 : 12}>
             <Paper sx={{ p: 2, backgroundColor: "#18181a", borderRadius: "12px", border: "0px solid #10A37F" }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap" }}>
-                <Typography variant="h6" sx={{ color: "#FFFFFF" }}>
-                  Результаты предобработки
-                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <IconButton
+                    onClick={togglePreprocessing}
+                    sx={{
+                      borderRadius: "50%",
+                      backgroundColor: "#10A37F",
+                      color: "#fff",
+                      mr: 2,
+                      transition: "transform 0.3s",
+                      "&:hover": { backgroundColor: "#0D8F70", transform: "scale(1.1)" },
+                    }}
+                  >
+                    {preprocessingOpen ? <CloseIcon /> : <SettingsIcon />}
+                  </IconButton>
+                  <Typography variant="h6" sx={{ color: "#FFFFFF" }}>
+                    Результаты предобработки
+                  </Typography>
+                </Box>
                 <ToggleButtonGroup
                   value={viewMode}
                   exclusive

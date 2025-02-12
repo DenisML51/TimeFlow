@@ -31,7 +31,7 @@ const Header = () => {
       >
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
-            🔥 Forecast Data Tool (Fast API + React JS)
+            🔥 Data Forecasting Tool (Fast API + React JS)
           </Typography>
           {user ? (
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>

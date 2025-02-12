@@ -14,8 +14,6 @@ import {
   ToggleButtonGroup,
   Tooltip,
   Chip,
-  // Tabs,
-  // Tab,
   Table,
   TableBody,
   TableCell,
@@ -28,6 +26,8 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 import { Line, Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -69,22 +69,40 @@ const SelectedColumnsPage = () => {
   const [localSortDirection, setLocalSortDirection] = useState(null);
   const [chartType, setChartType] = useState("line");
 
-  // Состояния для панели предобработки
-  const [activeAction, setActiveAction] = useState("none");
-  const [outlierThreshold, setOutlierThreshold] = useState(2);
+  // Параметры предобработки (отдельные для каждого шага)
   const [smoothingWindow, setSmoothingWindow] = useState(1);
+  const [decompositionWindow, setDecompositionWindow] = useState(2);
+  const [outlierThreshold, setOutlierThreshold] = useState(2);
   const [transformation, setTransformation] = useState("none");
 
-  // Состояния для выбора режима отображения: "combined", "chart", "table"
+  // Объект, хранящий, какие шаги применены (по умолчанию – ни один не применён)
+  const [processingSteps, setProcessingSteps] = useState({
+    imputation: false,
+    outliers: false,
+    smoothing: false,
+    transformation: false,
+    decomposition: false,
+    normalization: false,
+  });
+
+  const applyStep = (step) => {
+    setProcessingSteps((prev) => ({ ...prev, [step]: true }));
+  };
+  const cancelStep = (step) => {
+    setProcessingSteps((prev) => ({ ...prev, [step]: false }));
+  };
+
+  // Режим отображения результатов (для дальнейшей доработки, здесь остаётся "combined")
   const [viewMode, setViewMode] = useState("combined");
-  // const handleViewModeChange = (event, newValue) => {
-  //   if (newValue !== null) setViewMode(newValue);
-  // };
+
+  // Панель предобработки скрывается/показывается с анимацией
+  const [preprocessingOpen, setPreprocessingOpen] = useState(false);
+  const togglePreprocessing = () => setPreprocessingOpen((prev) => !prev);
 
   const handleBack = () => setShow(false);
   const handleExited = () => navigate(-1);
 
-  // Выбираем данные для выбранных столбцов
+  // Формируем выборку данных для выбранных столбцов
   const dataForDisplay = filteredData.map((row) => {
     const newRow = {};
     selectedColumns.forEach((col) => {
@@ -108,11 +126,12 @@ const SelectedColumnsPage = () => {
     });
   }, [dataForDisplay, localSortColumn, localSortDirection]);
 
-  // Применяем предобработку, которая реально меняет данные (для целевой переменной – второй выбранный столбец)
+  // Применяем шаги предобработки последовательно к данным (всегда для целевой переменной – второй выбранный столбец)
   const finalDataResult = useMemo(() => {
     let data = [...sortedData];
-    // Импутация: заполнение пропусков средним значением
-    if (activeAction === "imputation") {
+    let seasonalValues = null;
+    // 1. Импутация (заполнение пропусков средним значением)
+    if (processingSteps.imputation) {
       const numericValues = data.map(row => Number(row[selectedColumns[1]])).filter(val => !isNaN(val));
       const mean = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
       data = data.map(row => {
@@ -123,15 +142,15 @@ const SelectedColumnsPage = () => {
         return row;
       });
     }
-    // Фильтрация выбросов
-    if (activeAction === "outliers") {
+    // 2. Фильтрация выбросов
+    if (processingSteps.outliers) {
       const targetValues = data.map(row => Number(row[selectedColumns[1]]));
       const mean = targetValues.reduce((a, b) => a + b, 0) / targetValues.length;
       const std = Math.sqrt(targetValues.reduce((acc, val) => acc + (val - mean) ** 2, 0) / targetValues.length);
       data = data.filter(row => Math.abs(Number(row[selectedColumns[1]]) - mean) <= outlierThreshold * std);
     }
-    // Сглаживание: скользящее среднее
-    if (activeAction === "smoothing" && smoothingWindow > 1) {
+    // 3. Сглаживание (скользящее среднее) – используется smoothingWindow
+    if (processingSteps.smoothing && smoothingWindow > 1) {
       let smoothed = [];
       for (let i = 0; i < data.length; i++) {
         const windowData = data.slice(Math.max(0, i - smoothingWindow + 1), i + 1);
@@ -140,8 +159,8 @@ const SelectedColumnsPage = () => {
       }
       data = smoothed;
     }
-    // Преобразование: логарифмическое или разностное
-    if (activeAction === "transformation" && transformation !== "none") {
+    // 4. Преобразование (логарифмическое или разностное)
+    if (processingSteps.transformation && transformation !== "none") {
       if (transformation === "log") {
         data = data.map(row => ({ ...row, [selectedColumns[1]]: Math.log(Number(row[selectedColumns[1]])) }));
       } else if (transformation === "difference") {
@@ -151,24 +170,39 @@ const SelectedColumnsPage = () => {
         }));
       }
     }
-    // Декомпозиция: вычисляем тренд (скользящее среднее) и сезонную компоненту
-    let seasonalValues = null;
-    if (activeAction === "decomposition" && smoothingWindow > 1) {
+    // 5. Декомпозиция – используем независимое окно для декомпозиции
+    if (processingSteps.decomposition && decompositionWindow > 1) {
       let trend = [];
       for (let i = 0; i < data.length; i++) {
-        const windowData = data.slice(Math.max(0, i - smoothingWindow + 1), i + 1);
+        const windowData = data.slice(Math.max(0, i - decompositionWindow + 1), i + 1);
         const avg = windowData.reduce((sum, row) => sum + Number(row[selectedColumns[1]]), 0) / windowData.length;
         trend.push(avg);
       }
       seasonalValues = data.map((row, i) => Number(row[selectedColumns[1]]) - trend[i]);
       data = data.map((row, i) => ({ ...row, [selectedColumns[1]]: trend[i] }));
     }
+    // 6. Нормализация – масштабирование данных в диапазоне [0,1]
+    if (processingSteps.normalization) {
+      const values = data.map(row => Number(row[selectedColumns[1]]));
+      const minVal = Math.min(...values);
+      const maxVal = Math.max(...values);
+      data = data.map(row => ({
+        ...row,
+        [selectedColumns[1]]: (Number(row[selectedColumns[1]]) - minVal) / (maxVal - minVal)
+      }));
+    }
     return { data, seasonalValues };
-  }, [sortedData, activeAction, outlierThreshold, smoothingWindow, transformation, selectedColumns]);
+  }, [
+    sortedData,
+    processingSteps,
+    outlierThreshold,
+    smoothingWindow,
+    decompositionWindow,
+    transformation,
+    selectedColumns,
+  ]);
 
   const finalData = finalDataResult.data;
-
-  // Подготовка данных для графика
   const labels = finalData.map(row => row[selectedColumns[0]]);
   const dataValues = finalData.map(row => Number(row[selectedColumns[1]]));
   const chartData = {
@@ -212,15 +246,6 @@ const SelectedColumnsPage = () => {
     { symbol: "max", tooltip: "Максимум", value: stats.max.toFixed(3) },
   ] : [];
 
-  const actions = [
-    { value: "none", label: "Без изменений" },
-    { value: "outliers", label: "Выбросы" },
-    { value: "smoothing", label: "Сглаживание" },
-    { value: "transformation", label: "Преобразование" },
-    { value: "imputation", label: "Заполнение пропусков" },
-    { value: "decomposition", label: "Декомпозиция" },
-  ];
-
   return (
     <Slide direction="left" in={show} mountOnEnter unmountOnExit onExited={handleExited}>
       <Box sx={{ p: 3, backgroundColor: "#121212", minHeight: "100vh", color: "#fff", overflow: "hidden" }}>
@@ -235,9 +260,9 @@ const SelectedColumnsPage = () => {
             : [];
           const otherCategoricalColumns = allCategoricalColumns.filter(col => !selectedColumns.includes(col));
           return otherCategoricalColumns.length > 0 && (
-            <Box sx={{ mb: 3, display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center"}}>
+            <Box sx={{ mb: 3, display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center" }}>
               {otherCategoricalColumns.map(col => (
-                <Box key={col} sx={{ p: 1, border: "1px solid", borderColor: filters[col] ? "#AFD700" : "#10A37F", borderRadius: "12px", minWidth: "150px", backgroundColor: '#18181a'  }}>
+                <Box key={col} sx={{ p: 1, border: "1px solid", borderColor: filters[col] ? "#AFD700" : "#10A37F", borderRadius: "12px", minWidth: "150px", backgroundColor: "#18181a" }}>
                   <Typography variant="subtitle1" sx={{ mb: 1, textAlign: "center", color: filters[col] ? "#FFD700" : "#10A37F" }}>
                     {col.replace("_", " ")}
                   </Typography>
@@ -258,97 +283,170 @@ const SelectedColumnsPage = () => {
           );
         })()}
 
-        {/* Основной контент: сетка с двумя колонками */}
+        {/* Кнопка для показа/скрытия панели предобработки */}
+        <Box sx={{ textAlign: "center", mb: 3 }}>
+          <Button variant="contained" onClick={togglePreprocessing} sx={{ backgroundColor: "#10A37F", color: "#fff", textTransform: "none" }}>
+            {preprocessingOpen ? "Скрыть настройки предобработки" : "Показать настройки предобработки"}
+          </Button>
+        </Box>
+
         <Grid container spacing={3}>
-          {/* Левая колонка: панель предобработки */}
-          <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2, backgroundColor: "#18181a", borderRadius: "12px", border: "0px solid #10A37F" }}>
-              <Typography variant="h6" sx={{ mb: 2, color: "#10A37F", textAlign: "center" }}>
-                Настройки предобработки
-              </Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {actions.map(action => (
-                  <Button
-                    key={action.value}
-                    variant={activeAction === action.value ? "contained" : "outlined"}
-                    onClick={() => setActiveAction(action.value)}
-                    sx={{ textTransform: "none", borderColor: "#10A37F", color: "#FFFFFF" }}
-                  >
-                    {action.label}
-                  </Button>
-                ))}
-              </Box>
-              {activeAction === "outliers" && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle1" sx={{ color: "#10A37F" }}>
-                    Порог выбросов (σ): {outlierThreshold}
+          {preprocessingOpen && (
+            <Grid item xs={12} md={3}>
+              <Slide direction="right" in={preprocessingOpen} mountOnEnter unmountOnExit>
+                <Paper sx={{ p: 2, backgroundColor: "#18181a", borderRadius: "12px", border: "0px solid #10A37F" }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: "#FFFFFF", textAlign: "center" }}>
+                    Настройки предобработки
                   </Typography>
-                  <Slider
-                    value={outlierThreshold}
-                    onChange={(e, newVal) => setOutlierThreshold(newVal)}
-                    min={1}
-                    max={5}
-                    step={0.1}
-                    valueLabelDisplay="auto"
-                    color="primary"
-                  />
-                </Box>
-              )}
-              {activeAction === "smoothing" && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle1" sx={{ color: "#10A37F" }}>
-                    Окно сглаживания: {smoothingWindow}
-                  </Typography>
-                  <Slider
-                    value={smoothingWindow}
-                    onChange={(e, newVal) => setSmoothingWindow(newVal)}
-                    min={1}
-                    max={20}
-                    step={1}
-                    valueLabelDisplay="auto"
-                    color="primary"
-                  />
-                </Box>
-              )}
-              {activeAction === "transformation" && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle1" sx={{ color: "#10A37F" }}>
-                    Преобразование
-                  </Typography>
-                  <RadioGroup value={transformation} onChange={(e) => setTransformation(e.target.value)}>
-                    <FormControlLabel value="none" control={<Radio />} label="Нет" />
-                    <FormControlLabel value="log" control={<Radio />} label="Логарифм" />
-                    <FormControlLabel value="difference" control={<Radio />} label="Разность" />
-                  </RadioGroup>
-                </Box>
-              )}
-              {activeAction === "imputation" && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle1" sx={{ color: "#10A37F" }}>
-                    Заполнение пропусков (среднее)
-                  </Typography>
-                </Box>
-              )}
-              {activeAction === "decomposition" && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle1" sx={{ color: "#10A37F" }}>
-                    Окно декомпозиции: {smoothingWindow}
-                  </Typography>
-                  <Slider
-                    value={smoothingWindow}
-                    onChange={(e, newVal) => setSmoothingWindow(newVal)}
-                    min={2}
-                    max={30}
-                    step={1}
-                    valueLabelDisplay="auto"
-                    color="primary"
-                  />
-                </Box>
-              )}
-            </Paper>
-          </Grid>
-          {/* Правая колонка: Основной контент (обзор: график и таблица) */}
-          <Grid item xs={12} md={9}>
+
+                  {/* Импутация */}
+                  <Box sx={{ mb: 2, p: 1, border: "1px solid #10A37F", borderRadius: "8px" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#FFFFFF" }}>Заполнение пропусков</Typography>
+                      {processingSteps.imputation ? (
+                        <IconButton size="small" onClick={() => cancelStep("imputation")} sx={{ color: "#FF6384" }}>
+                          <CloseIcon />
+                        </IconButton>
+                      ) : (
+                        <IconButton size="small" onClick={() => applyStep("imputation")} sx={{ color: "#10A37F" }}>
+                          <AddIcon />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </Box>
+
+                  {/* Фильтрация выбросов */}
+                  <Box sx={{ mb: 2, p: 1, border: "1px solid #10A37F", borderRadius: "8px" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#FFFFFF" }}>Выбросы</Typography>
+                      {processingSteps.outliers ? (
+                        <IconButton size="small" onClick={() => cancelStep("outliers")} sx={{ color: "#FF6384" }}>
+                          <CloseIcon />
+                        </IconButton>
+                      ) : (
+                        <IconButton size="small" onClick={() => applyStep("outliers")} sx={{ color: "#10A37F" }}>
+                          <AddIcon />
+                        </IconButton>
+                      )}
+                    </Box>
+                    <Typography variant="caption" sx={{ color: "#FFFFFF" }}>
+                      Порог (σ): {outlierThreshold}
+                    </Typography>
+                    <Slider
+                      value={outlierThreshold}
+                      onChange={(e, newVal) => setOutlierThreshold(newVal)}
+                      min={1}
+                      max={5}
+                      step={0.1}
+                      valueLabelDisplay="auto"
+                      size="small"
+                    />
+                  </Box>
+
+                  {/* Сглаживание */}
+                  <Box sx={{ mb: 2, p: 1, border: "1px solid #10A37F", borderRadius: "8px" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#FFFFFF" }}>Сглаживание</Typography>
+                      {processingSteps.smoothing ? (
+                        <IconButton size="small" onClick={() => cancelStep("smoothing")} sx={{ color: "#FF6384" }}>
+                          <CloseIcon />
+                        </IconButton>
+                      ) : (
+                        <IconButton size="small" onClick={() => applyStep("smoothing")} sx={{ color: "#10A37F" }}>
+                          <AddIcon />
+                        </IconButton>
+                      )}
+                    </Box>
+                    <Typography variant="caption" sx={{ color: "#FFFFFF" }}>
+                      Окно: {smoothingWindow}
+                    </Typography>
+                    <Slider
+                      value={smoothingWindow}
+                      onChange={(e, newVal) => setSmoothingWindow(newVal)}
+                      min={1}
+                      max={20}
+                      step={1}
+                      valueLabelDisplay="auto"
+                      size="small"
+                    />
+                  </Box>
+
+                  {/* Преобразование */}
+                  <Box sx={{ mb: 2, p: 1, border: "1px solid #10A37F", borderRadius: "8px" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#FFFFFF" }}>Преобразование</Typography>
+                      {processingSteps.transformation ? (
+                        <IconButton size="small" onClick={() => cancelStep("transformation")} sx={{ color: "#FF6384" }}>
+                          <CloseIcon />
+                        </IconButton>
+                      ) : (
+                        <IconButton size="small" onClick={() => applyStep("transformation")} sx={{ color: "#10A37F" }}>
+                          <AddIcon />
+                        </IconButton>
+                      )}
+                    </Box>
+                    <RadioGroup
+                      value={transformation}
+                      onChange={(e) => setTransformation(e.target.value)}
+                      row
+                    >
+                      <FormControlLabel value="none" control={<Radio size="small" />} label="Нет" />
+                      <FormControlLabel value="log" control={<Radio size="small" />} label="Логарифм" />
+                      <FormControlLabel value="difference" control={<Radio size="small" />} label="Разность" />
+                    </RadioGroup>
+                  </Box>
+
+                  {/* Декомпозиция */}
+                  <Box sx={{ mb: 2, p: 1, border: "1px solid #10A37F", borderRadius: "8px" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#FFFFFF" }}>Декомпозиция</Typography>
+                      {processingSteps.decomposition ? (
+                        <IconButton size="small" onClick={() => cancelStep("decomposition")} sx={{ color: "#FF6384" }}>
+                          <CloseIcon />
+                        </IconButton>
+                      ) : (
+                        <IconButton size="small" onClick={() => applyStep("decomposition")} sx={{ color: "#10A37F" }}>
+                          <AddIcon />
+                        </IconButton>
+                      )}
+                    </Box>
+                    <Typography variant="caption" sx={{ color: "#FFFFFF" }}>
+                      Окно: {decompositionWindow}
+                    </Typography>
+                    <Slider
+                      value={decompositionWindow}
+                      onChange={(e, newVal) => setDecompositionWindow(newVal)}
+                      min={2}
+                      max={30}
+                      step={1}
+                      valueLabelDisplay="auto"
+                      size="small"
+                    />
+                  </Box>
+
+                  {/* Нормализация */}
+                  <Box sx={{ mb: 2, p: 1, border: "1px solid #10A37F", borderRadius: "8px" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#FFFFFF" }}>Нормализация</Typography>
+                      {processingSteps.normalization ? (
+                        <IconButton size="small" onClick={() => cancelStep("normalization")} sx={{ color: "#FF6384" }}>
+                          <CloseIcon />
+                        </IconButton>
+                      ) : (
+                        <IconButton size="small" onClick={() => applyStep("normalization")} sx={{ color: "#10A37F" }}>
+                          <AddIcon />
+                        </IconButton>
+                      )}
+                    </Box>
+                    <Typography variant="caption" sx={{ color: "#FFFFFF" }}>
+                      Масштабирование в диапазоне [0,1]
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Slide>
+            </Grid>
+          )}
+          <Grid item xs={12} md={preprocessingOpen ? 9 : 12}>
             <Paper sx={{ p: 2, backgroundColor: "#18181a", borderRadius: "12px", border: "0px solid #10A37F" }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap" }}>
                 <Typography variant="h6" sx={{ color: "#10A37F" }}>
@@ -373,12 +471,12 @@ const SelectedColumnsPage = () => {
               </Box>
               {(viewMode === "combined" || viewMode === "chart") && (
                 <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: "flex", justifyContent: "center", mb: 1 }}>
+                  <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
                     <ToggleButtonGroup
                       value={chartType}
                       exclusive
                       onChange={(e, newType) => { if (newType !== null) setChartType(newType); }}
-                      sx={{ backgroundColor: "#1E1E1E", borderRadius: "8px", p:0.1 }}
+                      sx={{ backgroundColor: "#1E1E1E", borderRadius: "8px", p: 0.1 }}
                     >
                       <ToggleButton value="line" sx={{ color: "#fff", borderColor: "#10A37F" }}>
                         Линейный
@@ -395,12 +493,14 @@ const SelectedColumnsPage = () => {
                       borderRadius: "12px",
                       backgroundColor: "rgba(16, 163, 127, 0.1)",
                       boxShadow: 3,
+                      width: "100%",
+                      height: 400,
                     }}
                   >
                     {chartType === "line" && (
                       <Line
                         data={
-                          activeAction === "decomposition" && finalDataResult.seasonalValues
+                          processingSteps.decomposition && finalDataResult.seasonalValues
                             ? {
                                 labels: finalDataResult.data.map(row => row[selectedColumns[0]]),
                                 datasets: [
@@ -427,6 +527,7 @@ const SelectedColumnsPage = () => {
                         }
                         options={{
                           responsive: true,
+                          maintainAspectRatio: false,
                           plugins: {
                             legend: { labels: { color: "#fff" } },
                             title: { display: true, text: "График", color: "#fff" },
@@ -443,6 +544,7 @@ const SelectedColumnsPage = () => {
                         data={chartData}
                         options={{
                           responsive: true,
+                          maintainAspectRatio: false,
                           plugins: {
                             legend: { labels: { color: "#fff" } },
                             title: { display: true, text: "График", color: "#fff" },
@@ -459,7 +561,7 @@ const SelectedColumnsPage = () => {
               )}
               {(viewMode === "combined" || viewMode === "table") && (
                 <Box>
-                  <Box sx={{ mb: 2, display: "flex", flexDirection: "column", alignItems: "left" }}>
+                  <Box sx={{ mb: 2, display: "flex", flexDirection: "column", alignItems: "flex" }}>
                     <Typography variant="h6" sx={{ color: "#10A37F", mb: 2 }}>
                       Описательные статистики
                     </Typography>
@@ -480,10 +582,9 @@ const SelectedColumnsPage = () => {
                           <Box
                             sx={{
                               p: 2,
-                              // minWidth: "120px",
                               textAlign: "center",
                               borderRadius: "12px",
-                              backgroundColor: "#1e1e1e",
+                              backgroundColor: "#1e1e1a",
                               border: "1px solid #10A37F",
                               transition: "transform 0.2s, box-shadow 0.2s",
                               "&:hover": {
@@ -492,7 +593,7 @@ const SelectedColumnsPage = () => {
                               },
                             }}
                           >
-                            <Typography variant="h8" sx={{ color: "#10A37F", fontWeight: 600, fontSize: "1.0rem" }}>
+                            <Typography variant="h8" sx={{ color: "#10A37F", fontWeight: 600, fontSize: "1rem" }}>
                               {stat.symbol}
                             </Typography>
                             <Typography variant="subtitle2" sx={{ color: "#fff", fontSize: "0.8rem" }}>

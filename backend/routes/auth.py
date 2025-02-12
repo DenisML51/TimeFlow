@@ -2,16 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from models.user import User
-from utils.auth import get_password_hash, verify_password, create_access_token, get_current_user, ACCESS_TOKEN_EXPIRE_MINUTES
+from utils.auth import get_password_hash, verify_password, create_access_token, get_current_user
 from database import get_db
-from pydantic import BaseModel, EmailStr, constr, validator
+from pydantic import BaseModel, EmailStr, Field, validator
 from models.history import History
 import re
 
 auth_router = APIRouter()
 
 class UserRegister(BaseModel):
-    username: constr(min_length=3, max_length=50)
+    username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str
 
@@ -58,8 +58,7 @@ async def login(user_data: UserLogin, response: Response, db: AsyncSession = Dep
         value=access_token,
         httponly=True,
         samesite="lax",
-        path="/",
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        path="/"
     )
     # Записываем событие входа в историю
     new_history = History(user_id=user.id, action="Пользователь вошел в систему")

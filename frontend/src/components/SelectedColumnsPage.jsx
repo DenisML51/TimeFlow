@@ -5,7 +5,6 @@ import {
   Grid,
   Paper,
   Typography,
-  Button,
   Slider,
   Radio,
   RadioGroup,

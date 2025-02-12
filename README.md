@@ -52,10 +52,3 @@ Forecast ML Project — это современное веб-приложени�
 
 ---
 
-## 📖 Как начать
-
-### 1. Клонируйте репозиторий
-
-```bash
-git clone https://github.com/your-username/forecast-ml-project.git
-cd forecast-ml-project

@@ -69,13 +69,13 @@ const SelectedColumnsPage = () => {
   const [localSortDirection, setLocalSortDirection] = useState(null);
   const [chartType, setChartType] = useState("line");
 
-  // Параметры предобработки (отдельные для каждого шага)
+  // Параметры предобработки (каждый шаг имеет свои независимые параметры)
   const [smoothingWindow, setSmoothingWindow] = useState(1);
   const [decompositionWindow, setDecompositionWindow] = useState(2);
   const [outlierThreshold, setOutlierThreshold] = useState(2);
   const [transformation, setTransformation] = useState("none");
 
-  // Объект, хранящий, какие шаги применены (по умолчанию – ни один не применён)
+  // Объект, указывающий, какие шаги предобработки применены
   const [processingSteps, setProcessingSteps] = useState({
     imputation: false,
     outliers: false,
@@ -85,6 +85,7 @@ const SelectedColumnsPage = () => {
     normalization: false,
   });
 
+  // Функции для применения и отмены каждого шага
   const applyStep = (step) => {
     setProcessingSteps((prev) => ({ ...prev, [step]: true }));
   };
@@ -92,10 +93,10 @@ const SelectedColumnsPage = () => {
     setProcessingSteps((prev) => ({ ...prev, [step]: false }));
   };
 
-  // Режим отображения результатов (для дальнейшей доработки, здесь остаётся "combined")
+  // Режим отображения (например, "combined", "chart", "table")
   const [viewMode, setViewMode] = useState("combined");
 
-  // Панель предобработки скрывается/показывается с анимацией
+  // Состояние для скрытия/отображения панели предобработки с анимацией
   const [preprocessingOpen, setPreprocessingOpen] = useState(false);
   const togglePreprocessing = () => setPreprocessingOpen((prev) => !prev);
 
@@ -126,13 +127,14 @@ const SelectedColumnsPage = () => {
     });
   }, [dataForDisplay, localSortColumn, localSortDirection]);
 
-  // Применяем шаги предобработки последовательно к данным (всегда для целевой переменной – второй выбранный столбец)
+  // Применяем шаги предобработки последовательно к данным (для целевой переменной – второй выбранный столбец)
   const finalDataResult = useMemo(() => {
     let data = [...sortedData];
     let seasonalValues = null;
     // 1. Импутация (заполнение пропусков средним значением)
     if (processingSteps.imputation) {
-      const numericValues = data.map(row => Number(row[selectedColumns[1]])).filter(val => !isNaN(val));
+      const numericValues = data.map(row => Number(row[selectedColumns[1]]))
+        .filter(val => !isNaN(val));
       const mean = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
       data = data.map(row => {
         const value = Number(row[selectedColumns[1]]);
@@ -159,7 +161,7 @@ const SelectedColumnsPage = () => {
       }
       data = smoothed;
     }
-    // 4. Преобразование (логарифмическое или разностное)
+    // 4. Преобразование (логарифмическое или разностное преобразование)
     if (processingSteps.transformation && transformation !== "none") {
       if (transformation === "log") {
         data = data.map(row => ({ ...row, [selectedColumns[1]]: Math.log(Number(row[selectedColumns[1]])) }));
@@ -170,7 +172,7 @@ const SelectedColumnsPage = () => {
         }));
       }
     }
-    // 5. Декомпозиция – используем независимое окно для декомпозиции
+    // 5. Декомпозиция – используется независимое окно decompositionWindow
     if (processingSteps.decomposition && decompositionWindow > 1) {
       let trend = [];
       for (let i = 0; i < data.length; i++) {
@@ -230,7 +232,7 @@ const SelectedColumnsPage = () => {
     const sorted = [...numericData].sort((a, b) => a - b);
     const min = sorted[0];
     const max = sorted[sorted.length - 1];
-    const median = count % 2 === 0 ? (sorted[count / 2 - 1] + sorted[count / 2]) / 2 : sorted[Math.floor(count / 2)];
+    const median = count % 2 === 0 ? (sorted[count/2 - 1] + sorted[count/2]) / 2 : sorted[Math.floor(count/2)];
     const variance = numericData.reduce((acc, val) => acc + (val - mean) ** 2, 0) / count;
     const std = Math.sqrt(variance);
     return { count, mean, median, std, min, max };
@@ -449,7 +451,7 @@ const SelectedColumnsPage = () => {
           <Grid item xs={12} md={preprocessingOpen ? 9 : 12}>
             <Paper sx={{ p: 2, backgroundColor: "#18181a", borderRadius: "12px", border: "0px solid #10A37F" }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap" }}>
-                <Typography variant="h6" sx={{ color: "#10A37F" }}>
+                <Typography variant="h6" sx={{ color: "#FFFFFF" }}>
                   Результаты предобработки
                 </Typography>
                 <ToggleButtonGroup
@@ -562,7 +564,7 @@ const SelectedColumnsPage = () => {
               {(viewMode === "combined" || viewMode === "table") && (
                 <Box>
                   <Box sx={{ mb: 2, display: "flex", flexDirection: "column", alignItems: "flex" }}>
-                    <Typography variant="h6" sx={{ color: "#10A37F", mb: 2 }}>
+                    <Typography variant="h6" sx={{ color: "#FFFFFF", mb: 2 }}>
                       Описательные статистики
                     </Typography>
                     <Box

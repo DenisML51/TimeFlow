@@ -12,6 +12,28 @@ export const DashboardProvider = ({ children }) => {
   const [columns, setColumns] = useState([]);
   const [selectedColumns, setSelectedColumns] = useState([]);
 
+  // Дополнительное состояние для второй страницы и настроек предобработки
+  const [secondPageState, setSecondPageState] = useState({
+    localSortColumn: null,
+    localSortDirection: null,
+    chartType: "line",
+    smoothingWindow: 1,
+    decompositionWindow: 2, // Независимое окно для декомпозиции
+    outlierThreshold: 2,
+    transformation: "none",
+    processingSteps: {
+      imputation: false,
+      outliers: false,
+      smoothing: false,
+      transformation: false,
+      decomposition: false,
+      normalization: false,
+    },
+    viewMode: "combined", // Например, "combined", "chart", "table"
+    preprocessingOpen: false,
+  });
+
+  // Функция сброса состояния (вызывается при загрузке нового файла)
   const resetDashboardState = () => {
     setOriginalData([]);
     setFilters({});
@@ -21,6 +43,25 @@ export const DashboardProvider = ({ children }) => {
     setTableData([]);
     setColumns([]);
     setSelectedColumns([]);
+    setSecondPageState({
+      localSortColumn: null,
+      localSortDirection: null,
+      chartType: "line",
+      smoothingWindow: 1,
+      decompositionWindow: 2,
+      outlierThreshold: 2,
+      transformation: "none",
+      processingSteps: {
+        imputation: false,
+        outliers: false,
+        smoothing: false,
+        transformation: false,
+        decomposition: false,
+        normalization: false,
+      },
+      viewMode: "combined",
+      preprocessingOpen: false,
+    });
   };
 
   return (
@@ -43,6 +84,8 @@ export const DashboardProvider = ({ children }) => {
         selectedColumns,
         setSelectedColumns,
         resetDashboardState,
+        secondPageState,
+        setSecondPageState,
       }}
     >
       {children}

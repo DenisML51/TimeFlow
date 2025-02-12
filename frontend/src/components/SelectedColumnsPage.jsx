@@ -284,8 +284,7 @@ const SelectedColumnsPage = () => {
             </Box>
           );
         })()}
-
-
+        
         <Grid container spacing={3}>
           {preprocessingOpen && (
             <Grid item xs={12} md={3}>

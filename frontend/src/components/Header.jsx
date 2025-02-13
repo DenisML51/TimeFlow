@@ -100,7 +100,7 @@ const Header = () => {
               {/* Кнопка «Регистрация» теперь сразу ведёт в Dashboard */}
               <Button
                 color="secondary"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate("/register")}
                 sx={{
                   borderRadius: "30px",
                   padding: "8px 20px",

@@ -35,7 +35,7 @@ const Register = () => {
         }}
       >
         <Typography variant="h4" mb={3} color="white">
-          Register
+          Регистрация
         </Typography>
         <TextField
           label="Username"
@@ -108,7 +108,7 @@ const Register = () => {
           fullWidth
           onClick={handleRegister}
           sx={{
-            backgroundColor: "#3f51b5",
+            backgroundColor: "#10A37F",
             color: "white",
             mt: 3,
             borderRadius: "8px",
@@ -116,12 +116,12 @@ const Register = () => {
             fontSize: "16px",
             transition: "0.3s",
             "&:hover": {
-              backgroundColor: "#303f9f",
+              backgroundColor: "#0f8f6f",
               transform: "scale(1.05)",
             },
           }}
         >
-          Register
+          Зарегистрироваться
         </Button>
       </Box>
     </Container>

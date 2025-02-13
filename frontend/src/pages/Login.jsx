@@ -51,7 +51,7 @@ const Login = () => {
         }}
       >
         <Typography variant="h4" mb={3} color="white">
-          Login
+          Вход в аккаунт
         </Typography>
         <TextField
           label="Username"
@@ -104,7 +104,7 @@ const Login = () => {
             variant="contained"
             fullWidth
             sx={{
-              backgroundColor: "#3f51b5",
+              backgroundColor: "#10A37F",
               color: "white",
               mt: 3,
               borderRadius: "8px",
@@ -112,12 +112,12 @@ const Login = () => {
               fontSize: "16px",
               transition: "0.3s",
               "&:hover": {
-                backgroundColor: "#303f9f",
+                backgroundColor: "#0f8f6f",
                 transform: "scale(1.05)",
               },
             }}
           >
-            Login
+            Войти
           </Button>
         )}
         {loginMessage && (

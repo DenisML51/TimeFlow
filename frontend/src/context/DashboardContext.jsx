@@ -11,6 +11,11 @@ export const DashboardProvider = ({ children }) => {
   const [tableData, setTableData] = useState([]);
   const [columns, setColumns] = useState([]);
   const [selectedColumns, setSelectedColumns] = useState([]);
+  const [uploadedFile, setUploadedFile] = useState(null);
+
+  // Новое состояние для сохранения пагинации таблицы
+  const [tablePage, setTablePage] = useState(0);
+  const [tableRowsPerPage, setTableRowsPerPage] = useState(25);
 
   // Дополнительное состояние для второй страницы и настроек предобработки
   const [secondPageState, setSecondPageState] = useState({
@@ -18,7 +23,7 @@ export const DashboardProvider = ({ children }) => {
     localSortDirection: null,
     chartType: "line",
     smoothingWindow: 1,
-    decompositionWindow: 2, // Независимое окно для декомпозиции
+    decompositionWindow: 2,
     outlierThreshold: 2,
     transformation: "none",
     processingSteps: {
@@ -29,11 +34,11 @@ export const DashboardProvider = ({ children }) => {
       decomposition: false,
       normalization: false,
     },
-    viewMode: "combined", // Например, "combined", "chart", "table"
+    viewMode: "combined",
     preprocessingOpen: false,
   });
 
-  // Функция сброса состояния (вызывается при загрузке нового файла)
+  // Функция сброса состояния (вызывается при загрузке нового файла или выходе из аккаунта)
   const resetDashboardState = () => {
     setOriginalData([]);
     setFilters({});
@@ -43,6 +48,9 @@ export const DashboardProvider = ({ children }) => {
     setTableData([]);
     setColumns([]);
     setSelectedColumns([]);
+    setUploadedFile(null);
+    setTablePage(0);
+    setTableRowsPerPage(25);
     setSecondPageState({
       localSortColumn: null,
       localSortDirection: null,
@@ -83,6 +91,12 @@ export const DashboardProvider = ({ children }) => {
         setColumns,
         selectedColumns,
         setSelectedColumns,
+        uploadedFile,
+        setUploadedFile,
+        tablePage,
+        setTablePage,
+        tableRowsPerPage,
+        setTableRowsPerPage,
         resetDashboardState,
         secondPageState,
         setSecondPageState,

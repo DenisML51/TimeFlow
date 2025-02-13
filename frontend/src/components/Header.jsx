@@ -1,5 +1,12 @@
 import React, { useContext } from "react";
-import { AppBar, Toolbar, Typography, Button, IconButton, Box } from "@mui/material";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  IconButton,
+  Box
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import HistoryIcon from "@mui/icons-material/History";
 import HistoryModal from "./HistoryModal";
@@ -12,9 +19,15 @@ const Header = () => {
   const { user, logout } = useContext(AuthContext);
   const [historyOpen, setHistoryOpen] = React.useState(false);
 
+  // Обработчик выхода
   const handleLogout = async () => {
     await logout();
-    resetDashboardState();
+    resetDashboardState(); // при логауте сбрасываем состояние дашборда
+    navigate("/");
+  };
+
+  // При клике на логотип — переходим на главную, НЕ сбрасывая сессию
+  const handleLogoClick = () => {
     navigate("/");
   };
 
@@ -26,13 +39,21 @@ const Header = () => {
         sx={{
           background: "linear-gradient(90deg, #1B1B1F 0%, #121212 100%)",
           padding: "10px 20px",
-          borderRadius: "12px",
+          borderRadius: "12px"
         }}
       >
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
+
+
+          {/* Название сайта также кликабельно */}
+          <Typography
+            variant="h6"
+            sx={{ flexGrow: 1, fontWeight: "bold", cursor: "pointer" }}
+            onClick={handleLogoClick}
+          >
             🔥 Time Series Forecasting Tool
           </Typography>
+
           {user ? (
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               <Typography variant="body1" sx={{ color: "#fff" }}>
@@ -50,8 +71,8 @@ const Header = () => {
                   margin: "0 8px",
                   "&:hover": {
                     backgroundColor: "#D32F2F",
-                    color: "#FFFFFF",
-                  },
+                    color: "#FFFFFF"
+                  }
                 }}
               >
                 Выход
@@ -70,15 +91,16 @@ const Header = () => {
                   "&:hover": {
                     transform: "scale(1.1)",
                     backgroundColor: "#0D8F70",
-                    color: "#FFFFFF",
-                  },
+                    color: "#FFFFFF"
+                  }
                 }}
               >
                 Войти
               </Button>
+              {/* Кнопка «Регистрация» теперь сразу ведёт в Dashboard */}
               <Button
                 color="secondary"
-                onClick={() => navigate("/register")}
+                onClick={() => navigate("/dashboard")}
                 sx={{
                   borderRadius: "30px",
                   padding: "8px 20px",
@@ -87,8 +109,8 @@ const Header = () => {
                   color: "#fff",
                   "&:hover": {
                     transform: "scale(1.1)",
-                    backgroundColor: "#2C2C2C",
-                  },
+                    backgroundColor: "#2C2C2C"
+                  }
                 }}
               >
                 Регистрация
@@ -97,6 +119,8 @@ const Header = () => {
           )}
         </Toolbar>
       </AppBar>
+
+      {/* Модалка с историей загрузок (видна только при user) */}
       <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} />
     </>
   );

@@ -1,5 +1,16 @@
 import React from "react";
-import { Box, Typography, FormControl, InputLabel, MenuItem, Select, Button } from "@mui/material";
+import {
+  Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Button,
+  Divider
+} from "@mui/material";
+import FilterListIcon from '@mui/icons-material/FilterList';
+import RotateLeftIcon from '@mui/icons-material/RotateLeft';
 
 const FilterPanel = ({ originalData, columns, filters, updateFilters }) => {
   // Отбираем те столбцы, где встречаются строковые значения
@@ -19,48 +30,87 @@ const FilterPanel = ({ originalData, columns, filters, updateFilters }) => {
   return (
     <Box
       sx={{
-        p: 3,
-        borderRadius: "12px",
-        bgcolor: "rgba(255, 255, 255, 0.05)",
-        backdropFilter: "blur(10px)",
+        p: 2,
+        borderRadius: "16px",
+        bgcolor: "rgba(255,255,255,0.05)",
+        backdropFilter: "blur(12px)",
         boxShadow: 3,
+        border: "1px solid rgba(255,255,255,0.1)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 3
       }}
     >
-      <Typography variant="h6" gutterBottom>
-        🔍 Фильтр
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", color: "#10A37F" }}>
+        <FilterListIcon sx={{ mr: 1.5, fontSize: 28 }} />
+        <Typography variant="h6" component="div">
+          Фильтрация данных
+        </Typography>
+      </Box>
 
       {categoricalColumns.map((column) => (
-        <FormControl fullWidth key={column} sx={{ mb: 2 }}>
-          <InputLabel>{column}</InputLabel>
+        <FormControl
+          fullWidth
+          variant="outlined"
+          key={column}
+          sx={{
+            // Отступ снизу под каждый селект
+            mb: 1,
+
+            // Настраиваем стили для "outlined"
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "8px",
+              bgcolor: "rgba(255,255,255,0.05)",
+
+              // Цвет рамки по умолчанию
+              "& fieldset": {
+                borderColor: "rgba(255,255,255,0.1)"
+              },
+              // Цвет рамки при ховере
+              "&:hover fieldset": {
+                borderColor: "rgba(16,163,127,0.5)"
+              },
+              // Цвет рамки, когда селект в фокусе
+              "&.Mui-focused fieldset": {
+                borderColor: "#10A37F"
+              }
+            }
+          }}
+        >
+          {/* Передаем label без принудительного transform */}
+          <InputLabel
+            sx={{
+              color: "rgba(255,255,255,0.7)!important"
+            }}
+          >
+            {column}
+          </InputLabel>
+
           <Select
+            label={column}
             value={filters[column] || "Все"}
             onChange={(e) => handleFilterChange(column, e.target.value)}
-            label={column}
             MenuProps={{
               PaperProps: {
                 sx: {
-                  maxHeight: 200,
-                  overflowY: "auto",
-                  "&::-webkit-scrollbar": { width: "8px" },
-                  "&::-webkit-scrollbar-track": {
-                    background: "#f1f1f1",
-                    borderRadius: "4px",
-                  },
-                  "&::-webkit-scrollbar-thumb": {
-                    backgroundColor: "#10A37F",
-                    borderRadius: "4px",
-                  },
-                  "&::-webkit-scrollbar-thumb:hover": {
-                    backgroundColor: "#0D8F70",
-                  },
-                },
-              },
+                  bgcolor: "#1E1E1E",
+                  "& .MuiMenuItem-root": {
+                    "&.Mui-selected": {
+                      bgcolor: "rgba(16,163,127,0.2)"
+                    },
+                    "&:hover": {
+                      bgcolor: "rgba(16,163,127,0.1)"
+                    }
+                  }
+                }
+              }
             }}
           >
-            <MenuItem value="Все">Все</MenuItem>
+            <MenuItem value="Все" sx={{ color: "#10A37F" }}>
+              Все
+            </MenuItem>
             {[...new Set(originalData.map((row) => row[column]))].map((value) => (
-              <MenuItem key={value} value={value}>
+              <MenuItem key={value} value={value} sx={{ color: "rgba(255,255,255,0.8)" }}>
                 {value}
               </MenuItem>
             ))}
@@ -68,8 +118,25 @@ const FilterPanel = ({ originalData, columns, filters, updateFilters }) => {
         </FormControl>
       ))}
 
-      <Button fullWidth variant="contained" color="success" onClick={resetFilters}>
-        ♻️ Сбросить фильтры
+      <Divider sx={{ borderColor: "rgba(255,255,255,0.1)" }} />
+
+      <Button
+        fullWidth
+        variant="contained"
+        color="success"
+        onClick={resetFilters}
+        startIcon={<RotateLeftIcon />}
+        sx={{
+          borderRadius: "12px",
+          py: 1.5,
+          fontSize: "1rem",
+          bgcolor: "rgba(16,163,127,0.7)",
+          "&:hover": {
+            bgcolor: "rgba(16,163,127,0.9)"
+          }
+        }}
+      >
+        Сбросить фильтры
       </Button>
     </Box>
   );

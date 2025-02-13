@@ -1,823 +1,1050 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
+  IconButton,
   Typography,
-  CircularProgress,
   Paper,
   Grid,
+  Slider,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Slider,
-  Chip,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Tooltip,
-  IconButton,
-  Switch,
-  Fade,
+  CircularProgress,
   Tabs,
   Tab,
-} from '@mui/material';
-import { HelpOutline as HelpOutlineIcon } from '@mui/icons-material';
-import { useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { Line } from 'react-chartjs-2';
-import { saveAs } from 'file-saver';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+  Checkbox,
+  FormControlLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  RadioGroup,
+  Radio,
+  Slide
+} from "@mui/material";
+import {
+  ArrowBack as ArrowBackIcon,
+  Settings as SettingsIcon,
+  Close as CloseIcon,
+  Check as CheckIcon
+} from "@mui/icons-material";
+import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
+import { Line } from "react-chartjs-2";
+import { saveAs } from "file-saver";
+import * as XLSX from "xlsx";
 
-// Цвет для акцентов
-const accentColor = "#10A37F";
+// =========== 1) МЕТРИКИ НА СТАНДАРТИЗОВАННЫХ ДАННЫХ ===========
+function computeMetricsOnStandardized(dataArray) {
+  const rowsWithFact = dataArray.filter((d) => d.y_fact !== null && d.y_fact !== undefined);
+  if (!rowsWithFact.length) return null;
 
-/**
- * Вспомогательная функция для расчёта базовых метрик (MAE, RMSE, MAPE)
- * по массиву данных { ds, y_fact, y_forecast, ... }.
- */
-function computeMetrics(dataArray) {
-  if (!dataArray || dataArray.length === 0) return null;
-  let sumAbsErr = 0;
-  let sumSqErr = 0;
-  let count = 0;
-  dataArray.forEach((item) => {
-    if (item.y_fact !== null && item.y_fact !== undefined) {
-      sumAbsErr += Math.abs(item.y_fact - item.y_forecast);
-      sumSqErr += (item.y_fact - item.y_forecast) ** 2;
-      count++;
+  const facts = rowsWithFact.map((d) => d.y_fact);
+  const preds = rowsWithFact.map((d) => d.y_forecast);
+  const combined = [...facts, ...preds];
+  const mean = combined.reduce((acc, v) => acc + v, 0) / combined.length;
+  const variance = combined.reduce((acc, v) => acc + (v - mean) ** 2, 0) / combined.length;
+  const std = Math.sqrt(variance);
+  if (std === 0) {
+    return { mae: 0, rmse: 0, mape: 0 };
+  }
+
+  const factsScaled = facts.map((f) => (f - mean) / std);
+  const predsScaled = preds.map((p) => (p - mean) / std);
+
+  let sumAbs = 0,
+    sumSq = 0,
+    sumPct = 0,
+    countPct = 0;
+  for (let i = 0; i < factsScaled.length; i++) {
+    const err = factsScaled[i] - predsScaled[i];
+    sumAbs += Math.abs(err);
+    sumSq += err * err;
+    if (factsScaled[i] !== 0) {
+      sumPct += Math.abs(err / factsScaled[i]);
+      countPct++;
     }
-  });
-  if (count === 0) return null; // нет фактических значений
-  const mae = sumAbsErr / count;
-  const rmse = Math.sqrt(sumSqErr / count);
-  // MAPE
-  let sumPecent = 0;
-  let countMape = 0;
-  dataArray.forEach((item) => {
-    if (item.y_fact && item.y_fact !== 0) {
-      sumPecent += Math.abs(item.y_fact - item.y_forecast) / Math.abs(item.y_fact);
-      countMape++;
-    }
-  });
-  const mape = countMape > 0 ? (sumPecent / countMape) * 100 : null;
+  }
+
+  const mae = sumAbs / factsScaled.length;
+  const rmse = Math.sqrt(sumSq / factsScaled.length);
+  const mape = countPct > 0 ? (sumPct / countPct) * 100 : null;
   return { mae, rmse, mape };
 }
 
-/**
- * Функция для генерации данных для Chart.js
- * @param {Array} dataArray - массив объектов [{ds, y_fact, y_forecast, yhat_lower, yhat_upper, model_name}, ...]
- * @param {string} labelFact - название легенды для факта
- * @param {string} labelForecast - название легенды для прогноза
- */
-function makeChartData(dataArray, labelFact = 'Факт', labelForecast = 'Прогноз') {
+// =========== 2) График для ОДНОЙ МОДЕЛИ ===========
+function makeSingleModelChartData(dataArray, modelColor) {
+  // Факт => #FFD700 (золотой), прогноз => modelColor
   return {
-    labels: dataArray.map(d => d.ds),
+    labels: dataArray.map((d) => d.ds),
     datasets: [
       {
-        label: labelFact,
-        data: dataArray.map(d => d.y_fact), // могут быть null
-        fill: false,
-        backgroundColor: "#FF6384",
-        borderColor: "#FF6384",
-        borderWidth: 2,
-        pointRadius: 3,
-        pointHoverRadius: 4,
+        label: "Факт",
+        data: dataArray.map((d) => d.y_fact),
+        borderColor: "#FFD700",
+        backgroundColor: "#FFD700",
+        borderWidth: 1,
+        pointRadius: 2,
+        fill: false
       },
       {
-        label: labelForecast,
-        data: dataArray.map(d => d.y_forecast),
-        fill: false,
-        backgroundColor: accentColor,
-        borderColor: accentColor,
-        borderWidth: 2,
-        pointRadius: 3,
-        pointHoverRadius: 4,
+        label: "Прогноз",
+        data: dataArray.map((d) => d.y_forecast),
+        borderColor: modelColor,
+        backgroundColor: modelColor,
+        borderWidth: 1,
+        pointRadius: 2,
+        fill: false
       },
       {
-        label: 'Нижняя граница',
-        data: dataArray.map(d => d.yhat_lower),
-        fill: '-1',
-        backgroundColor: "rgba(16, 163, 127, 0.3)",
-        borderColor: "rgba(16, 163, 127, 0.3)",
+        label: "Нижняя",
+        data: dataArray.map((d) => d.yhat_lower),
+        fill: "-1",
+        backgroundColor: `${modelColor}33`,
+        borderColor: `${modelColor}33`,
         borderDash: [5, 5],
         borderWidth: 1,
-        pointRadius: 0,
+        pointRadius: 0
       },
       {
-        label: 'Верхняя граница',
-        data: dataArray.map(d => d.yhat_upper),
-        fill: '-1',
-        backgroundColor: "rgba(16, 163, 127, 0.3)",
-        borderColor: "rgba(16, 163, 127, 0.3)",
+        label: "Верхняя",
+        data: dataArray.map((d) => d.yhat_upper),
+        fill: "-1",
+        backgroundColor: `${modelColor}33`,
+        borderColor: `${modelColor}33`,
         borderDash: [5, 5],
         borderWidth: 1,
-        pointRadius: 0,
-      },
-    ],
+        pointRadius: 0
+      }
+    ]
   };
 }
 
-const ForecastPage = () => {
-  const location = useLocation();
+// =========== 3) График (All Models) ===========
+function makeCombinedChartData(modelsArray, modelColorMap) {
+  // modelsArray => [{ modelName, segment: [...данных] }, ...]
+  const allDates = new Set();
+  modelsArray.forEach((m) => {
+    m.segment.forEach((row) => allDates.add(row.ds));
+  });
+  const labels = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
+
+  const datasets = [];
+  modelsArray.forEach((m) => {
+    const color = modelColorMap[m.modelName] || "#36A2EB";
+    const mapData = new Map();
+    m.segment.forEach((row) => {
+      mapData.set(row.ds, { fact: row.y_fact, forecast: row.y_forecast });
+    });
+
+    // fact
+    datasets.push({
+      label: `Факт (${m.modelName})`,
+      data: labels.map((ds) => {
+        const item = mapData.get(ds);
+        return item ? item.fact : null;
+      }),
+      borderColor: "#FFD700",
+      backgroundColor: "#FFD700",
+      borderWidth: 1,
+      pointRadius: 2,
+      fill: false
+    });
+
+    // forecast
+    datasets.push({
+      label: `Прогноз (${m.modelName})`,
+      data: labels.map((ds) => {
+        const item = mapData.get(ds);
+        return item ? item.forecast : null;
+      }),
+      borderColor: color,
+      backgroundColor: "transparent",
+      borderDash: [5, 5],
+      borderWidth: 1,
+      pointRadius: 2,
+      fill: false
+    });
+  });
+
+  return { labels, datasets };
+}
+
+// =========== 4) Компонент "ProphetBlock" в меню справа ===========
+function ProphetBlock({
+  active,
+  setActive,
+  prophetParams,
+  setProphetParams
+}) {
+  const [localSeasonalityMode, setLocalSeasonalityMode] = useState(prophetParams.seasonality_mode || "additive");
+
+  const handleApply = () => {
+    setProphetParams((prev) => ({
+      ...prev,
+      seasonality_mode: localSeasonalityMode
+    }));
+    setActive(true);
+  };
+
+  const handleCancel = () => {
+    setActive(false);
+  };
+
+  // Активна => зелёная рамка, иначе красная
+  const borderColor = active ? "#10A37F" : "#FF4444";
+
+  return (
+    <Paper
+      sx={{
+        p: 2,
+        mb: 2,
+        border: `2px solid ${borderColor}`,
+        borderRadius: 2,
+        transition: "border-color 0.2s"
+      }}
+    >
+      <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
+        Prophet
+      </Typography>
+      <Box sx={{ mt: 1 }}>
+        <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+          <InputLabel>Seasonality Mode</InputLabel>
+          <Select
+            value={localSeasonalityMode}
+            label="Seasonality Mode"
+            onChange={(e) => setLocalSeasonalityMode(e.target.value)}
+            sx={{ backgroundColor: "#2c2c2c", color: "#fff" }}
+          >
+            <MenuItem value="additive">Additive</MenuItem>
+            <MenuItem value="multiplicative">Multiplicative</MenuItem>
+          </Select>
+        </FormControl>
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+          {active ? (
+            <Button
+              variant="outlined"
+              startIcon={<CloseIcon />}
+              sx={{
+                borderColor: "#FF4444",
+                color: "#FF4444",
+                "&:hover": {
+                  borderColor: "#FF4444",
+                  backgroundColor: "#ff44441a"
+                }
+              }}
+              onClick={handleCancel}
+            >
+              Отключить
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              startIcon={<CheckIcon />}
+              sx={{
+                borderColor: "#10A37F",
+                color: "#10A37F",
+                "&:hover": {
+                  borderColor: "#10A37F",
+                  backgroundColor: "#10A37F1a"
+                }
+              }}
+              onClick={handleApply}
+            >
+              Активировать
+            </Button>
+          )}
+        </Box>
+      </Box>
+      <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444" }}>
+        {active ? "Активна" : "Выключена"}
+      </Typography>
+    </Paper>
+  );
+}
+
+// =========== 5) Основной компонент ForecastPage ===========
+export default function ForecastPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Получаем предобработанные данные и выбранные колонки из state/SessionStorage
-  const stateModifiedData = location.state?.modifiedData;
-  const stateSelectedColumns = location.state?.selectedColumns;
-  const storedModifiedData = sessionStorage.getItem('modifiedData')
-    ? JSON.parse(sessionStorage.getItem('modifiedData'))
-    : null;
-  const storedSelectedColumns = sessionStorage.getItem('selectedColumns')
-    ? JSON.parse(sessionStorage.getItem('selectedColumns'))
+  // ====== A) Читаем сохранённое из sessionStorage
+  const storedState = sessionStorage.getItem("forecastPageState")
+    ? JSON.parse(sessionStorage.getItem("forecastPageState"))
     : null;
 
-  const modifiedData = stateModifiedData || storedModifiedData;
-  const selectedColumns = stateSelectedColumns || storedSelectedColumns;
+  // Параметры, пришедшие через location.state
+  const stateModifiedData = location.state?.modifiedData || [];
+  const stateSelectedColumns = location.state?.selectedColumns || [];
 
-  // Если данных нет или пользователь пришёл напрямую, возвращаемся назад
-  useEffect(() => {
-    if (!modifiedData || modifiedData.length === 0 || !selectedColumns || selectedColumns.length < 2) {
-      navigate(-1);
-    }
-  }, [modifiedData, selectedColumns, navigate]);
+  const storedModifiedData = sessionStorage.getItem("modifiedData")
+    ? JSON.parse(sessionStorage.getItem("modifiedData"))
+    : [];
+  const storedSelectedColumns = sessionStorage.getItem("selectedColumns")
+    ? JSON.parse(sessionStorage.getItem("selectedColumns"))
+    : [];
 
-  // Сохраняем в sessionStorage при первом заходе (чтобы не потерять при перезагрузке)
+  // Изначальные данные
+  const initialModifiedData = stateModifiedData.length
+    ? stateModifiedData
+    : storedModifiedData;
+  const initialSelectedColumns = stateSelectedColumns.length
+    ? stateSelectedColumns
+    : storedSelectedColumns;
+
+  // Параметры прогноза
+  const [horizon, setHorizon] = useState(storedState?.horizon ?? 10);
+  const [historySize, setHistorySize] = useState(storedState?.historySize ?? 5);
+  const [freq, setFreq] = useState(storedState?.freq || "D");
+  const [confidenceLevel, setConfidenceLevel] = useState(storedState?.confidenceLevel ?? 95);
+
+  // Активность моделей
+  const [prophetActive, setProphetActive] = useState(storedState?.prophetActive ?? false);
+  const [prophetParams, setProphetParams] = useState(storedState?.prophetParams || { seasonality_mode: "additive" });
+  const [arimaActive, setArimaActive] = useState(storedState?.arimaActive ?? false);
+
+  // modelColorMap
+  const modelColorMap = {
+    Prophet: "#36A2EB",
+    Arima: "#9966FF"
+  };
+
+  // Результаты
+  const [forecastResults, setForecastResults] = useState(storedState?.forecastResults || []);
+  const [loading, setLoading] = useState(false);
+
+  // Вкладка "общий" (All/Train/Test/Horizon/All+Horizon)
+  const [commonTab, setCommonTab] = useState(storedState?.commonTab || 0);
+
+  // Система вкладок (модели)
+  const [modelTab, setModelTab] = useState(storedState?.modelTab || 0);
+  const [modelSubTabs, setModelSubTabs] = useState(storedState?.modelSubTabs || {});
+
+  // Меню справа
+  const [modelsOpen, setModelsOpen] = useState(storedState?.modelsOpen ?? false);
+
+  // dtName, yName
+  const dtName = initialSelectedColumns[0] || "ds";
+  const yName = initialSelectedColumns[1] || "y";
+
+  // CSV/XLSX
+  const [csvDialogOpen, setCsvDialogOpen] = useState(false);
+  const [csvSelectedCols, setCsvSelectedCols] = useState(storedState?.csvSelectedCols || []);
+  const [allPossibleCols, setAllPossibleCols] = useState([]);
+  const [fileType, setFileType] = useState(storedState?.fileType || "csv");
+  const [previewData, setPreviewData] = useState([]);
+
+  // ====== B) Сохраняем состояние в sessionStorage
   useEffect(() => {
-    if (stateModifiedData) {
-      sessionStorage.setItem('modifiedData', JSON.stringify(stateModifiedData));
+    sessionStorage.setItem(
+      "forecastPageState",
+      JSON.stringify({
+        horizon,
+        historySize,
+        freq,
+        confidenceLevel,
+        prophetActive,
+        prophetParams,
+        arimaActive,
+        forecastResults,
+        commonTab,
+        modelTab,
+        modelSubTabs,
+        modelsOpen,
+        csvSelectedCols,
+        fileType
+      })
+    );
+  }, [
+    horizon,
+    historySize,
+    freq,
+    confidenceLevel,
+    prophetActive,
+    prophetParams,
+    arimaActive,
+    forecastResults,
+    commonTab,
+    modelTab,
+    modelSubTabs,
+    modelsOpen,
+    csvSelectedCols,
+    fileType
+  ]);
+
+  // Сохраняем сами данные, если пришли из location
+  useEffect(() => {
+    if (stateModifiedData.length) {
+      sessionStorage.setItem("modifiedData", JSON.stringify(stateModifiedData));
     }
-    if (stateSelectedColumns) {
-      sessionStorage.setItem('selectedColumns', JSON.stringify(stateSelectedColumns));
+    if (stateSelectedColumns.length) {
+      sessionStorage.setItem("selectedColumns", JSON.stringify(stateSelectedColumns));
     }
   }, [stateModifiedData, stateSelectedColumns]);
 
-  // Имена столбцов
-  const dtName = selectedColumns ? selectedColumns[0] : 'ds';
-  const yName = selectedColumns ? selectedColumns[1] : 'y';
-
-  // Параметры модели (initial values загружаются из sessionStorage, если есть)
-  const [model, setModel] = useState(() => sessionStorage.getItem('forecast_model') || 'Prophet');
-  const [horizon, setHorizon] = useState(() => Number(sessionStorage.getItem('forecast_horizon')) || 10);
-  const [historyParam, setHistoryParam] = useState(() => Number(sessionStorage.getItem('forecast_history')) || 0);
-  const [freq, setFreq] = useState(() => sessionStorage.getItem('forecast_freq') || 'D');
-  const [confidenceLevel, setConfidenceLevel] = useState(95);
-
-  // При изменении – сохраняем в sessionStorage
+  // Если нет данных, выходим
   useEffect(() => {
-    sessionStorage.setItem('forecast_model', model);
-    sessionStorage.setItem('forecast_horizon', horizon);
-    sessionStorage.setItem('forecast_history', historyParam);
-    sessionStorage.setItem('forecast_freq', freq);
-  }, [model, horizon, historyParam, freq]);
+    if (!initialModifiedData || !initialSelectedColumns || initialModifiedData.length === 0 || initialSelectedColumns.length < 2) {
+      navigate(-1);
+    }
+  }, [initialModifiedData, initialSelectedColumns, navigate]);
 
-  // Состояние для полученных данных (4 набора)
-  const [forecastAll, setForecastAll] = useState([]);
-  const [forecastTrain, setForecastTrain] = useState([]);
-  const [forecastTest, setForecastTest] = useState([]);
-  const [forecastHorizon, setForecastHorizon] = useState([]);
-
-  // Загрузка
-  const [loading, setLoading] = useState(false);
-
-  // Управление вкладками для графиков / таблиц
-  const [viewTab, setViewTab] = useState(0); // 0 - Графики, 1 - Таблицы
-  const handleViewTabChange = (event, newValue) => {
-    setViewTab(newValue);
-  };
-
-  // Дополнительные вкладки внутри графиков (All / Train / Test / Future)
-  const [graphTab, setGraphTab] = useState(0);
-  const handleGraphTabChange = (event, newValue) => {
-    setGraphTab(newValue);
-  };
-
-  // Дополнительные вкладки внутри таблиц (All / Train / Test / Future)
-  const [tableTab, setTableTab] = useState(0);
-  const handleTableTabChange = (event, newValue) => {
-    setTableTab(newValue);
-  };
-
-  // Функция возврата на предыдущую страницу
-  const handleBack = () => {
-    navigate(-1);
-  };
-
-  // Запрос на бэкенд
-  const handleForecast = async () => {
+  // ====== C) Построить прогноз
+  const handleBuildForecast = async () => {
     setLoading(true);
     try {
-      const payload = {
-        model,
-        horizon: Number(horizon),
-        // "history" трактуем как test_size
-        history: Number(historyParam),
-        dt_name: dtName,
-        y_name: yName,
-        freq,
-        confidence_level: confidenceLevel,
-        data: modifiedData,
-      };
-      const response = await axios.post('http://localhost:8000/api/forecast', payload, { withCredentials: true });
-      const {
-        forecast_all,
-        forecast_train,
-        forecast_test,
-        forecast_horizon
-      } = response.data;
+      const activeModels = [];
+      if (prophetActive) {
+        activeModels.push({ model: "Prophet", uniqueParams: prophetParams });
+      }
+      if (arimaActive) {
+        activeModels.push({ model: "Arima", uniqueParams: {} });
+      }
 
-      setForecastAll(forecast_all || []);
-      setForecastTrain(forecast_train || []);
-      setForecastTest(forecast_test || []);
-      setForecastHorizon(forecast_horizon || []);
-    } catch (error) {
-      console.error("Ошибка прогноза:", error);
+      const newResults = [];
+      for (let m of activeModels) {
+        const payload = {
+          model: m.model,
+          horizon,
+          history: historySize,
+          dt_name: dtName,
+          y_name: yName,
+          freq,
+          confidence_level: confidenceLevel,
+          data: initialModifiedData
+        };
+        const resp = await axios.post("http://localhost:8000/api/forecast", payload);
+        const { forecast_all, forecast_train, forecast_test, forecast_horizon } = resp.data;
+        newResults.push({
+          modelName: m.model,
+          forecastAll: forecast_all || [],
+          forecastTrain: forecast_train || [],
+          forecastTest: forecast_test || [],
+          forecastHorizon: forecast_horizon || []
+        });
+      }
+      setForecastResults(newResults);
+    } catch (err) {
+      console.error("Ошибка прогноза:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Скачивание CSV будущего прогноза
-  const handleDownloadCSV = () => {
-    if (forecastHorizon.length === 0) return;
-    const headers = "ds,y_forecast,yhat_lower,yhat_upper,model_name\n";
-    const rows = forecastHorizon.map(row =>
-      `${row.ds},${row.y_forecast},${row.yhat_lower},${row.yhat_upper},${row.model_name}`
-    ).join('\n');
-    const csvContent = headers + rows;
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    saveAs(blob, 'forecast_horizon.csv');
+  // ====== D) Формирование списка столбцов
+  useEffect(() => {
+    const colSet = new Set(["ds", "y_fact"]);
+    forecastResults.forEach((m) => {
+      const arr = [
+        ...m.forecastAll,
+        ...m.forecastTrain,
+        ...m.forecastTest,
+        ...m.forecastHorizon
+      ];
+      arr.forEach((row) => {
+        if (row.y_forecast !== undefined) colSet.add(`${m.modelName}_y_forecast`);
+        if (row.yhat_lower !== undefined) colSet.add(`${m.modelName}_yhat_lower`);
+        if (row.yhat_upper !== undefined) colSet.add(`${m.modelName}_yhat_upper`);
+      });
+    });
+    setAllPossibleCols(Array.from(colSet));
+  }, [forecastResults]);
+
+  // ====== E) Построение общего массива для превью / скачивания ======
+  const buildMergedRows = () => {
+    const bigMap = new Map();
+    forecastResults.forEach((m) => {
+      const combined = [
+        ...m.forecastAll,
+        ...m.forecastTrain,
+        ...m.forecastTest,
+        ...m.forecastHorizon
+      ];
+      combined.forEach((row) => {
+        if (!bigMap.has(row.ds)) {
+          bigMap.set(row.ds, { ds: row.ds, y_fact: null });
+        }
+        const val = bigMap.get(row.ds);
+        if (row.y_fact !== undefined && row.y_fact !== null) {
+          val.y_fact = row.y_fact;
+        }
+        if (row.y_forecast !== undefined) {
+          val[`${m.modelName}_y_forecast`] = row.y_forecast;
+        }
+        if (row.yhat_lower !== undefined) {
+          val[`${m.modelName}_yhat_lower`] = row.yhat_lower;
+        }
+        if (row.yhat_upper !== undefined) {
+          val[`${m.modelName}_yhat_upper`] = row.yhat_upper;
+        }
+      });
+    });
+
+    const allDs = Array.from(bigMap.keys()).sort((a, b) => new Date(a) - new Date(b));
+    const mergedRows = allDs.map((ds) => bigMap.get(ds));
+    return mergedRows;
   };
 
-  // Категориальные столбцы (для отображения)
-  const categoricalColumns = modifiedData && modifiedData.length > 0
-    ? Object.keys(modifiedData[0]).filter(col =>
-        typeof modifiedData[0][col] === 'string' && col !== dtName && col !== yName
-      )
-    : [];
+  // ====== F) Диалог CSV/XLSX ======
+  const handleOpenCsvDialog = () => {
+    // Формируем превью (5 строк)
+    const merged = buildMergedRows();
+    setPreviewData(merged.slice(0, 5));
+    setCsvDialogOpen(true);
+  };
+  const handleCloseCsvDialog = () => setCsvDialogOpen(false);
 
-  // Общие опции для Chart.js
-  const commonChartOptions = {
+  const handleDownloadSelectedCols = () => {
+    const mergedRows = buildMergedRows();
+    const finalCols = csvSelectedCols.length ? csvSelectedCols : allPossibleCols;
+    const finalData = mergedRows.map((r) => {
+      const obj = {};
+      finalCols.forEach((col) => {
+        obj[col] = r[col] !== undefined ? r[col] : "";
+      });
+      return obj;
+    });
+
+    if (fileType === "csv") {
+      // CSV
+      const header = finalCols.join(",");
+      const rows = finalData.map((row) =>
+        finalCols.map((c) => (row[c] !== undefined ? row[c] : "")).join(",")
+      );
+      const csvContent = [header, ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      saveAs(blob, "forecast.csv");
+    } else {
+      // XLSX
+      const ws = XLSX.utils.json_to_sheet(finalData, { header: finalCols });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "ForecastData");
+      XLSX.writeFile(wb, "forecast.xlsx");
+    }
+
+    setCsvDialogOpen(false);
+  };
+
+  // ====== G) Обработка вкладок
+  const handleCommonTabChange = (e, val) => setCommonTab(val);
+  const handleModelTabChange = (e, val) => setModelTab(val);
+  const handleModelSubTabChange = (modelIndex, val) => {
+    setModelSubTabs((prev) => ({ ...prev, [modelIndex]: val }));
+  };
+
+  // ====== Кнопка назад ======
+  const handleBack = () => {
+    navigate(-1);
+  };
+
+  // ====== Меню справа (Slide) ======
+  const panelWidth = 320;
+  const toggleModels = () => setModelsOpen((p) => !p);
+
+  // ====== Общие опции для графиков ======
+  const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { labels: { color: "#fff" } },
-      tooltip: { mode: 'index', intersect: false },
+      legend: { labels: { color: "#fff" } }
     },
     scales: {
       x: {
         ticks: {
           color: "#fff",
-          maxRotation: 45,
-          minRotation: 45,
-          autoSkip: true,
-          maxTicksLimit: 10,
+          callback: function (value) {
+            const label = this.getLabelForValue(value);
+            return label ? label.slice(0, 10) : "";
+          }
         },
         grid: { color: "rgba(255,255,255,0.1)" }
       },
       y: {
         ticks: { color: "#fff" },
         grid: { color: "rgba(255,255,255,0.1)" }
-      },
-    },
+      }
+    }
   };
 
-  // Данные для графиков
-  const chartDataAll = makeChartData(forecastAll, "Факт(All)", "Прогноз(All)");
-  const chartDataTrain = makeChartData(forecastTrain, "Факт(Train)", "Прогноз(Train)");
-  const chartDataTest = makeChartData(forecastTest, "Факт(Test)", "Прогноз(Test)");
-  const chartDataHorizon = (() => {
-    // Для будущего нет y_fact, можно либо задать null, либо вообще убрать факт
-    const labels = forecastHorizon.map(d => d.ds);
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Прогноз(Horizon)',
-          data: forecastHorizon.map(d => d.y_forecast),
-          borderColor: accentColor,
-          backgroundColor: accentColor,
-          pointRadius: 3,
-          pointHoverRadius: 4,
-          borderWidth: 2,
-          fill: false,
-        },
-        {
-          label: 'Нижняя граница',
-          data: forecastHorizon.map(d => d.yhat_lower),
-          fill: '-1',
-          backgroundColor: "rgba(16, 163, 127, 0.3)",
-          borderColor: "rgba(16, 163, 127, 0.3)",
-          borderDash: [5, 5],
-          borderWidth: 1,
-          pointRadius: 0,
-        },
-        {
-          label: 'Верхняя граница',
-          data: forecastHorizon.map(d => d.yhat_upper),
-          fill: '-1',
-          backgroundColor: "rgba(16, 163, 127, 0.3)",
-          borderColor: "rgba(16, 163, 127, 0.3)",
-          borderDash: [5, 5],
-          borderWidth: 1,
-          pointRadius: 0,
-        },
-      ],
-    };
-  })();
-
-  // Метрики
-  const metricsAll = computeMetrics(forecastAll);
-  const metricsTrain = computeMetrics(forecastTrain);
-  const metricsTest = computeMetrics(forecastTest);
-
   return (
-    <Box
-      sx={{
-        p: 3,
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #121212, #1e1e1e)",
-        color: "#fff",
-      }}
-    >
-      {/* Верхняя панель */}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+    <Box sx={{ position: "relative", bgcolor: "#1a1a1a", minHeight: "100vh" }}>
+      {/* ШАПКА */}
+      <Box sx={{ display: "flex", alignItems: "center", p: 2, bgcolor: "#121212", color: "#fff" }}>
         <Button
           onClick={handleBack}
-          startIcon={<ArrowBackIcon sx={{ color: "#fff" }} />}
+          startIcon={<ArrowBackIcon />}
           sx={{ color: "#fff", mr: 2 }}
         >
           Назад
         </Button>
         <Typography variant="h5" sx={{ flexGrow: 1, textAlign: "center" }}>
-          Прогнозирование (Train / Test / Horizon)
+          Прогнозирование
         </Typography>
+        <IconButton
+          onClick={toggleModels}
+          sx={{
+            color: modelsOpen ? "#FF4444" : "#10A37F",
+            border: "1px solid",
+            borderColor: modelsOpen ? "#FF4444" : "#10A37F"
+          }}
+        >
+          {modelsOpen ? <CloseIcon /> : <SettingsIcon />}
+        </IconButton>
       </Box>
 
-      {/* Категориальные признаки */}
-      {categoricalColumns.length > 0 && (
-        <Fade in timeout={600}>
-          <Paper
-            sx={{
-              p: 2,
-              mb: 3,
-              background: "rgba(16, 163, 127, 0.15)",
-              borderRadius: "12px",
-              boxShadow: 3,
-            }}
-          >
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Категориальные переменные выборки:
+      {/* ОСНОВНОЙ КОНТЕЙНЕР: левая часть + панель справа */}
+      <Box
+        sx={{
+          display: "flex",
+          width: "100%",
+          height: "calc(100vh - 56px)",
+          bgcolor: "#121212"
+        }}
+      >
+        {/* ЛЕВАЯ ЧАСТЬ */}
+        <Box
+          sx={{
+            flexGrow: 1,
+            transition: "margin-right 0.3s",
+            marginRight: modelsOpen ? `${panelWidth + 16}px` : 0, // +16 для отступа
+            overflowY: "auto",
+
+            "&::-webkit-scrollbar": {
+              display: "none"
+            },
+            "-ms-overflow-style": "none", /* IE and Edge */
+            "scrollbar-width": "none"
+          }}
+        >
+          {/* ОБЩИЕ ПАРАМЕТРЫ */}
+          <Paper sx={{ m: 2, p: 3, borderRadius: 3, backgroundColor: "#2a2a2a" }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Общие параметры прогноза
             </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-              {categoricalColumns.map(col => (
-                <Chip
-                  key={col}
-                  label={col}
-                  sx={{ backgroundColor: accentColor, color: "#fff" }}
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography gutterBottom>Горизонт: {horizon}</Typography>
+                <Slider
+                  value={horizon}
+                  onChange={(e, val) => setHorizon(val)}
+                  min={0}
+                  max={50}
+                  step={1}
+                  valueLabelDisplay="auto"
+                  sx={{ color: "#10A37F" }}
                 />
-              ))}
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography gutterBottom>History (Test Size): {historySize}</Typography>
+                <Slider
+                  value={historySize}
+                  onChange={(e, val) => setHistorySize(val)}
+                  min={0}
+                  max={50}
+                  step={1}
+                  valueLabelDisplay="auto"
+                  sx={{ color: "#10A37F" }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Частота</InputLabel>
+                  <Select
+                    value={freq}
+                    label="Частота"
+                    onChange={(e) => setFreq(e.target.value)}
+                    sx={{ backgroundColor: "#2c2c2c", color: "#fff" }}
+                  >
+                    <MenuItem value="D">День</MenuItem>
+                    <MenuItem value="W-MON">Неделя (Пн)</MenuItem>
+                    <MenuItem value="M">Месяц</MenuItem>
+                    <MenuItem value="MS">Начало месяца</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography gutterBottom>Уровень доверия: {confidenceLevel}%</Typography>
+                <Slider
+                  value={confidenceLevel}
+                  onChange={(e, val) => setConfidenceLevel(val)}
+                  min={80}
+                  max={99}
+                  step={1}
+                  valueLabelDisplay="auto"
+                  sx={{ color: "#10A37F" }}
+                />
+              </Grid>
+            </Grid>
+            <Box sx={{ mt: 3, textAlign: "center" }}>
+              <Button
+                variant="contained"
+                onClick={handleBuildForecast}
+                disabled={loading}
+                sx={{ borderRadius: "20px", backgroundColor: "#10A37F" }}
+              >
+                {loading ? <CircularProgress size={24} /> : "Построить прогноз"}
+              </Button>
             </Box>
           </Paper>
-        </Fade>
-      )}
 
-      {/* Информация о выбранных столбцах */}
-      <Paper
-        sx={{
-          p: 2,
-          mb: 3,
-          backgroundColor: "#18181a",
-          borderRadius: "12px",
-          boxShadow: 3,
-        }}
-      >
-        <Typography variant="subtitle1">
-          Столбец с датой: <strong>{dtName}</strong>
-        </Typography>
-        <Typography variant="subtitle1">
-          Целевая переменная: <strong>{yName}</strong>
-        </Typography>
-      </Paper>
-
-      {/* Параметры прогноза */}
-      <Paper
-        sx={{
-          p: 3,
-          mb: 3,
-          background: "linear-gradient(135deg, rgba(16,163,127,0.15), rgba(16,163,127,0.05))",
-          borderRadius: "12px",
-          boxShadow: 3,
-        }}
-      >
-        <Typography variant="h6" sx={{ mb: 2 }}>Параметры прогноза</Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={3}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Модель</InputLabel>
-              <Select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                label="Модель"
-                sx={{ backgroundColor: "#2c2c2c", color: "#fff" }}
+          {/* ЕСЛИ ЕСТЬ РЕЗУЛЬТАТЫ, ПОКАЗЫВАЕМ ОБЩИЙ ГРАФИК */}
+          {forecastResults.length > 0 && (
+            <Paper sx={{ m: 2, p: 2, borderRadius: 3, backgroundColor: "#2a2a2a" }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Общий график (все модели)
+              </Typography>
+              {/* Вкладки: 0=All, 1=Train, 2=Test, 3=Horizon, 4=All+Horizon */}
+              <Tabs
+                value={commonTab}
+                onChange={handleCommonTabChange}
+                textColor="inherit"
+                indicatorColor="primary"
+                sx={{ mb: 2 }}
               >
-                <MenuItem value="Prophet">Prophet</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+                <Tab label="All" />
+                <Tab label="Train" />
+                <Tab label="Test" />
+                <Tab label="Horizon" />
+                <Tab label="All+Horizon" />
+              </Tabs>
+              <Box sx={{ height: 500 }}>
+                {(() => {
+                  const subset = forecastResults.map((mRes) => {
+                    let segment = [];
+                    if (commonTab === 0) {
+                      segment = mRes.forecastAll;
+                    } else if (commonTab === 1) {
+                      segment = mRes.forecastTrain;
+                    } else if (commonTab === 2) {
+                      segment = mRes.forecastTest;
+                    } else if (commonTab === 3) {
+                      segment = mRes.forecastHorizon;
+                    } else if (commonTab === 4) {
+                      // All + Horizon = объединяем
+                      segment = [...mRes.forecastAll, ...mRes.forecastHorizon];
+                    }
+                    return { modelName: mRes.modelName, segment };
+                  });
+                  const data = makeCombinedChartData(subset, modelColorMap);
+                  return <Line data={data} options={chartOptions} />;
+                })()}
+              </Box>
+              <Box sx={{ textAlign: "center", mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={handleOpenCsvDialog}
+                  sx={{ borderRadius: "20px", backgroundColor: "#10A37F" }}
+                >
+                  Скачать (All Models)
+                </Button>
+              </Box>
+            </Paper>
+          )}
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Typography gutterBottom>Горизонт (периодов): {horizon}</Typography>
-            <Slider
-              value={horizon}
-              onChange={(e, newVal) => setHorizon(newVal)}
-              min={0}
-              max={50}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: accentColor }}
-            />
-          </Grid>
+          {/* БЛОК: ВКЛАДКИ ПО МОДЕЛЯМ (система: tabs => модели, внутри subTabs => all/train/test/horizon) */}
+          {forecastResults.length > 0 && (
+            <Paper sx={{ m: 2, p: 2, borderRadius: 3, backgroundColor: "#2a2a2a" }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Отдельные модели
+              </Typography>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography gutterBottom>История (test size): {historyParam}</Typography>
-              <Tooltip title="Сколько последних точек выделяется для тестовой выборки">
-                <IconButton size="small">
-                  <HelpOutlineIcon fontSize="small" sx={{ color: "#fff" }} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-            <Slider
-              value={historyParam}
-              onChange={(e, newVal) => setHistoryParam(newVal)}
-              min={0}
-              max={50}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: accentColor }}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Частота</InputLabel>
-              <Select
-                value={freq}
-                onChange={(e) => setFreq(e.target.value)}
-                label="Частота"
-                sx={{ backgroundColor: "#2c2c2c", color: "#fff" }}
+              <Tabs
+                value={modelTab}
+                onChange={handleModelTabChange}
+                textColor="inherit"
+                indicatorColor="primary"
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{ mb: 2 }}
               >
-                <MenuItem value="D">День</MenuItem>
-                <MenuItem value="W-MON">Неделя (пн)</MenuItem>
-                <MenuItem value="M">Месяц</MenuItem>
-                <MenuItem value="MS">Начало месяца</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+                {forecastResults.map((mRes, idx) => (
+                  <Tab key={mRes.modelName} label={mRes.modelName} />
+                ))}
+              </Tabs>
 
-          <Grid item xs={12} sm={6} md={6}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography gutterBottom>Уровень доверия: {confidenceLevel}%</Typography>
-              <Tooltip title="Процент доверительного интервала при прогнозировании">
-                <IconButton size="small">
-                  <HelpOutlineIcon fontSize="small" sx={{ color: "#fff" }} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-            <Slider
-              value={confidenceLevel}
-              onChange={(e, newVal) => setConfidenceLevel(newVal)}
-              min={80}
-              max={99}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: accentColor }}
-            />
-          </Grid>
-        </Grid>
+              {forecastResults[modelTab] && (() => {
+                const curModel = forecastResults[modelTab];
+                const color = modelColorMap[curModel.modelName] || "#36A2EB";
+                const subTab = modelSubTabs[modelTab] || 0;
+                const handleSubTabChange = (e, val) => handleModelSubTabChange(modelTab, val);
 
-        {/* Кнопка "Выполнить прогноз" */}
-        <Box sx={{ mt: 3, textAlign: "center" }}>
-          <Button
-            variant="contained"
-            onClick={handleForecast}
-            disabled={loading}
-            sx={{ borderRadius: "20px", px: 3, backgroundColor: accentColor }}
-          >
-            {loading ? <CircularProgress size={24} /> : "Выполнить прогноз"}
-          </Button>
+                // Метрики
+                const metricsAll = computeMetricsOnStandardized(curModel.forecastAll);
+                const metricsTrain = computeMetricsOnStandardized(curModel.forecastTrain);
+                const metricsTest = computeMetricsOnStandardized(curModel.forecastTest);
+
+                // Графики
+                const chartAll = makeSingleModelChartData(curModel.forecastAll, color);
+                const chartTrain = makeSingleModelChartData(curModel.forecastTrain, color);
+                const chartTest = makeSingleModelChartData(curModel.forecastTest, color);
+                const chartHorizon = makeSingleModelChartData(curModel.forecastHorizon, color);
+
+                return (
+                  <Box>
+                    <Tabs
+                      value={subTab}
+                      onChange={handleSubTabChange}
+                      textColor="inherit"
+                      indicatorColor="primary"
+                      sx={{ mb: 2 }}
+                    >
+                      <Tab label="All" disabled={curModel.forecastAll.length === 0} />
+                      <Tab label="Train" disabled={curModel.forecastTrain.length === 0} />
+                      <Tab label="Test" disabled={curModel.forecastTest.length === 0} />
+                      <Tab label="Horizon" disabled={curModel.forecastHorizon.length === 0} />
+                    </Tabs>
+
+                    {subTab === 0 && (
+                      <Box sx={{ height: 400 }}>
+                        <Line data={chartAll} options={chartOptions} />
+                        {metricsAll && (
+                          <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+                            <Typography>MAE: {metricsAll.mae.toFixed(4)}</Typography>
+                            <Typography>RMSE: {metricsAll.rmse.toFixed(4)}</Typography>
+                            {metricsAll.mape && (
+                              <Typography>MAPE: {metricsAll.mape.toFixed(2)}%</Typography>
+                            )}
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+                    {subTab === 1 && (
+                      <Box sx={{ height: 400 }}>
+                        <Line data={chartTrain} options={chartOptions} />
+                        {metricsTrain && (
+                          <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+                            <Typography>MAE: {metricsTrain.mae.toFixed(4)}</Typography>
+                            <Typography>RMSE: {metricsTrain.rmse.toFixed(4)}</Typography>
+                            {metricsTrain.mape && (
+                              <Typography>MAPE: {metricsTrain.mape.toFixed(2)}%</Typography>
+                            )}
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+                    {subTab === 2 && (
+                      <Box sx={{ height: 400 }}>
+                        <Line data={chartTest} options={chartOptions} />
+                        {metricsTest && (
+                          <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
+                            <Typography>MAE: {metricsTest.mae.toFixed(4)}</Typography>
+                            <Typography>RMSE: {metricsTest.rmse.toFixed(4)}</Typography>
+                            {metricsTest.mape && (
+                              <Typography>MAPE: {metricsTest.mape.toFixed(2)}%</Typography>
+                            )}
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+                    {subTab === 3 && (
+                      <Box sx={{ height: 400 }}>
+                        <Line data={chartHorizon} options={chartOptions} />
+                        <Typography sx={{ mt: 2 }}>
+                          Прогноз будущего (факт отсутствует).
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })()}
+            </Paper>
+          )}
         </Box>
-      </Paper>
 
-      {/* Основные вкладки: Графики / Таблицы */}
-      {(forecastAll.length > 0 || forecastHorizon.length > 0) && (
-        <Paper sx={{ mb: 3, backgroundColor: "#1e1e1e", borderRadius: "12px", boxShadow: 3 }}>
-          <Tabs
-            value={viewTab}
-            onChange={handleViewTabChange}
-            textColor="inherit"
-            indicatorColor="primary"
-            variant="fullWidth"
+        {/* МЕНЮ СПРАВА (Slide) */}
+        <Slide direction="left" in={modelsOpen} mountOnEnter unmountOnExit>
+          <Box
+            sx={{
+              position: "absolute",
+              top: 90, // немного ниже шапки (56px)
+              right: 16, // небольшой отступ справа
+              width: `${panelWidth}px`,
+              height: "calc(100vh - 230px)",
+              bgcolor: "#2a2a2a",
+              borderRadius: 3,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+              p: 2,
+              overflowY: "auto",
+              // Кастомный скролл:
+              "&::-webkit-scrollbar": {
+                width: "6px"
+              },
+              "&::-webkit-scrollbar-track": {
+                backgroundColor: "transparent"
+              },
+              "&::-webkit-scrollbar-thumb": {
+                backgroundColor: "#666",
+                borderRadius: "3px"
+              },
+              "&::-webkit-scrollbar-thumb:hover": {
+                backgroundColor: "#aaa"
+              }
+            }}
           >
-            <Tab label="Графики" />
-            <Tab label="Таблицы" />
-          </Tabs>
+            <Typography variant="h6" sx={{ color: "#fff", mb: 2 }}>
+              Модели
+            </Typography>
 
-          {/* Вкладка "Графики" */}
-          {viewTab === 0 && (
-            <Box sx={{ p: 3 }}>
-              {/* Дополнительные вкладки: All / Train / Test / Horizon */}
-              <Tabs
-                value={graphTab}
-                onChange={handleGraphTabChange}
-                textColor="inherit"
-                indicatorColor="primary"
-                sx={{ mb: 3 }}
-                variant="scrollable"
-              >
-                <Tab label="All History" />
-                <Tab label="Train" disabled={forecastTrain.length === 0} />
-                <Tab label="Test" disabled={forecastTest.length === 0} />
-                <Tab label="Horizon" disabled={forecastHorizon.length === 0} />
-              </Tabs>
+            {/* Prophet */}
+            <ProphetBlock
+              active={prophetActive}
+              setActive={setProphetActive}
+              prophetParams={prophetParams}
+              setProphetParams={setProphetParams}
+            />
 
-              {/* ALL HISTORY */}
-              {graphTab === 0 && forecastAll.length > 0 && (
-                <Box sx={{ mb: 3, height: 500 }}>
-                  <Typography variant="h6">All History</Typography>
-                  <Line data={chartDataAll} options={commonChartOptions} />
-                  {/* Метрики по All */}
-                  {metricsAll && (
-                    <Box sx={{ mt: 2, display: "flex", gap: 3, flexWrap: "wrap" }}>
-                      <Typography>MAE: {metricsAll.mae.toFixed(3)}</Typography>
-                      <Typography>RMSE: {metricsAll.rmse.toFixed(3)}</Typography>
-                      {metricsAll.mape && <Typography>MAPE: {metricsAll.mape.toFixed(1)}%</Typography>}
-                    </Box>
-                  )}
+            {/* ARIMA */}
+            <Paper
+              sx={{
+                p: 2,
+                mb: 2,
+                borderRadius: 2,
+                border: `2px solid ${arimaActive ? "#10A37F" : "#FF4444"}`,
+                transition: "border-color 0.2s"
+              }}
+            >
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
+                ARIMA
+              </Typography>
+              <Box sx={{ mt: 1 }}>
+                {arimaActive ? (
+                  <Button
+                    variant="outlined"
+                    startIcon={<CloseIcon />}
+                    sx={{
+                      borderColor: "#FF4444",
+                      color: "#FF4444",
+                      "&:hover": {
+                        borderColor: "#FF4444",
+                        backgroundColor: "#ff44441a"
+                      }
+                    }}
+                    onClick={() => setArimaActive(false)}
+                  >
+                    Отключить
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outlined"
+                    startIcon={<CheckIcon />}
+                    sx={{
+                      borderColor: "#10A37F",
+                      color: "#10A37F",
+                      "&:hover": {
+                        borderColor: "#10A37F",
+                        backgroundColor: "#10A37F1a"
+                      }
+                    }}
+                    onClick={() => setArimaActive(true)}
+                  >
+                    Активировать
+                  </Button>
+                )}
+              </Box>
+              <Typography variant="caption" sx={{ color: arimaActive ? "#10A37F" : "#FF4444" }}>
+                {arimaActive ? "Активна" : "Выключена"}
+              </Typography>
+            </Paper>
+          </Box>
+        </Slide>
+      </Box>
+
+      {/* ДИАЛОГ ВЫБОРА СТОЛБЦОВ / ФОРМАТА ФАЙЛА */}
+      <Dialog open={csvDialogOpen} onClose={handleCloseCsvDialog} fullWidth maxWidth="md">
+        <DialogTitle>Сохранить результаты</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            Выберите столбцы и формат файла:
+          </Typography>
+
+          {/* Формат файла */}
+          <RadioGroup
+            row
+            value={fileType}
+            onChange={(e) => setFileType(e.target.value)}
+            sx={{ mb: 2 }}
+          >
+            <FormControlLabel value="csv" control={<Radio />} label="CSV" />
+            <FormControlLabel value="xlsx" control={<Radio />} label="XLSX" />
+          </RadioGroup>
+
+          {/* Список чекбоксов */}
+          {!allPossibleCols.length ? (
+            <Typography>Нет доступных столбцов</Typography>
+          ) : (
+            <>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                {allPossibleCols.map((col) => (
+                  <FormControlLabel
+                    key={col}
+                    control={
+                      <Checkbox
+                        checked={csvSelectedCols.includes(col)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setCsvSelectedCols((prev) => [...prev, col]);
+                          } else {
+                            setCsvSelectedCols((prev) => prev.filter((c) => c !== col));
+                          }
+                        }}
+                      />
+                    }
+                    label={col}
+                  />
+                ))}
+              </Box>
+              {/* Превью первых 5 строк (снизу) */}
+              {previewData && previewData.length > 0 && (
+                <Box sx={{ mt: 2, overflowX: "auto" }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Превью (первые 5 строк):
+                  </Typography>
+                  <table
+                    style={{
+                      borderCollapse: "collapse",
+                      width: "100%",
+                      color: "#fff",
+                      fontSize: "0.85rem"
+                    }}
+                  >
+                    <thead>
+                      <tr style={{ backgroundColor: "#333" }}>
+                        {csvSelectedCols.map((col) => (
+                          <th key={col} style={{ border: "1px solid #555", padding: "4px" }}>
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewData.map((row, idx) => (
+                        <tr key={idx}>
+                          {csvSelectedCols.map((col) => (
+                            <td
+                              key={col}
+                              style={{ border: "1px solid #555", padding: "4px" }}
+                            >
+                              {row[col] !== undefined ? row[col] : ""}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </Box>
               )}
-
-              {/* TRAIN */}
-              {graphTab === 1 && forecastTrain.length > 0 && (
-                <Box sx={{ mb: 3, height: 500 }}>
-                  <Typography variant="h6">Train</Typography>
-                  <Line data={chartDataTrain} options={commonChartOptions} />
-                  {/* Метрики по Train */}
-                  {metricsTrain && (
-                    <Box sx={{ mt: 2, display: "flex", gap: 3, flexWrap: "wrap" }}>
-                      <Typography>MAE: {metricsTrain.mae.toFixed(3)}</Typography>
-                      <Typography>RMSE: {metricsTrain.rmse.toFixed(3)}</Typography>
-                      {metricsTrain.mape && <Typography>MAPE: {metricsTrain.mape.toFixed(1)}%</Typography>}
-                    </Box>
-                  )}
-                </Box>
-              )}
-
-              {/* TEST */}
-              {graphTab === 2 && forecastTest.length > 0 && (
-                <Box sx={{ mb: 3, height: 500 }}>
-                  <Typography variant="h6">Test</Typography>
-                  <Line data={chartDataTest} options={commonChartOptions} />
-                  {/* Метрики по Test */}
-                  {metricsTest && (
-                    <Box sx={{ mt: 2, display: "flex", gap: 3, flexWrap: "wrap" }}>
-                      <Typography>MAE: {metricsTest.mae.toFixed(3)}</Typography>
-                      <Typography>RMSE: {metricsTest.rmse.toFixed(3)}</Typography>
-                      {metricsTest.mape && <Typography>MAPE: {metricsTest.mape.toFixed(1)}%</Typography>}
-                    </Box>
-                  )}
-                </Box>
-              )}
-
-              {/* HORIZON */}
-              {graphTab === 3 && forecastHorizon.length > 0 && (
-                <Box sx={{ mb: 3, height: 500 }}>
-                  <Typography variant="h6">Horizon (Будущее)</Typography>
-                  <Line data={chartDataHorizon} options={commonChartOptions} />
-                  {/* Скачать CSV */}
-                  <Box sx={{ textAlign: "center", mt: 3 }}>
-                    <Button
-                      variant="contained"
-                      onClick={handleDownloadCSV}
-                      sx={{ borderRadius: "20px", backgroundColor: accentColor }}
-                    >
-                      Скачать CSV (Horizon)
-                    </Button>
-                  </Box>
-                </Box>
-              )}
-            </Box>
+            </>
           )}
-
-          {/* Вкладка "Таблицы" */}
-          {viewTab === 1 && (
-            <Box sx={{ p: 3 }}>
-              <Tabs
-                value={tableTab}
-                onChange={handleTableTabChange}
-                textColor="inherit"
-                indicatorColor="primary"
-                sx={{ mb: 3 }}
-                variant="scrollable"
-              >
-                <Tab label="All" disabled={forecastAll.length === 0} />
-                <Tab label="Train" disabled={forecastTrain.length === 0} />
-                <Tab label="Test" disabled={forecastTest.length === 0} />
-                <Tab label="Horizon" disabled={forecastHorizon.length === 0} />
-              </Tabs>
-
-              {/* Таблица ALL */}
-              {tableTab === 0 && forecastAll.length > 0 && (
-                <Paper
-                  sx={{
-                    p: 3,
-                    mb: 3,
-                    backgroundColor: "#1e1e1e",
-                    borderRadius: "12px",
-                    boxShadow: 3,
-                    overflowX: "auto",
-                  }}
-                >
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    All History (Прогноз + Факт)
-                  </Typography>
-                  <Box sx={{ maxHeight: 300, overflowY: "auto" }}>
-                    <Table stickyHeader>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Дата</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Факт</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Прогноз</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Нижняя</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Верхняя</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Модель</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {forecastAll.map((row, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell sx={{ color: "#fff" }}>{row.ds}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.y_fact}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.y_forecast}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.yhat_lower}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.yhat_upper}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.model_name}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Box>
-                </Paper>
-              )}
-
-              {/* Таблица TRAIN */}
-              {tableTab === 1 && forecastTrain.length > 0 && (
-                <Paper
-                  sx={{
-                    p: 3,
-                    mb: 3,
-                    backgroundColor: "#1e1e1e",
-                    borderRadius: "12px",
-                    boxShadow: 3,
-                    overflowX: "auto",
-                  }}
-                >
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    Train (Прогноз + Факт)
-                  </Typography>
-                  <Box sx={{ maxHeight: 300, overflowY: "auto" }}>
-                    <Table stickyHeader>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Дата</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Факт</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Прогноз</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Нижняя</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Верхняя</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Модель</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {forecastTrain.map((row, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell sx={{ color: "#fff" }}>{row.ds}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.y_fact}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.y_forecast}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.yhat_lower}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.yhat_upper}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.model_name}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Box>
-                </Paper>
-              )}
-
-              {/* Таблица TEST */}
-              {tableTab === 2 && forecastTest.length > 0 && (
-                <Paper
-                  sx={{
-                    p: 3,
-                    mb: 3,
-                    backgroundColor: "#1e1e1e",
-                    borderRadius: "12px",
-                    boxShadow: 3,
-                    overflowX: "auto",
-                  }}
-                >
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    Test (Прогноз + Факт)
-                  </Typography>
-                  <Box sx={{ maxHeight: 300, overflowY: "auto" }}>
-                    <Table stickyHeader>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Дата</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Факт</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Прогноз</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Нижняя</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Верхняя</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Модель</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {forecastTest.map((row, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell sx={{ color: "#fff" }}>{row.ds}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.y_fact}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.y_forecast}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.yhat_lower}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.yhat_upper}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.model_name}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Box>
-                </Paper>
-              )}
-
-              {/* Таблица HORIZON */}
-              {tableTab === 3 && forecastHorizon.length > 0 && (
-                <Paper
-                  sx={{
-                    p: 3,
-                    mb: 3,
-                    backgroundColor: "#1e1e1e",
-                    borderRadius: "12px",
-                    boxShadow: 3,
-                    overflowX: "auto",
-                  }}
-                >
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    Будущее (Horizon)
-                  </Typography>
-                  <Box sx={{ maxHeight: 300, overflowY: "auto" }}>
-                    <Table stickyHeader>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Дата</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Прогноз</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Нижняя</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Верхняя</TableCell>
-                          <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>Модель</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {forecastHorizon.map((row, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell sx={{ color: "#fff" }}>{row.ds}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.y_forecast}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.yhat_lower}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.yhat_upper}</TableCell>
-                            <TableCell sx={{ color: "#fff" }}>{row.model_name}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Box>
-                  {/* Скачать CSV */}
-                  <Box sx={{ textAlign: "center", mt: 3 }}>
-                    <Button
-                      variant="contained"
-                      onClick={handleDownloadCSV}
-                      sx={{ borderRadius: "20px", backgroundColor: accentColor }}
-                    >
-                      Скачать CSV (Horizon)
-                    </Button>
-                  </Box>
-                </Paper>
-              )}
-            </Box>
-          )}
-        </Paper>
-      )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCsvDialog}>Отмена</Button>
+          <Button variant="contained" onClick={handleDownloadSelectedCols}>
+            Скачать
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
-};
-
-export default ForecastPage;
+}

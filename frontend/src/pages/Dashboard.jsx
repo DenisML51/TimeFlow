@@ -1,5 +1,5 @@
 import React, { useContext, useEffect } from "react";
-import { Box, Grid, Button, Typography } from "@mui/material";
+import { Box, Grid, Button, Typography, Paper } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import FileUpload from "../components/FileUpload";
 import FilterPanel from "../components/FilterPanel";
@@ -25,20 +25,17 @@ const Dashboard = () => {
     setColumns,
     selectedColumns,
     setSelectedColumns,
+    resetDashboardState,
   } = useContext(DashboardContext);
 
   // При изменении исходных данных, фильтров или параметров сортировки пересчитываем результирующий набор
   useEffect(() => {
     let data = [...originalData];
-
-    // Применяем фильтры
     Object.entries(filters).forEach(([column, value]) => {
       if (value) {
         data = data.filter((row) => row[column] === value);
       }
     });
-
-    // Применяем сортировку, если задана
     if (sortColumn && sortDirection) {
       data.sort((a, b) => {
         const valA = a[sortColumn];
@@ -53,28 +50,25 @@ const Dashboard = () => {
           : String(valB).localeCompare(String(valA));
       });
     }
-
     setFilteredData(data);
-    setTableData(data.slice(0, 5)); // Выводим только первые 5 строк
+    setTableData(data.slice(0, 5));
   }, [originalData, filters, sortColumn, sortDirection, setFilteredData, setTableData]);
 
-  // Обработчики сортировки – задаём столбец и направление
+  // Обработчики сортировки
   const handleSortAsc = (column) => {
     setSortColumn(column);
     setSortDirection("asc");
   };
-
   const handleSortDesc = (column) => {
     setSortColumn(column);
     setSortDirection("desc");
   };
 
-  // Функция обновления фильтров, передаваемая в FilterPanel
   const updateFilters = (newFilters) => {
     setFilters(newFilters);
   };
 
-  // Функция выбора столбца по клику
+  // Выбор столбцов: пользователь может выбрать 2 столбца (дата и таргет)
   const handleColumnSelect = (column) => {
     setSelectedColumns((prevSelected) => {
       if (prevSelected.includes(column)) {
@@ -87,32 +81,46 @@ const Dashboard = () => {
     });
   };
 
-  // Переход на вторую страницу, если выбраны ровно 2 столбца
+  // Переход на страницу предобработки. Обратите внимание: для прогнозирования позже передадим полную выборку.
   const handleConfirmSelection = () => {
     if (selectedColumns.length === 2) {
-      // Передаём в SelectedColumnsPage выбранные столбцы, отфильтрованные данные и текущие фильтры
+      // Передаём full filteredData, а также выбранные столбцы и текущие фильтры
       navigate("/selected", { state: { selectedColumns, filteredData, filters } });
     }
   };
 
+  // При нажатии на "Новый файл" сбрасываем состояние и сразу открываем диалог загрузки.
+  const handleReset = () => {
+    resetDashboardState();
+    // Имитируем нажатие на скрытый input (FileUpload сам открывается)
+    const fileInput = document.getElementById("upload-file");
+    if (fileInput) fileInput.click();
+  };
+
   return (
     <Grid container spacing={2} justifyContent="center" sx={{ p: 4 }}>
-      {originalData.length > 0 && columns.length > 0 && (
-        <Grid item xs={12} md={3}>
-          <FilterPanel
-            originalData={originalData}
-            columns={columns}
-            filters={filters}
-            updateFilters={updateFilters}
-          />
-        </Grid>
-      )}
-
-      <Grid item xs={12} md={9}>
-        <FileUpload
-          setOriginalData={setOriginalData}
-          setColumns={setColumns}
+      <Grid item xs={12}>
+        <Paper sx={{ p: 3, mb: 3, backgroundColor: "#1e1e1e", borderRadius: "16px" }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Typography variant="h5" sx={{ color: "#fff" }}>
+              Загрузите новый файл или сформируйте выборку
+            </Typography>
+            <Button variant="contained" color="error" onClick={handleReset} sx={{ borderRadius: "20px" }}>
+              Новый файл
+            </Button>
+          </Box>
+        </Paper>
+      </Grid>
+      <Grid item xs={12} md={3}>
+        <FilterPanel
+          originalData={originalData}
+          columns={columns}
+          filters={filters}
+          updateFilters={updateFilters}
         />
+      </Grid>
+      <Grid item xs={12} md={9}>
+        <FileUpload setOriginalData={setOriginalData} setColumns={setColumns} />
         {tableData.length > 0 && (
           <>
             <Box mt={4}>
@@ -127,11 +135,11 @@ const Dashboard = () => {
             {selectedColumns.length > 0 && (
               <Box mt={2} sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <Typography variant="body1">
-                  {selectedColumns.length >= 1 && `Первый выбранный: ${selectedColumns[0]}`}
+                  {selectedColumns.length >= 1 && `Столбец с датой: ${selectedColumns[0]}`}
                 </Typography>
                 {selectedColumns.length === 2 && (
                   <Typography variant="body1">
-                    Второй выбранный: {selectedColumns[1]}
+                    Целевая переменная: {selectedColumns[1]}
                   </Typography>
                 )}
                 <Button
@@ -141,7 +149,7 @@ const Dashboard = () => {
                   disabled={selectedColumns.length !== 2}
                   onClick={handleConfirmSelection}
                 >
-                  Подтвердить
+                  Подтвердить выбор
                 </Button>
               </Box>
             )}

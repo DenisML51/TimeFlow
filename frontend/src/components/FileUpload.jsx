@@ -1,5 +1,5 @@
 import React, { useState, useContext } from "react";
-import { Box, Button, Typography, CircularProgress } from "@mui/material";
+import { Button, Typography, CircularProgress, Paper } from "@mui/material";
 import axios from "axios";
 import { HistoryContext } from "../context/HistoryContext";
 import { DashboardContext } from "../context/DashboardContext";
@@ -28,7 +28,7 @@ const FileUpload = () => {
 
     try {
       setLoading(true);
-      // Используем URL с "localhost" для согласованности с логином
+      // Используем URL с "localhost" для согласованности
       const response = await axios.post("http://localhost:8000/api/upload", formData, {
         withCredentials: true,
       });
@@ -50,7 +50,7 @@ const FileUpload = () => {
   };
 
   return (
-    <Box sx={{ textAlign: "center", p: 4, borderRadius: "12px", bgcolor: "rgba(255, 255, 255, 0.05)", backdropFilter: "blur(10px)", boxShadow: 3 }}>
+    <Paper sx={{ textAlign: "center", p: 4, borderRadius: "12px", bgcolor: "rgba(255,255,255,0.05)", backdropFilter: "blur(10px)", boxShadow: 3, mb: 3 }}>
       <input type="file" accept=".csv" onChange={handleFileChange} style={{ display: "none" }} id="upload-file" />
       <label htmlFor="upload-file">
         <Button variant="contained" component="span" sx={{ borderRadius: "20px", bgcolor: "#10A37F" }}>
@@ -66,7 +66,7 @@ const FileUpload = () => {
       <br /><br />
       {loading && <CircularProgress />}
       {message && <Typography variant="body1">{message}</Typography>}
-    </Box>
+    </Paper>
   );
 };
 

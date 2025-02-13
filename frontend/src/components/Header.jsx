@@ -31,7 +31,7 @@ const Header = () => {
       >
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
-            🔥 Time Series Forecasting Tool (Fast API + React JS)
+            🔥 Time Series Forecasting Tool
           </Typography>
           {user ? (
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>

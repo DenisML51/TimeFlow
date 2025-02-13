@@ -7,3 +7,5 @@ python-jose
 pandas
 python-multipart
 bcrypt
+aiofiles
+prophet

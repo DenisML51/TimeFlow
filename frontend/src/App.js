@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import SelectedColumnsPage from "./components/SelectedColumnsPage";
+import ForecastPage from "./components/ForecastPage"; // Добавляем импорт новой страницы
 import ProtectedRoute from "./components/ProtectedRoute";
 import Header from "./components/Header";
 import { DashboardProvider } from "./context/DashboardContext";
@@ -48,6 +49,15 @@ const App = () => {
                     element={
                       <ProtectedRoute>
                         <SelectedColumnsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Добавляем новый маршрут для страницы прогнозирования */}
+                  <Route
+                    path="/forecast"
+                    element={
+                      <ProtectedRoute>
+                        <ForecastPage />
                       </ProtectedRoute>
                     }
                   />

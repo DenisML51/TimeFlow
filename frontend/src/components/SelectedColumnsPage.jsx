@@ -21,8 +21,10 @@ import {
   TableRow,
   IconButton,
   Slide,
+  Button,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import AddIcon from "@mui/icons-material/Add";
@@ -248,14 +250,25 @@ const SelectedColumnsPage = () => {
     { symbol: "max", tooltip: "Максимум", value: stats.max.toFixed(3) },
   ] : [];
 
+  // Функция перехода к странице прогнозирования
+  const handleGoToForecast = () => {
+    // Передаем финальную выборку (результат предобработки) на страницу прогнозирования
+    navigate("/forecast", { state: { modifiedData: finalData, selectedColumns } });
+  };
+
   return (
     <Slide direction="left" in={show} mountOnEnter unmountOnExit onExited={handleExited}>
-      <Box sx={{ p: 3, backgroundColor: "#121212", minHeight: "100vh", color: "#fff", overflow: "hidden" }}>
-        <IconButton onClick={handleBack} sx={{ mb: 2, color: "#fff" }}>
+      <Box sx={{ position: "relative", p: 3, backgroundColor: "#121212", minHeight: "100vh", color: "#fff", overflow: "hidden" }}>
+        {/* Кнопка для возврата на предыдущую страницу */}
+        <IconButton onClick={handleBack} sx={{ position: "absolute", left: 16, top: 16, color: "#fff" }}>
           <ArrowBackIcon />
         </IconButton>
+        {/* Кнопка для перехода к странице прогнозирования */}
+        <IconButton onClick={handleGoToForecast} sx={{ position: "absolute", right: 16, top: 16, color: "#fff" }}>
+          <ArrowForwardIcon />
+        </IconButton>
 
-        {/* Верхний блок: категориальные данные */}
+        {/* Верхний блок: отображение категориальных данных */}
         {(() => {
           const allCategoricalColumns = filteredData.length
             ? Object.keys(filteredData[0]).filter(col => typeof filteredData[0][col] === "string")
@@ -284,7 +297,7 @@ const SelectedColumnsPage = () => {
             </Box>
           );
         })()}
-        
+
         <Grid container spacing={3}>
           {preprocessingOpen && (
             <Grid item xs={12} md={3}>
@@ -678,6 +691,12 @@ const SelectedColumnsPage = () => {
             </Paper>
           </Grid>
         </Grid>
+        {/* Дополнительная кнопка для перехода к прогнозу (если нужна) */}
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+          <Button variant="contained" color="primary" onClick={handleGoToForecast} disabled={finalData.length === 0}>
+            Перейти к прогнозу
+          </Button>
+        </Box>
       </Box>
     </Slide>
   );

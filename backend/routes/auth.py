@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from models.user import User
+from models.history import History  # Добавлен импорт модели History
 from utils.auth import get_password_hash, verify_password, create_access_token, get_current_user
 from database import get_db
 from pydantic import BaseModel, EmailStr, Field, validator
-from models.history import History
 import re
+from services.history_service import record_history_bg
 
 auth_router = APIRouter()
 
@@ -46,13 +47,12 @@ class UserLogin(BaseModel):
     password: str
 
 @auth_router.post("/login")
-async def login(user_data: UserLogin, response: Response, db: AsyncSession = Depends(get_db)):
+async def login(user_data: UserLogin, response: Response, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == user_data.username))
     user = result.scalar_one_or_none()
     if not user or not verify_password(user_data.password, user.hashed_password):
          raise HTTPException(status_code=400, detail="Неверные учетные данные")
     access_token = create_access_token(data={"sub": user.username})
-    # Устанавливаем cookie с указанием пути и временем жизни, чтобы сессия сохранялась
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -60,10 +60,7 @@ async def login(user_data: UserLogin, response: Response, db: AsyncSession = Dep
         samesite="lax",
         path="/"
     )
-    # Записываем событие входа в историю
-    new_history = History(user_id=user.id, action="Пользователь вошел в систему")
-    db.add(new_history)
-    await db.commit()
+    background_tasks.add_task(record_history_bg, user.id, "Пользователь вошел в систему")
     return {"message": "Успешный вход"}
 
 @auth_router.get("/me")
@@ -79,10 +76,7 @@ async def get_history(db: AsyncSession = Depends(get_db), current_user: User = D
     return [{"action": item.action, "timestamp": item.timestamp} for item in history_items]
 
 @auth_router.post("/logout")
-async def logout(response: Response, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    # Записываем событие выхода в историю
-    new_history = History(user_id=current_user.id, action="Пользователь вышел из системы")
-    db.add(new_history)
-    await db.commit()
+async def logout(response: Response, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user)):
+    background_tasks.add_task(record_history_bg, current_user.id, "Пользователь вышел из системы")
     response.delete_cookie("access_token", path="/")
     return {"message": "Вы успешно вышли"}

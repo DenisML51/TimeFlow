@@ -6,7 +6,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import SelectedColumnsPage from "./components/SelectedColumnsPage";
+import SelectedColumnsPage from "./components/Preprocessing";
 import ForecastPage from "./components/ForecastPage"; // Добавляем импорт новой страницы
 import ProtectedRoute from "./components/ProtectedRoute";
 import Header from "./components/Header";
@@ -45,7 +45,7 @@ const App = () => {
                     }
                   />
                   <Route
-                    path="/selected"
+                    path="/preprocessing"
                     element={
                       <ProtectedRoute>
                         <SelectedColumnsPage />

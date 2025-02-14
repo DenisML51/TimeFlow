@@ -33,7 +33,7 @@ const Login = () => {
         if (dialogContent.onClose) {
           dialogContent.onClose();
         }
-      }, 3000);
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [dialogOpen, dialogContent]);

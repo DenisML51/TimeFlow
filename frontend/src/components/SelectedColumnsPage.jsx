@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import {
   Box,
   Grid,
-  Paper,
   Typography,
   Slider,
   Radio,
@@ -15,7 +14,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   IconButton,
@@ -23,14 +21,17 @@ import {
   Button,
   Select,
   MenuItem,
+  useTheme,
+  Paper,
 } from "@mui/material";
+import { motion, AnimatePresence } from "framer-motion";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import SettingsIcon from "@mui/icons-material/Settings";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { Line, Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -39,13 +40,13 @@ import {
   PointElement,
   LineElement,
   BarElement,
-  ArcElement,
   Title,
   Tooltip as ChartTooltip,
   Legend,
 } from "chart.js";
 import { DashboardContext } from "../context/DashboardContext";
 import CategoricalDataBlock from "./CategoricalDataBlock";
+import { FloatingLinesBackground } from "../components/AnimatedBackground";
 
 ChartJS.register(
   CategoryScale,
@@ -53,13 +54,75 @@ ChartJS.register(
   PointElement,
   LineElement,
   BarElement,
-  ArcElement,
   Title,
   ChartTooltip,
   Legend
 );
 
+const GlassPaper = ({ children, ...props }) => {
+  const theme = useTheme();
+  return (
+    <Paper
+      {...props}
+      sx={{
+        backdropFilter: "blur(16px)",
+        backgroundColor: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        borderRadius: "24px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+        p: 3,
+        ...props.sx,
+      }}
+    >
+      {children}
+    </Paper>
+  );
+};
+
+const ProcessingStepControl = ({ label, active, onToggle, children }) => {
+  const theme = useTheme();
+  return (
+    <Box
+      sx={{
+        mb: 3,
+        p: 2,
+        borderRadius: "16px",
+        border: `1px solid ${
+          active ? theme.palette.primary.main : "rgba(255,255,255,0.1)"
+        }`,
+        bgcolor: "rgba(16,163,127,0.05)",
+        transition: "all 0.3s ease",
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: active ? 2 : 0,
+        }}
+      >
+        <Typography variant="subtitle1" sx={{ color: "#fff" }}>
+          {label}
+        </Typography>
+        <IconButton
+          size="small"
+          onClick={onToggle}
+          sx={{
+            color: active ? theme.palette.error.main : theme.palette.primary.main,
+            "&:hover": { bgcolor: "rgba(255,255,255,0.05)" },
+          }}
+        >
+          {active ? <CloseIcon /> : <AddIcon />}
+        </IconButton>
+      </Box>
+      {active && children}
+    </Box>
+  );
+};
+
 const SelectedColumnsPage = () => {
+  const theme = useTheme();
   const navigate = useNavigate();
   const {
     selectedColumns,
@@ -68,13 +131,11 @@ const SelectedColumnsPage = () => {
     secondPageState,
     setSecondPageState,
   } = useContext(DashboardContext);
-
-  // Состояние для анимации перехода
   const [show, setShow] = useState(true);
+
   const handleBack = () => setShow(false);
   const handleExited = () => navigate(-1);
 
-  // Формируем выборку данных для выбранных столбцов (данные, переданные с первой страницы)
   const dataForDisplay = useMemo(() => {
     return filteredData.map((row) => {
       const newRow = {};
@@ -85,7 +146,6 @@ const SelectedColumnsPage = () => {
     });
   }, [filteredData, selectedColumns]);
 
-  // Локальная сортировка по выбранным столбцам
   const sortedData = useMemo(() => {
     if (!secondPageState.localSortColumn || !secondPageState.localSortDirection)
       return dataForDisplay;
@@ -107,14 +167,11 @@ const SelectedColumnsPage = () => {
     secondPageState.localSortDirection,
   ]);
 
-  // Применяем шаги предобработки к данным, полученным с первой страницы
   const finalDataResult = useMemo(() => {
     let data = [...sortedData];
     let seasonalValues = null;
 
-    // 1. Заполнение пропусков (импутация)
     if (secondPageState.processingSteps.imputation) {
-      // Сортируем данные по дате (предполагается, что selectedColumns[0] – дата)
       let sortedByDate = [...data].sort(
         (a, b) =>
           new Date(a[selectedColumns[0]]) - new Date(b[selectedColumns[0]])
@@ -123,11 +180,7 @@ const SelectedColumnsPage = () => {
       const lastDate = new Date(
         sortedByDate[sortedByDate.length - 1][selectedColumns[0]]
       );
-
-      // Используем частоту, введённую пользователем (например, "D", "W-MON", "MS")
       const frequency = secondPageState.imputationFrequency || "D";
-
-      // Функция для вычисления следующей даты по выбранной частоте
       const getNextDate = (currentDate, frequency) => {
         let nextDate = new Date(currentDate);
         if (frequency === "D") {
@@ -139,8 +192,6 @@ const SelectedColumnsPage = () => {
         }
         return nextDate;
       };
-
-      // Корректируем начальную дату (для "W-MON" и "MS")
       let currentDate = new Date(firstDate);
       if (frequency === "W-MON") {
         const day = currentDate.getDay();
@@ -150,15 +201,11 @@ const SelectedColumnsPage = () => {
       } else if (frequency === "MS") {
         currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       }
-
-      // Генерируем полный временной ряд дат от firstDate до lastDate по выбранной частоте
       let completeDates = [];
       while (currentDate <= lastDate) {
         completeDates.push(new Date(currentDate));
         currentDate = getNextDate(currentDate, frequency);
       }
-
-      // Создаём карту существующих дат (формат ISO: YYYY-MM-DD)
       const existingDataMap = {};
       sortedByDate.forEach((row) => {
         const dateStr = new Date(row[selectedColumns[0]])
@@ -166,8 +213,6 @@ const SelectedColumnsPage = () => {
           .split("T")[0];
         existingDataMap[dateStr] = row;
       });
-
-      // Формируем новый массив данных: для каждой даты либо берём существующую запись, либо создаём новую с пропущенным значением
       let newData = completeDates.map((date) => {
         const dateStr = date.toISOString().split("T")[0];
         if (existingDataMap[dateStr]) {
@@ -179,13 +224,10 @@ const SelectedColumnsPage = () => {
           return newRow;
         }
       });
-
       newData.sort(
         (a, b) =>
           new Date(a[selectedColumns[0]]) - new Date(b[selectedColumns[0]])
       );
-
-      // Линейная интерполяция для заполнения пропусков в таргетном столбце
       let filledData = [...newData];
       for (let i = 0; i < filledData.length; i++) {
         if (
@@ -229,7 +271,6 @@ const SelectedColumnsPage = () => {
       data = filledData;
     }
 
-    // 2. Фильтрация выбросов
     if (secondPageState.processingSteps.outliers) {
       const targetValues = data.map((row) => Number(row[selectedColumns[1]]));
       const mean =
@@ -245,7 +286,6 @@ const SelectedColumnsPage = () => {
       );
     }
 
-    // 3. Сглаживание
     if (
       secondPageState.processingSteps.smoothing &&
       secondPageState.smoothingWindow > 1
@@ -266,7 +306,6 @@ const SelectedColumnsPage = () => {
       data = smoothed;
     }
 
-    // 4. Преобразование
     if (
       secondPageState.processingSteps.transformation &&
       secondPageState.transformation !== "none"
@@ -286,7 +325,6 @@ const SelectedColumnsPage = () => {
       }
     }
 
-    // 5. Декомпозиция
     if (
       secondPageState.processingSteps.decomposition &&
       secondPageState.decompositionWindow > 1
@@ -310,7 +348,6 @@ const SelectedColumnsPage = () => {
       data = data.map((row, i) => ({ ...row, [selectedColumns[1]]: trend[i] }));
     }
 
-    // 6. Нормализация
     if (secondPageState.processingSteps.normalization) {
       const values = data.map((row) => Number(row[selectedColumns[1]]));
       const minVal = Math.min(...values);
@@ -334,9 +371,10 @@ const SelectedColumnsPage = () => {
         label: selectedColumns[1],
         data: dataValues,
         fill: false,
-        backgroundColor: "rgba(16, 163, 127, 0.6)",
-        borderColor: "#10A37F",
+        backgroundColor: theme.palette.primary.light,
+        borderColor: theme.palette.primary.main,
         borderWidth: 2,
+        tension: 0.1,
       },
     ],
   };
@@ -382,622 +420,404 @@ const SelectedColumnsPage = () => {
       <Box
         sx={{
           position: "relative",
-          p: 3,
-          backgroundColor: "#121212",
+          p: 4,
           minHeight: "100vh",
-          color: "#fff",
-          overflow: "hidden",
+          background: theme.palette.background.default,
         }}
       >
-        <Box>
-          <IconButton onClick={handleBack} sx={{ position: "absolute", left: 16, top: 16, color: "#fff" }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h5" sx={{ flexGrow: 1, textAlign: "center", pb: 3 }}>
-            Предобработка
-          </Typography>
-          <IconButton onClick={handleGoToForecast} sx={{ position: "absolute", right: 16, top: 16, color: "#fff" }}>
-            <ArrowForwardIcon />
-          </IconButton>
+        <FloatingLinesBackground />
 
-          {/* Блок категориальных данных вынесен в отдельный компонент */}
-          <Box sx={{ bgcolor: "#121212", p: 0.1, pb: 2 }}>
-            <CategoricalDataBlock
-              filteredData={filteredData}
-              selectedColumns={selectedColumns}
-              filters={filters}
-            />
+        <Box sx={{ position: "relative", zIndex: 1 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
+            <IconButton
+              onClick={handleBack}
+              sx={{
+                color: theme.palette.text.primary,
+                "&:hover": { bgcolor: "rgba(255,255,255,0.05)" },
+              }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, #00ff88 100%)`,
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              Предобработка данных
+            </Typography>
+
+            <Button
+              variant="contained"
+              onClick={handleGoToForecast}
+              endIcon={<ArrowForwardIcon />}
+              sx={{
+                bgcolor: theme.palette.primary.main,
+                "&:hover": { bgcolor: theme.palette.primary.dark },
+                borderRadius: "12px",
+                px: 4,
+                py: 1,
+              }}
+            >
+              Прогнозирование
+            </Button>
           </Box>
-        </Box>
-        <Grid container spacing={2}>
-          {secondPageState.preprocessingOpen && (
+
+          <CategoricalDataBlock
+            filteredData={filteredData}
+            selectedColumns={selectedColumns}
+            filters={filters}
+          />
+
+          <Grid container spacing={4}>
             <Grid item xs={12} md={3}>
-              <Slide direction="right" in={secondPageState.preprocessingOpen} mountOnEnter unmountOnExit>
-                <Paper
-                  sx={{
-                    p: 2,
-                    backgroundColor: "#121212",
-                    borderRadius: 3,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                    border: "none",
-                  }}
-                >
-                  <Typography variant="h6" sx={{ mb: 2, color: "#fff", textAlign: "center" }}>
-                    Настройки предобработки
-                  </Typography>
-
-                  {/* Заполнение пропусков */}
-                  <Box sx={{ mb: 2, pb: 1, borderBottom: "1px solid #333" }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
-                        Заполнение пропусков
+              <AnimatePresence>
+                {secondPageState.preprocessingOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <GlassPaper>
+                      <Typography variant="h6" sx={{ mb: 3, color: theme.palette.primary.main }}>
+                        Этапы обработки
                       </Typography>
-                      {secondPageState.processingSteps.imputation ? (
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              processingSteps: { ...prev.processingSteps, imputation: false },
-                            }))
-                          }
-                          sx={{ color: "#FF6384" }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      ) : (
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              processingSteps: { ...prev.processingSteps, imputation: true },
-                            }))
-                          }
-                          sx={{ color: "#10A37F" }}
-                        >
-                          <AddIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                    {secondPageState.processingSteps.imputation &&
-                      !["D", "W-MON", "MS"].includes(
-                        (() => {
-                          const sorted = [...sortedData].sort(
-                            (a, b) =>
-                              new Date(a[selectedColumns[0]]) - new Date(b[selectedColumns[0]])
-                          );
-                          if (sorted.length < 2) return "";
-                          const date0 = new Date(sorted[0][selectedColumns[0]]);
-                          const date1 = new Date(sorted[1][selectedColumns[0]]);
-                          if (
-                            (date0.getDate() === 1 &&
-                              date1.getDate() === 1 &&
-                              (date1.getFullYear() - date0.getFullYear()) * 12 +
-                                (date1.getMonth() - date0.getMonth()) === 1) ||
-                            Math.abs(date1 - date0 - 86400000) < 0.1 * 86400000 ||
-                            Math.abs(date1 - date0 - 604800000) < 0.1 * 604800000
-                          )
-                            return "detected";
-                          return "";
-                        })()
-                      ) && (
-                        <Box sx={{ mt: 1, display: "flex", alignItems: "center" }}>
-                          <Typography variant="caption" sx={{ color: "#fff" }}>
-                            Частота:
-                          </Typography>
-                          <Select
-                            value={secondPageState.imputationFrequency || "D"}
-                            onChange={(e) =>
-                              setSecondPageState((prev) => ({
-                                ...prev,
-                                imputationFrequency: e.target.value,
-                              }))
-                            }
-                            size="small"
-                            sx={{
-                              ml: 1,
-                              color: "#fff",
-                              borderColor: "#10A37F",
-                              "& .MuiOutlinedInput-notchedOutline": { borderColor: "#10A37F" },
-                            }}
-                          >
-                            <MenuItem value="D">Дневная (D)</MenuItem>
-                            <MenuItem value="W-MON">Недельная (W-MON)</MenuItem>
-                            <MenuItem value="MS">Начало месяца (MS)</MenuItem>
-                          </Select>
-                        </Box>
-                      )}
-                  </Box>
 
-                  {/* Выбросы */}
-                  <Box sx={{ mb: 2, pb: 1, borderBottom: "1px solid #333" }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
-                        Выбросы
-                      </Typography>
-                      {secondPageState.processingSteps.outliers ? (
-                        <IconButton
-                          size="small"
-                          onClick={() =>
+                      <ProcessingStepControl
+                        label="Заполнение пропусков"
+                        active={secondPageState.processingSteps.imputation}
+                        onToggle={() =>
+                          setSecondPageState((prev) => ({
+                            ...prev,
+                            processingSteps: {
+                              ...prev.processingSteps,
+                              imputation: !prev.processingSteps.imputation,
+                            },
+                          }))
+                        }
+                      >
+                        <Select
+                          value={secondPageState.imputationFrequency || "D"}
+                          onChange={(e) =>
                             setSecondPageState((prev) => ({
                               ...prev,
-                              processingSteps: { ...prev.processingSteps, outliers: false },
+                              imputationFrequency: e.target.value,
                             }))
                           }
-                          sx={{ color: "#FF6384" }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      ) : (
-                        <IconButton
                           size="small"
-                          onClick={() =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              processingSteps: { ...prev.processingSteps, outliers: true },
-                            }))
-                          }
-                          sx={{ color: "#10A37F" }}
+                          fullWidth
+                          sx={{ mt: 1 }}
                         >
-                          <AddIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                    <Typography variant="caption" sx={{ color: "#fff" }}>
-                      Порог (σ): {secondPageState.outlierThreshold}
-                    </Typography>
-                    <Slider
-                      value={secondPageState.outlierThreshold}
-                      onChange={(e, newVal) =>
-                        setSecondPageState((prev) => ({ ...prev, outlierThreshold: newVal }))
-                      }
-                      min={1}
-                      max={5}
-                      step={0.1}
-                      valueLabelDisplay="auto"
-                      size="small"
-                    />
-                  </Box>
+                          <MenuItem value="D">Дневная</MenuItem>
+                          <MenuItem value="W-MON">Недельная</MenuItem>
+                          <MenuItem value="MS">Месячная</MenuItem>
+                        </Select>
+                      </ProcessingStepControl>
 
-                  {/* Сглаживание */}
-                  <Box sx={{ mb: 2, pb: 1, borderBottom: "1px solid #333" }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
-                        Сглаживание
-                      </Typography>
-                      {secondPageState.processingSteps.smoothing ? (
-                        <IconButton
-                          size="small"
-                          onClick={() =>
+                      <ProcessingStepControl
+                        label="Фильтрация выбросов"
+                        active={secondPageState.processingSteps.outliers}
+                        onToggle={() =>
+                          setSecondPageState((prev) => ({
+                            ...prev,
+                            processingSteps: {
+                              ...prev.processingSteps,
+                              outliers: !prev.processingSteps.outliers,
+                            },
+                          }))
+                        }
+                      >
+                        <Typography variant="caption" sx={{ color: "#fff" }}>
+                          Порог: {secondPageState.outlierThreshold}σ
+                        </Typography>
+                        <Slider
+                          value={secondPageState.outlierThreshold}
+                          onChange={(e, newVal) =>
                             setSecondPageState((prev) => ({
                               ...prev,
-                              processingSteps: { ...prev.processingSteps, smoothing: false },
+                              outlierThreshold: newVal,
                             }))
                           }
-                          sx={{ color: "#FF6384" }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      ) : (
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              processingSteps: { ...prev.processingSteps, smoothing: true },
-                            }))
-                          }
-                          sx={{ color: "#10A37F" }}
-                        >
-                          <AddIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                    <Typography variant="caption" sx={{ color: "#fff" }}>
-                      Окно: {secondPageState.smoothingWindow}
-                    </Typography>
-                    <Slider
-                      value={secondPageState.smoothingWindow}
-                      onChange={(e, newVal) =>
-                        setSecondPageState((prev) => ({ ...prev, smoothingWindow: newVal }))
-                      }
-                      min={1}
-                      max={20}
-                      step={1}
-                      valueLabelDisplay="auto"
-                      size="small"
-                    />
-                  </Box>
+                          min={1}
+                          max={5}
+                          step={0.1}
+                          sx={{ mt: 1 }}
+                        />
+                      </ProcessingStepControl>
 
-                  {/* Преобразование */}
-                  <Box sx={{ mb: 2, pb: 1, borderBottom: "1px solid #333" }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
-                        Преобразование
-                      </Typography>
-                      {secondPageState.processingSteps.transformation ? (
-                        <IconButton
-                          size="small"
-                          onClick={() =>
+                      <ProcessingStepControl
+                        label="Сглаживание"
+                        active={secondPageState.processingSteps.smoothing}
+                        onToggle={() =>
+                          setSecondPageState((prev) => ({
+                            ...prev,
+                            processingSteps: {
+                              ...prev.processingSteps,
+                              smoothing: !prev.processingSteps.smoothing,
+                            },
+                          }))
+                        }
+                      >
+                        <Typography variant="caption" sx={{ color: "#fff" }}>
+                          Размер окна: {secondPageState.smoothingWindow}
+                        </Typography>
+                        <Slider
+                          value={secondPageState.smoothingWindow}
+                          onChange={(e, newVal) =>
                             setSecondPageState((prev) => ({
                               ...prev,
-                              processingSteps: { ...prev.processingSteps, transformation: false },
+                              smoothingWindow: newVal,
                             }))
                           }
-                          sx={{ color: "#FF6384" }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      ) : (
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              processingSteps: { ...prev.processingSteps, transformation: true },
-                            }))
-                          }
-                          sx={{ color: "#10A37F" }}
-                        >
-                          <AddIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                    <RadioGroup
-                      value={secondPageState.transformation}
-                      onChange={(e) =>
-                        setSecondPageState((prev) => ({ ...prev, transformation: e.target.value }))
-                      }
-                      row
-                    >
-                      <FormControlLabel value="none" control={<Radio size="small" />} label="Нет" />
-                      <FormControlLabel value="log" control={<Radio size="small" />} label="Логарифм" />
-                      <FormControlLabel value="difference" control={<Radio size="small" />} label="Разность" />
-                    </RadioGroup>
-                  </Box>
+                          min={1}
+                          max={20}
+                          step={1}
+                          sx={{ mt: 1 }}
+                        />
+                      </ProcessingStepControl>
 
-                  {/* Декомпозиция */}
-                  <Box sx={{ mb: 2, pb: 1, borderBottom: "1px solid #333" }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
-                        Декомпозиция
-                      </Typography>
-                      {secondPageState.processingSteps.decomposition ? (
-                        <IconButton
-                          size="small"
-                          onClick={() =>
+                      <ProcessingStepControl
+                        label="Декомпозиция"
+                        active={secondPageState.processingSteps.decomposition}
+                        onToggle={() =>
+                          setSecondPageState((prev) => ({
+                            ...prev,
+                            processingSteps: {
+                              ...prev.processingSteps,
+                              decomposition: !prev.processingSteps.decomposition,
+                            },
+                          }))
+                        }
+                      >
+                        <Typography variant="caption" sx={{ color: "#fff" }}>
+                          Окно тренда: {secondPageState.decompositionWindow}
+                        </Typography>
+                        <Slider
+                          value={secondPageState.decompositionWindow}
+                          onChange={(e, newVal) =>
                             setSecondPageState((prev) => ({
                               ...prev,
-                              processingSteps: { ...prev.processingSteps, decomposition: false },
+                              decompositionWindow: newVal,
                             }))
                           }
-                          sx={{ color: "#FF6384" }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      ) : (
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              processingSteps: { ...prev.processingSteps, decomposition: true },
-                            }))
-                          }
-                          sx={{ color: "#10A37F" }}
-                        >
-                          <AddIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                    <Typography variant="caption" sx={{ color: "#fff" }}>
-                      Окно: {secondPageState.decompositionWindow}
-                    </Typography>
-                    <Slider
-                      value={secondPageState.decompositionWindow}
-                      onChange={(e, newVal) =>
-                        setSecondPageState((prev) => ({ ...prev, decompositionWindow: newVal }))
-                      }
-                      min={2}
-                      max={30}
-                      step={1}
-                      valueLabelDisplay="auto"
-                      size="small"
-                    />
-                  </Box>
+                          min={2}
+                          max={30}
+                          step={1}
+                          sx={{ mt: 1 }}
+                        />
+                      </ProcessingStepControl>
 
-                  {/* Нормализация */}
-                  <Box sx={{ mb: 2, p: 1 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
-                        Нормализация
-                      </Typography>
-                      {secondPageState.processingSteps.normalization ? (
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              processingSteps: { ...prev.processingSteps, normalization: false },
-                            }))
-                          }
-                          sx={{ color: "#FF6384" }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      ) : (
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              processingSteps: { ...prev.processingSteps, normalization: true },
-                            }))
-                          }
-                          sx={{ color: "#10A37F" }}
-                        >
-                          <AddIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                    <Typography variant="caption" sx={{ color: "#fff" }}>
-                      Масштабирование в диапазоне [0,1]
-                    </Typography>
-                  </Box>
-                </Paper>
-              </Slide>
+                      <ProcessingStepControl
+                        label="Нормализация"
+                        active={secondPageState.processingSteps.normalization}
+                        onToggle={() =>
+                          setSecondPageState((prev) => ({
+                            ...prev,
+                            processingSteps: {
+                              ...prev.processingSteps,
+                              normalization: !prev.processingSteps.normalization,
+                            },
+                          }))
+                        }
+                      />
+                    </GlassPaper>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Grid>
-          )}
-          <Grid item xs={12} md={secondPageState.preprocessingOpen ? 9 : 12}>
-            <Paper sx={{ p: 2, backgroundColor: "#121212", borderRadius: 3 }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap" }}>
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <IconButton
+
+            <Grid item xs={12} md={secondPageState.preprocessingOpen ? 9 : 12}>
+              <GlassPaper>
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
+                  <Button
                     onClick={() =>
                       setSecondPageState((prev) => ({
                         ...prev,
                         preprocessingOpen: !prev.preprocessingOpen,
                       }))
                     }
+                    startIcon={<SettingsIcon />}
                     sx={{
-                      borderRadius: "50%",
-                      backgroundColor: "#10A37F",
-                      color: "#fff",
-                      mr: 2,
-                      transition: "transform 0.3s",
-                      "&:hover": { backgroundColor: "#0D8F70", transform: "scale(1.1)" },
+                      borderRadius: "12px",
+                      px: 3,
+                      py: 1,
+                      bgcolor: "rgba(16,163,127,0.1)",
+                      "&:hover": { bgcolor: "rgba(16,163,127,0.2)" },
                     }}
                   >
-                    {secondPageState.preprocessingOpen ? (
-                      <CloseIcon fontSize="small" />
-                    ) : (
-                      <SettingsIcon fontSize="small" />
-                    )}
-                  </IconButton>
-                  <Typography variant="h6" sx={{ color: "#fff" }}>
-                    Результаты предобработки
-                  </Typography>
+                    {secondPageState.preprocessingOpen ? "Скрыть настройки" : "Показать настройки"}
+                  </Button>
+
+                  <ToggleButtonGroup
+                    value={secondPageState.chartType}
+                    exclusive
+                    onChange={(e, newType) =>
+                      setSecondPageState((prev) => ({ ...prev, chartType: newType }))
+                    }
+                    sx={{
+                      bgcolor: "rgba(255,255,255,0.05)",
+                      borderRadius: "12px",
+                      p: 0.5,
+                    }}
+                  >
+                    <ToggleButton value="line" sx={{ textTransform: "none", px: 3 }}>
+                      Линейный
+                    </ToggleButton>
+                    <ToggleButton value="bar" sx={{ textTransform: "none", px: 3 }}>
+                      Столбчатый
+                    </ToggleButton>
+                  </ToggleButtonGroup>
                 </Box>
-                <ToggleButtonGroup
-                  value={secondPageState.chartType}
-                  exclusive
-                  onChange={(e, newType) => {
-                    if (newType !== null)
-                      setSecondPageState((prev) => ({ ...prev, chartType: newType }));
-                  }}
-                  sx={{ backgroundColor: "#1E1E1E", borderRadius: "8px", p: 0.1 }}
-                >
-                  <ToggleButton value="line" sx={{ color: "#fff", borderColor: "#10A37F" }}>
-                    Линейный
-                  </ToggleButton>
-                  <ToggleButton value="bar" sx={{ color: "#fff", borderColor: "#10A37F" }}>
-                    Столбчатый
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
-              <Box sx={{ mb: 3 }}>
+
                 <Box
                   sx={{
-                    p: 2,
-                    borderRadius: "12px",
-                    backgroundColor: "rgba(16,163,127,0.1)",
-                    boxShadow: 3,
-                    width: "100%",
                     height: 400,
+                    borderRadius: "16px",
+                    overflow: "hidden",
+                    position: "relative",
+                    bgcolor: "rgba(0,0,0,0.3)",
+                    mb: 4,
                   }}
                 >
-                  {secondPageState.chartType === "line" && (
+                  {secondPageState.chartType === "line" ? (
                     <Line
-                      data={
-                        secondPageState.processingSteps.decomposition &&
-                        finalDataResult.seasonalValues
-                          ? {
-                              labels: finalDataResult.data.map(
-                                (row) => row[selectedColumns[0]]
-                              ),
-                              datasets: [
-                                {
-                                  label: "Тренд",
-                                  data: finalDataResult.data.map((row) =>
-                                    Number(row[selectedColumns[1]])
-                                  ),
-                                  fill: false,
-                                  backgroundColor: "rgba(16,163,127,0.6)",
-                                  borderColor: "#10A37F",
-                                  borderWidth: 2,
-                                },
-                                {
-                                  label: "Сезонная компонента",
-                                  data: finalDataResult.seasonalValues,
-                                  fill: false,
-                                  backgroundColor: "rgba(255,99,132,0.6)",
-                                  borderColor: "#FF6384",
-                                  borderWidth: 2,
-                                  borderDash: [5, 5],
-                                },
-                              ],
-                            }
-                          : chartData
-                      }
+                      data={chartData}
                       options={{
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                          legend: { labels: { color: "#fff" } },
-                          title: { display: true, text: "График", color: "#fff" },
+                          legend: { labels: { color: theme.palette.text.primary } },
+                          title: { display: false },
                         },
                         scales: {
-                          x: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,0.1)" } },
-                          y: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,0.1)" } },
+                          x: {
+                            grid: { color: "rgba(255,255,255,0.05)" },
+                            ticks: { color: theme.palette.text.secondary },
+                          },
+                          y: {
+                            grid: { color: "rgba(255,255,255,0.05)" },
+                            ticks: { color: theme.palette.text.secondary },
+                          },
                         },
                       }}
                     />
-                  )}
-                  {secondPageState.chartType === "bar" && (
+                  ) : (
                     <Bar
                       data={chartData}
                       options={{
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                          legend: { labels: { color: "#fff" } },
-                          title: { display: true, text: "График", color: "#fff" },
+                          legend: { labels: { color: theme.palette.text.primary } },
+                          title: { display: false },
                         },
                         scales: {
-                          x: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,0.1)" } },
-                          y: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,0.1)" } },
+                          x: {
+                            grid: { color: "rgba(255,255,255,0.05)" },
+                            ticks: { color: theme.palette.text.secondary },
+                          },
+                          y: {
+                            grid: { color: "rgba(255,255,255,0.05)" },
+                            ticks: { color: theme.palette.text.secondary },
+                          },
                         },
                       }}
                     />
                   )}
                 </Box>
-              </Box>
-              <Box>
-                <Box sx={{ mb: 2, display: "flex", flexDirection: "column", alignItems: "flex" }}>
-                  <Typography variant="h6" sx={{ color: "#fff", mb: 2 }}>
+
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: theme.palette.primary.main }}>
                     Описательные статистики
                   </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: 2,
-                      flexWrap: "wrap",
-                      justifyContent: "center",
-                      p: 2,
-                      borderRadius: "16px",
-                      background: "linear-gradient(135deg, rgba(16,163,127,0.2), rgba(16,163,127,0.05))",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-                    }}
-                  >
+                  <Grid container spacing={2}>
                     {statsArray.map((stat, idx) => (
-                      <Tooltip key={idx} title={stat.tooltip}>
-                        <Box
-                          sx={{
-                            p: 2,
-                            textAlign: "center",
-                            borderRadius: "12px",
-                            backgroundColor: "#1e1e1a",
-                            border: "1px solid #10A37F",
-                            transition: "transform 0.2s, box-shadow 0.2s",
-                            "&:hover": {
-                              transform: "scale(1.05)",
-                              boxShadow: "0 6px 16px rgba(0,0,0,0.3)",
-                            },
-                          }}
-                        >
-                          <Typography variant="h8" sx={{ color: "#10A37F", fontWeight: 600, fontSize: "1rem" }}>
+                      <Grid item xs={6} sm={4} md={2} key={idx}>
+                        <GlassPaper sx={{ textAlign: "center", p: 2 }}>
+                          <Typography variant="subtitle2" sx={{ color: theme.palette.primary.light }}>
                             {stat.symbol}
                           </Typography>
-                          <Typography variant="subtitle2" sx={{ color: "#fff", fontSize: "0.8rem" }}>
+                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
                             {stat.value}
                           </Typography>
-                        </Box>
-                      </Tooltip>
+                          <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                            {stat.tooltip}
+                          </Typography>
+                        </GlassPaper>
+                      </Grid>
                     ))}
-                  </Box>
+                  </Grid>
                 </Box>
-                <TableContainer
-                  component={Paper}
+
+                <Box
                   sx={{
-                    maxHeight: "480px",
-                    overflowY: "auto",
-                    "&::-webkit-scrollbar": { width: "8px", height: "8px" },
-                    "&::-webkit-scrollbar-track": { background: "#2c2c2c", borderRadius: "0px" },
-                    "&::-webkit-scrollbar-thumb": { backgroundColor: "#10A37F", borderRadius: "8px" },
-                    "&::-webkit-scrollbar-thumb:hover": { backgroundColor: "#0D8F70" },
+                    maxHeight: 400,
+                    overflow: "auto",
+                    borderRadius: "16px",
+                    border: "1px solid rgba(255,255,255,0.1)",
                   }}
                 >
-                  <Table stickyHeader>
-                    <TableHead>
+                  <Table
+                    sx={{
+                      "& .MuiTableCell-root": {
+                        borderBottom: "1px solid rgba(255,255,255,0.1)",
+                        color: theme.palette.text.primary,
+                      },
+                    }}
+                  >
+                    <TableHead sx={{ bgcolor: "rgba(255,255,255,0.05)" }}>
                       <TableRow>
                         {selectedColumns.map((col) => (
-                          <TableCell
-                            key={col}
-                            sx={{
-                              bgcolor: "#10A37F",
-                              color: "#fff",
-                              fontWeight: "bold",
-                              whiteSpace: "nowrap",
-                              p: 1,
-                            }}
-                          >
-                            <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
-                              {col.replace("_", " ")}
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSecondPageState((prev) => ({
-                                    ...prev,
-                                    localSortColumn: col,
-                                    localSortDirection: "asc",
-                                  }));
-                                }}
-                                sx={{ color: "#fff", p: 0.5 }}
-                              >
-                                <ArrowUpwardIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSecondPageState((prev) => ({
-                                    ...prev,
-                                    localSortColumn: col,
-                                    localSortDirection: "desc",
-                                  }));
-                                }}
-                                sx={{ color: "#fff", p: 0.5 }}
-                              >
-                                <ArrowDownwardIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
+                          <TableCell key={col} sx={{ fontWeight: 600 }}>
+                            {col}
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                setSecondPageState((prev) => ({
+                                  ...prev,
+                                  localSortColumn: col,
+                                  localSortDirection: "asc",
+                                }))
+                              }
+                              sx={{ ml: 1, color: theme.palette.primary.main }}
+                            >
+                              <ArrowUpwardIcon />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                setSecondPageState((prev) => ({
+                                  ...prev,
+                                  localSortColumn: col,
+                                  localSortDirection: "desc",
+                                }))
+                              }
+                              sx={{ color: theme.palette.primary.main }}
+                            >
+                              <ArrowDownwardIcon />
+                            </IconButton>
                           </TableCell>
                         ))}
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {finalData.slice(0, 10).map((row, index) => (
-                        <TableRow key={index} sx={{ "&:hover": { backgroundColor: "rgba(255,255,255,0.03)" } }}>
+                      {finalData.slice(0, 10).map((row, idx) => (
+                        <TableRow key={idx}>
                           {selectedColumns.map((col) => (
-                            <TableCell key={col} sx={{ whiteSpace: "nowrap", color: "#fff", fontWeight: "normal" }}>
-                              {row[col]}
-                            </TableCell>
+                            <TableCell key={col}>{row[col]}</TableCell>
                           ))}
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                </TableContainer>
-              </Box>
-            </Paper>
+                </Box>
+              </GlassPaper>
+            </Grid>
           </Grid>
-        </Grid>
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-          <Button variant="contained" color="primary" onClick={handleGoToForecast} disabled={finalData.length === 0}>
-            Перейти к прогнозу
-          </Button>
         </Box>
       </Box>
     </Slide>

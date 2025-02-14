@@ -2,24 +2,31 @@ import React, { useContext, useEffect, useState } from "react";
 import {
   Box,
   Grid,
-  Paper,
   Typography,
   Button,
   CircularProgress,
-  Fade,
   Chip,
+  useTheme,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  TbUpload,
+  TbX,
+  TbChartLine,
+  TbFilter,
+  TbArrowRight,
+  TbInfoCircle,
+} from "react-icons/tb";
 import FilterPanel from "../components/FilterPanel";
 import TableDisplay from "../components/TableDisplay";
 import { DashboardContext } from "../context/DashboardContext";
 import { HistoryContext } from "../context/HistoryContext";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+import { FloatingLinesBackground } from "../components/AnimatedBackground";
 import axios from "axios";
 
 const Dashboard = () => {
+  const theme = useTheme();
   const navigate = useNavigate();
   const {
     originalData,
@@ -38,33 +45,36 @@ const Dashboard = () => {
     setColumns,
     selectedColumns,
     setSelectedColumns,
-    uploadedFile,
     setUploadedFile,
     resetDashboardState,
   } = useContext(DashboardContext);
 
   const { addHistoryItem } = useContext(HistoryContext);
-
-  // Локальные состояния для загрузки файла
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState(null);
 
   const handleFileChange = (event) => {
-    if (event.target.files && event.target.files[0]) {
-      setFile(event.target.files[0]);
-      setUploadedFile(event.target.files[0]);
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setUploadedFile(selectedFile);
       setMessage("");
     }
   };
 
+  console.log(message)
+
   const handleUpload = async () => {
     if (!file) {
-      setMessage("Выберите файл перед загрузкой.");
+      setMessage("Please select a file first");
       return;
     }
+
     const formData = new FormData();
     formData.append("file", file);
+
     try {
       setLoading(true);
       const response = await axios.post(
@@ -72,49 +82,62 @@ const Dashboard = () => {
         formData,
         { withCredentials: true }
       );
-      setLoading(false);
-      setMessage("✅ Файл загружен успешно!");
+
       const receivedData = response.data.full_data || [];
       const columnNames = response.data.columns || [];
+
       setOriginalData(receivedData);
       setColumns(columnNames);
       addHistoryItem(file.name);
-      // Сохраняем полный массив данных для таблицы
-      setTableData(receivedData);
+      analyzeData(receivedData);
     } catch (error) {
+      setMessage("Error uploading file");
+      console.error("Upload error:", error);
+    } finally {
       setLoading(false);
-      setMessage("❌ Ошибка загрузки файла. Подробности в консоли.");
-      console.error("Ошибка загрузки:", error);
     }
   };
 
-  // Применение фильтров и сортировки к загруженным данным
-  useEffect(() => {
-    let data = [...originalData];
-    Object.entries(filters).forEach(([column, value]) => {
-      if (value) {
-        data = data.filter((row) => row[column] === value);
-      }
-    });
-    if (sortColumn && sortDirection) {
-      data.sort((a, b) => {
-        const valA = a[sortColumn];
-        const valB = b[sortColumn];
-        if (!isNaN(valA) && !isNaN(valB)) {
-          return sortDirection === "asc"
-            ? Number(valA) - Number(valB)
-            : Number(valB) - Number(valA);
-        }
-        return sortDirection === "asc"
-          ? String(valA).localeCompare(String(valB))
-          : String(valB).localeCompare(String(valA));
+  const analyzeData = (data) => {
+    if (data.length === 0) return;
+
+    const numericColumns = columns.filter((col) =>
+      data.some((row) => !isNaN(parseFloat(row[col])))
+    );
+
+    const stats = numericColumns.reduce((acc, col) => {
+      const values = data
+        .map((row) => parseFloat(row[col]))
+        .filter((v) => !isNaN(v));
+      acc[col] = {
+        min: Math.min(...values),
+        max: Math.max(...values),
+        avg: values.reduce((a, b) => a + b, 0) / values.length,
+      };
+      return acc;
+    }, {});
+
+    setStats(stats);
+  };
+
+  const handleReset = () => {
+    resetDashboardState();
+    setFile(null);
+    setMessage("");
+    sessionStorage.removeItem("forecastPageState");
+    const fileInput = document.getElementById("upload-file");
+    if (fileInput) fileInput.value = "";
+  };
+
+  const handleConfirmSelection = () => {
+    if (Array.isArray(selectedColumns) && selectedColumns.length === 2) {
+      navigate("/preprocessing", {
+        state: { selectedColumns, filteredData, filters },
       });
     }
-    setFilteredData(data);
-    // Сохраняем полный массив данных для таблицы
-    setTableData(data);
-  }, [originalData, filters, sortColumn, sortDirection, setFilteredData, setTableData]);
+  };
 
+  // Новые обработчики сортировки
   const handleSortAsc = (column) => {
     setSortColumn(column);
     setSortDirection("asc");
@@ -125,278 +148,357 @@ const Dashboard = () => {
     setSortDirection("desc");
   };
 
-  const updateFilters = (newFilters) => {
-    setFilters(newFilters);
-  };
+  useEffect(() => {
+    let data = [...originalData];
 
-  const handleColumnSelect = (column) => {
-    setSelectedColumns((prevSelected) => {
-      if (prevSelected.includes(column)) {
-        return prevSelected.filter((col) => col !== column);
-      }
-      if (prevSelected.length >= 2) {
-        return prevSelected;
-      }
-      return [...prevSelected, column];
+    // Применяем фильтры
+    Object.entries(filters).forEach(([column, value]) => {
+      if (value) data = data.filter((row) => row[column] === value);
     });
-  };
 
-  const handleConfirmSelection = () => {
-    console.log('Переход на страницу обработки')
-    if (selectedColumns.length === 2) {
-      console.log('Выбраны', {selectedColumns})
-      console.log('Выбраны все столбцы')
-      navigate("/selected", { state: { selectedColumns, filteredData, filters } });
-    } else {
-    console.warn("Выбрано недостаточно столбцов:", selectedColumns);
-    console.log('Переход на страницу предобработки')}
-  };
+    // Применяем сортировку
+    if (sortColumn && sortDirection) {
+      data.sort((a, b) => {
+        const valA = a[sortColumn];
+        const valB = b[sortColumn];
 
-  // Сброс состояния при загрузке нового файла
-// Функция сброса состояния при загрузке нового файла
-const handleReset = () => {
-  // Сброс состояния дашборда (уже реализовано)
-  resetDashboardState();
-  setFile(null);
-  setMessage("");
+        // Если значения числовые – сортируем численно
+        if (!isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB))) {
+          return sortDirection === "asc"
+            ? parseFloat(valA) - parseFloat(valB)
+            : parseFloat(valB) - parseFloat(valA);
+        }
+        return sortDirection === "asc"
+          ? valA.toString().localeCompare(valB.toString())
+          : valB.toString().localeCompare(valA.toString());
+      });
+    }
 
-  // Очистка sessionStorage для сброса состояния страницы прогноза
-  sessionStorage.removeItem("forecastPageState");
-  sessionStorage.removeItem("modifiedData");
-  sessionStorage.removeItem("selectedColumns");
-
-  // Сброс значения инпута файла
-  const fileInput = document.getElementById("upload-file");
-  if (fileInput) fileInput.value = "";
-};
-
+    setFilteredData(data);
+    setTableData(data);
+  }, [originalData, filters, sortColumn, sortDirection]);
 
   return (
-    <Box sx={{ minHeight: "91vh", background: "#121212", p: 3 }}>
-      {/* Контейнер с симметричными горизонтальными отступами */}
-      <Grid container spacing={0} justifyContent="center" maxWidth="xl" sx={{ mx: "auto", px: 2 }}>
-        {/* Верхний блок: загрузка файла и информация о датасете */}
+    <Box
+      sx={{
+        minHeight: "100vh",
+        position: "relative",
+        overflow: "hidden",
+        p: 4,
+        background: theme.palette.background.default,
+      }}
+    >
+      <FloatingLinesBackground density={6} />
+
+      <Grid container spacing={4} sx={{ position: "relative", zIndex: 1 }}>
+        {/* File Upload Section */}
         <Grid item xs={12}>
-          <Paper
-            sx={{
-              p: 3,
-              mb: 5,
-              borderRadius: "16px",
-              bgcolor: "rgba(255,255,255,0.05)",
-              backdropFilter: "blur(12px)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              transition: "transform 0.3s, box-shadow 0.3s",
-              "&:hover": {
-                transform: "translateY(-2px)",
-                boxShadow: "0 12px 40px rgba(16,163,127,0.2)",
-              },
-            }}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Typography variant="h5" sx={{ color: "#e0e0e0", fontWeight: 500 }}>
-                Загрузите новый файл или сформируйте выборку
-              </Typography>
-              <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+            <Box
+              sx={{
+                background: "rgba(255,255,255,0.05)",
+                borderRadius: "20px",
+                p: 4,
+                border: "1px solid rgba(255,255,255,0.1)",
+                backdropFilter: "blur(12px)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 2,
+                  alignItems: "center",
+                  mb: 3,
+                }}
+              >
+                <TbUpload size={32} color={theme.palette.primary.main} />
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 600,
+                    background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, #00ff88 100%)`,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  Data Upload & Selection
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
                 <input
                   type="file"
                   accept=".csv"
                   onChange={handleFileChange}
-                  style={{ display: "none" }}
                   id="upload-file"
+                  hidden
                 />
-                <label htmlFor="upload-file">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    sx={{
-                      borderRadius: "12px",
-                      borderColor: "#10A37F",
-                      color: "#10A37F",
-                      px: 3,
-                      py: 1,
-                    }}
-                    startIcon={<CloudUploadIcon />}
-                  >
-                    Выбрать файл
-                  </Button>
-                </label>
+                <Button
+                  component="label"
+                  variant="contained"
+                  htmlFor="upload-file"
+                  startIcon={<TbUpload />}
+                  sx={{
+                    py: 1.5,
+                    px: 4,
+                    borderRadius: "12px",
+                    textTransform: "none",
+                    fontSize: "1rem",
+                  }}
+                >
+                  Choose File
+                </Button>
+
                 {file && (
-                  <Button
-                    variant="contained"
-                    onClick={handleUpload}
-                    disabled={loading}
-                    sx={{
-                      borderRadius: "12px",
-                      px: 3,
-                      py: 1,
-                      bgcolor: loading ? "rgba(16,163,127,0.3)" : "#10A37F",
-                      "&:hover:not(:disabled)": {
-                        bgcolor: "#0D8F70",
-                        transform: "scale(1.05)",
-                      },
-                    }}
-                  >
-                    {loading ? (
-                      <CircularProgress size={24} sx={{ color: "#fff", mr: 1 }} />
-                    ) : (
-                      "Загрузить"
-                    )}
-                  </Button>
+                  <AnimatePresence>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <Chip
+                        label={file.name}
+                        onDelete={handleReset}
+                        deleteIcon={<TbX />}
+                        sx={{
+                          bgcolor: "rgba(16,163,127,0.15)",
+                          color: theme.palette.primary.main,
+                          fontWeight: 500,
+                        }}
+                      />
+                    </motion.div>
+                  </AnimatePresence>
                 )}
+
                 <Button
                   variant="contained"
-                  color="error"
-                  onClick={handleReset}
+                  onClick={handleUpload}
+                  disabled={!file || loading}
                   sx={{
+                    px: 4,
+                    py: 1.5,
                     borderRadius: "12px",
-                    px: 3,
-                    py: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    transition: "all 0.3s",
-                    "&:hover": {
-                      bgcolor: "#B71C1C",
-                      transform: "scale(1.05)",
+                    bgcolor: theme.palette.primary.main,
+                    "&:disabled": {
+                      bgcolor: "rgba(255,255,255,0.1)",
                     },
                   }}
                 >
-                  <RestartAltIcon />
-                  Новый файл
+                  {loading ? (
+                    <CircularProgress size={24} sx={{ color: "#fff" }} />
+                  ) : (
+                    "Process Data"
+                  )}
                 </Button>
               </Box>
-              {(uploadedFile && originalData.length > 0) && (
-                <Fade in={true}>
+
+              {stats && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
                   <Box
                     sx={{
+                      mt: 4,
                       display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      bgcolor: "rgba(16,163,127,0.05)",
-                      borderRadius: "12px",
-                      p: 2,
-                      border: "1px solid rgba(16,163,127,0.4)",
+                      gap: 3,
+                      flexWrap: "wrap",
                     }}
                   >
-                    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                      <InsertDriveFileIcon sx={{ mr: 1.5, color: "#10A37F", fontSize: 32 }} />
-                      <Typography variant="body1" sx={{ fontWeight: 500, color: "#e0e0e0" }}>
-                        {uploadedFile.name}
-                      </Typography>
-                    </Box>
-                    <Typography variant="caption" sx={{ color: "#b0b0b0" }}>
-                      {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </Typography>
-                    <Box sx={{ mt: 2, textAlign: "center" }}>
-                      <Typography variant="body2" sx={{ color: "#10A37F" }}>
-                        Строк: {originalData.length} | Столбцов: {columns.length}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: "#b0b0b0" }}>
-                        Файл готов для дальнейшей обработки!
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Fade>
-              )}
-              {message && (
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: message.startsWith("✅") ? "#10A37F" : "#ff4444",
-                    fontWeight: 500,
-                  }}
-                >
-                  {message}
-                </Typography>
-              )}
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Левая панель – фильтры */}
-        <Grid item xs={12} md={3} sx={{ px: 2 }}>
-          <FilterPanel
-            originalData={originalData}
-            columns={columns}
-            filters={filters}
-            updateFilters={updateFilters}
-          />
-        </Grid>
-
-        {/* Правая панель – таблица и блок с выбранными столбцами */}
-        <Grid item xs={12} md={9} sx={{ px: 2 }}>
-          {tableData.length > 0 && (
-            <Box mt={4}>
-              <TableDisplay
-                data={tableData}
-                onSortAsc={handleSortAsc}
-                onSortDesc={handleSortDesc}
-                onColumnSelect={handleColumnSelect}
-                selectedColumns={selectedColumns}
-              />
-              {selectedColumns.length > 0 && (
-                <Paper
-                  sx={{
-                    mt: 3,
-                    p: 3,
-                    borderRadius: "16px",
-                    bgcolor: "rgba(16,163,127,0.05)",
-                    border: "1px solid rgba(16,163,127,0.4)",
-                    backdropFilter: "blur(4px)",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 2,
-                  }}
-                >
-                  <Typography variant="h6" sx={{ color: "#10A37F", fontWeight: 600 }}>
-                    Выбранные столбцы
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    {selectedColumns.map((col) => (
-                      <Chip
+                    {Object.entries(stats).map(([col, values]) => (
+                      <Box
                         key={col}
-                        label={col}
                         sx={{
-                          backgroundColor: "rgba(16,163,127,0.2)",
-                          color: "#fff",
-                          fontWeight: 600,
-                          fontSize: "1rem",
+                          bgcolor: "rgba(16,163,127,0.1)",
+                          p: 2,
+                          borderRadius: "12px",
+                          minWidth: "200px",
                         }}
-                      />
+                      >
+                        <Typography
+                          variant="subtitle1"
+                          sx={{
+                            fontWeight: 600,
+                            color: theme.palette.primary.main,
+                          }}
+                        >
+                          {col}
+                        </Typography>
+                        <Box sx={{ mt: 1 }}>
+                          <Typography>Min: {values.min.toFixed(2)}</Typography>
+                          <Typography>Max: {values.max.toFixed(2)}</Typography>
+                          <Typography>Avg: {values.avg.toFixed(2)}</Typography>
+                        </Box>
+                      </Box>
                     ))}
                   </Box>
-                  <Button
-                    variant="contained"
-                    onClick={handleConfirmSelection}
-                    disabled={selectedColumns.length !== 2}
-                    sx={{
-                      borderRadius: "12px",
-                      background:
-                        selectedColumns.length === 2
-                          ? "linear-gradient(90deg, #10A37F 0%, #0D8F70 100%)"
-                          : "rgba(16,163,127,0.3)",
-                      px: 4,
-                      py: 1.2,
-                      fontSize: "1rem",
-                      textTransform: "none",
-                      boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-                      transition: "transform 0.3s, box-shadow 0.3s",
-                      "&:hover": {
-                        transform: selectedColumns.length === 2 ? "scale(1.05)" : "none",
-                        boxShadow: selectedColumns.length === 2 ? "0 6px 12px rgba(0,0,0,0.3)" : undefined,
-                      },
-                    }}
-                  >
-                    Подтвердить выбор
-                  </Button>
-                </Paper>
+                </motion.div>
               )}
             </Box>
-          )}
+          </motion.div>
+        </Grid>
+
+        {/* Filters & Table Section */}
+        <Grid item xs={12} md={3}>
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Box
+              sx={{
+                p: 3,
+                bgcolor: "rgba(255,255,255,0.05)",
+                borderRadius: "16px",
+                border: "1px solid rgba(255,255,255,0.1)",
+                backdropFilter: "blur(12px)",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 1 }}>
+                <TbFilter size={24} color={theme.palette.primary.main} />
+                <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                  Data Filters
+                </Typography>
+              </Box>
+              <FilterPanel
+                originalData={originalData}
+                columns={columns}
+                filters={filters}
+                updateFilters={setFilters}
+              />
+            </Box>
+          </motion.div>
+        </Grid>
+
+        <Grid item xs={12} md={9}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Box
+              sx={{
+                bgcolor: "rgba(255,255,255,0.05)",
+                borderRadius: "16px",
+                border: "1px solid rgba(255,255,255,0.1)",
+                backdropFilter: "blur(12px)",
+                p: 3,
+              }}
+            >
+              <TableDisplay
+                data={tableData}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+                onSortAsc={handleSortAsc}
+                onSortDesc={handleSortDesc}
+                onColumnSelect={(value) => {
+                  setSelectedColumns((prev) => {
+                    if (prev.includes(value)) {
+                      return prev.filter((col) => col !== value);
+                    }
+                    if (prev.length < 2) {
+                      return [...prev, value];
+                    }
+                    return prev;
+                  });
+                }}
+                selectedColumns={selectedColumns}
+              />
+
+              {Array.isArray(selectedColumns) && selectedColumns.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Box
+                    sx={{
+                      mt: 4,
+                      p: 3,
+                      bgcolor: "rgba(16,163,127,0.1)",
+                      borderRadius: "12px",
+                      border: "1px solid rgba(16,163,127,0.3)",
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        color: theme.palette.primary.main,
+                      }}
+                    >
+                      <TbChartLine size={24} />
+                      Selected Features
+                    </Typography>
+
+                    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                      {selectedColumns.map((col) => (
+                        <Chip
+                          key={col}
+                          label={col}
+                          onDelete={() =>
+                            setSelectedColumns((prev) =>
+                              prev.filter((c) => c !== col)
+                            )
+                          }
+                          sx={{
+                            bgcolor: "rgba(16,163,127,0.2)",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                            py: 1.5,
+                            px: 2,
+                          }}
+                        />
+                      ))}
+                    </Box>
+
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={handleConfirmSelection}
+                      disabled={selectedColumns.length !== 2}
+                      endIcon={<TbArrowRight />}
+                      sx={{
+                        mt: 3,
+                        py: 1.5,
+                        borderRadius: "12px",
+                        fontSize: "1rem",
+                        bgcolor: theme.palette.primary.main,
+                        "&:disabled": { bgcolor: "rgba(255,255,255,0.1)" },
+                      }}
+                    >
+                      Continue to Analysis
+                    </Button>
+
+                    {selectedColumns.length !== 2 && (
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          mt: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          color: "text.secondary",
+                        }}
+                      >
+                        <TbInfoCircle />
+                        Please select exactly 2 features to continue
+                      </Typography>
+                    )}
+                  </Box>
+                </motion.div>
+              )}
+            </Box>
+          </motion.div>
         </Grid>
       </Grid>
     </Box>

@@ -38,12 +38,15 @@ import {
   Percent as PercentIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import axios from "axios";
 import { Line } from "react-chartjs-2";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 import CategoricalDataBlock from "./CategoricalDataBlock";
 import { DashboardContext } from "../context/DashboardContext";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import {FloatingLinesBackground} from "./AnimatedBackground";
 
 // ================================================
 // 1) Вспомогательные функции (метрики, графики)
@@ -951,293 +954,384 @@ export default function ForecastPage() {
   };
 
   return (
-    <Box sx={{ position: "relative", bgcolor: "#1a1a1a", minHeight: "100vh" }}>
-      {/* ШАПКА */}
-      <Box sx={{ display: "flex", alignItems: "center", p: 2, pt: 2.8, bgcolor: "#121212", color: "#fff" }}>
-        <IconButton onClick={handleBack} sx={{ position: "absolute", left: 20, top: 20, color: "#fff" }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h5" sx={{ flexGrow: 1, textAlign: "center" }}>
-          Прогнозирование
-        </Typography>
-        <IconButton
-          onClick={toggleModels}
-          sx={{ color: modelsOpen ? "#FF4444" : "#10A37F", border: "1px solid", borderColor: modelsOpen ? "#FF4444" : "#10A37F" }}
-        >
-          {modelsOpen ? <CloseIcon /> : <SettingsIcon />}
-        </IconButton>
-      </Box>
-      <Box sx={{ bgcolor: "#121212", p: 0.1, width: "100%" }}>
-        <CategoricalDataBlock filteredData={filteredData} selectedColumns={selectedColumns} filters={filters} />
-      </Box>
-
-      {/* ОСНОВНОЙ КОНТЕЙНЕР */}
-      <Box
-        sx={{
-          position: "relative",
-          width: "100%",
-          height: "calc(100vh - 56px)",
-          bgcolor: "#121212",
-        }}
+      <motion.div
+          initial={{opacity: 0, x: 50}}
+          animate={{opacity: 1, x: 0}}
+          exit={{opacity: 0, x: -50}}
+          transition={{duration: 0.3}}
+          style={{position: "relative", minHeight: "100vh"}}
       >
-        {/* ЛЕВАЯ ЧАСТЬ */}
-        <Box
-          sx={{
-            flexGrow: 1,
-            transition: "margin-right 0.3s",
-            marginRight: modelsOpen ? `${panelWidth + 16}px` : 0,
-            overflowY: "auto",
-            "&::-webkit-scrollbar": { display: "none" },
-            "-ms-overflow-style": "none",
-            "scrollbar-width": "none",
-          }}
-        >
-          <Paper sx={{ m: 2, p: 3, borderRadius: 3, backgroundColor: "#121212" }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Общие параметры прогноза
+        <FloatingLinesBackground/>
+        <Box sx={{position: "relative", minHeight: "100vh"}}>
+          {/* ШАПКА */}
+
+          <Box sx={{display: "flex", justifyContent: "space-between", m: 2, pt: 2}}>
+            <Button
+                variant="contained"
+                onClick={handleBack}
+                startIcon={<ArrowBackIcon/>}
+                sx={{
+                  background: "rgba(16,163,127,0.15)",
+                  color: "#10A37F",
+                  borderRadius: "12px",
+                  px: 3,
+                  "&:hover": {background: "rgba(16,163,127,0.3)"},
+                }}
+            >
+              Назад
+            </Button>
+
+            <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 700,
+                  background: "linear-gradient(45deg, #10A37F 30%, #00ff88 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+            >
+              Прогнозирование
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={3}>
-                <Typography gutterBottom>Горизонт: {horizon}</Typography>
-                <Slider value={horizon} onChange={(e, val) => setHorizon(val)} min={0} max={50} step={1} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Typography gutterBottom>History (Test Size): {historySize}</Typography>
-                <Slider value={historySize} onChange={(e, val) => setHistorySize(val)} min={0} max={50} step={1} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <FormControl fullWidth>
-                  <InputLabel>Частота</InputLabel>
-                  <Select value={freq} label="Частота" onChange={(e) => setFreq(e.target.value)} sx={{ backgroundColor: "#2c2c2c", color: "#fff" }}>
-                    <MenuItem value="D">День</MenuItem>
-                    <MenuItem value="W-MON">Неделя (Пн)</MenuItem>
-                    <MenuItem value="M">Месяц</MenuItem>
-                    <MenuItem value="MS">Начало месяца</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Typography gutterBottom>Уровень доверия: {confidenceLevel}%</Typography>
-                <Slider value={confidenceLevel} onChange={(e, val) => setConfidenceLevel(val)} min={80} max={99} step={1} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-              </Grid>
-            </Grid>
-            <Box sx={{ mt: 3, textAlign: "center" }}>
-              <Button variant="contained" onClick={handleBuildForecast} disabled={loading} sx={{ borderRadius: "20px", backgroundColor: "#10A37F" }}>
-                {loading ? <CircularProgress size={24} /> : "Построить прогноз"}
-              </Button>
-            </Box>
-          </Paper>
 
-          {/* Общий график (все модели) */}
-          {forecastResults.length > 0 && (
-            <Paper sx={{ m: 2, p: 2, borderRadius: 3, backgroundColor: "#121212" }}>
-              <Typography variant="h6" sx={{ mb: 1 }}>Общий график (все модели)</Typography>
-              <Tabs value={commonTab} onChange={handleCommonTabChange} textColor="inherit" indicatorColor="primary" sx={{ mb: 2 }}>
-                <Tab label="All" />
-                <Tab label="Train" />
-                <Tab label="Test" />
-                <Tab label="Horizon" />
-                <Tab label="All+Horizon" />
-              </Tabs>
-              <Box sx={{ height: 500 }}>
-                {(() => {
-                  const subset = forecastResults.map((mRes) => {
-                    let segment = [];
-                    if (commonTab === 0) segment = mRes.forecastAll;
-                    else if (commonTab === 1) segment = mRes.forecastTrain;
-                    else if (commonTab === 2) segment = mRes.forecastTest;
-                    else if (commonTab === 3) segment = mRes.forecastHorizon;
-                    else if (commonTab === 4) segment = [...mRes.forecastAll, ...mRes.forecastHorizon];
-                    return { modelName: mRes.modelName, segment };
-                  });
-                  const data = makeCombinedChartData(subset, modelColorMap);
-                  return <Line data={data} options={chartOptions} />;
-                })()}
-              </Box>
-              <Box sx={{ textAlign: "center", mt: 2 }}>
-                <Button variant="contained" onClick={handleOpenCsvDialog} sx={{ borderRadius: "20px", backgroundColor: "#10A37F" }}>
-                  Скачать (All Models)
-                </Button>
-              </Box>
-            </Paper>
-          )}
-
-          {/* Вкладки по отдельным моделям */}
-          {forecastResults.length > 0 && (
-            <Paper sx={{ m: 2, p: 2, borderRadius: 3, backgroundColor: "#121212" }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>Отдельные модели</Typography>
-              <Tabs value={modelTab} onChange={handleModelTabChange} textColor="inherit" indicatorColor="primary" variant="scrollable" scrollButtons="auto" sx={{ mb: 2 }}>
-                {forecastResults.map((mRes) => (
-                  <Tab key={mRes.modelName} label={mRes.modelName} />
-                ))}
-              </Tabs>
-              {forecastResults[modelTab] &&
-                (() => {
-                  const curModel = forecastResults[modelTab];
-                  const color = modelColorMap[curModel.modelName] || "#36A2EB";
-                  const subTab = modelSubTabs[modelTab] || 0;
-                  const handleSubTabChange = (e, val) => handleModelSubTabChange(modelTab, val);
-                  const metricsAll = computeMetricsOnStandardized(curModel.forecastAll);
-                  const metricsTrain = computeMetricsOnStandardized(curModel.forecastTrain);
-                  const metricsTest = computeMetricsOnStandardized(curModel.forecastTest);
-                  const chartAll = makeSingleModelChartData(curModel.forecastAll, color);
-                  const chartTrain = makeSingleModelChartData(curModel.forecastTrain, color);
-                  const chartTest = makeSingleModelChartData(curModel.forecastTest, color);
-                  const chartHorizon = makeSingleModelChartData(curModel.forecastHorizon, color);
-                  return (
-                    <Box>
-                      <Tabs value={subTab} onChange={handleSubTabChange} textColor="inherit" indicatorColor="primary" sx={{ mb: 2 }}>
-                        <Tab label="All" disabled={curModel.forecastAll.length === 0} />
-                        <Tab label="Train" disabled={curModel.forecastTrain.length === 0} />
-                        <Tab label="Test" disabled={curModel.forecastTest.length === 0} />
-                        <Tab label="Horizon" disabled={curModel.forecastHorizon.length === 0} />
-                      </Tabs>
-                      {subTab === 0 && (
-                        <Box sx={{ height: 400 }}>
-                          <Line data={chartAll} options={chartOptions} />
-                          {metricsAll && (
-                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2, pt: 3, pb: 10 }}>
-                              <AnimatedMetricChip label="MAE" value={metricsAll?.mae} type="mae" icon={<TrendingDownIcon />} />
-                              <AnimatedMetricChip label="RMSE" value={metricsAll?.rmse} type="rmse" icon={<ShowChartIcon />} />
-                              {metricsAll?.mape !== null && (
-                                <AnimatedMetricChip label="MAPE" value={metricsAll?.mape} type="mape" icon={<PercentIcon />} />
-                              )}
-                            </Box>
-                          )}
-                        </Box>
-                      )}
-                      {subTab === 1 && (
-                        <Box sx={{ height: 400 }}>
-                          <Line data={chartTrain} options={chartOptions} />
-                          {metricsTrain && (
-                            <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-                              <Typography>MAE: {metricsTrain.mae.toFixed(4)}</Typography>
-                              <Typography>RMSE: {metricsTrain.rmse.toFixed(4)}</Typography>
-                              {metricsTrain.mape && <Typography>MAPE: {metricsTrain.mape.toFixed(2)}%</Typography>}
-                            </Box>
-                          )}
-                        </Box>
-                      )}
-                      {subTab === 2 && (
-                        <Box sx={{ height: 400 }}>
-                          <Line data={chartTest} options={chartOptions} />
-                          {metricsTest && (
-                            <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-                              <Typography>MAE: {metricsTest.mae.toFixed(4)}</Typography>
-                              <Typography>RMSE: {metricsTest.rmse.toFixed(4)}</Typography>
-                              {metricsTest.mape && <Typography>MAPE: {metricsTest.mape.toFixed(2)}%</Typography>}
-                            </Box>
-                          )}
-                        </Box>
-                      )}
-                      {subTab === 3 && (
-                        <Box sx={{ height: 400 }}>
-                          <Line data={chartHorizon} options={chartOptions} />
-                          <Typography sx={{ mt: 2 }}>Прогноз будущего (факт отсутствует).</Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  );
-                })()}
-            </Paper>
-          )}
-        </Box>
-        {/* Панель справа – изменён верхний отступ и высота */}
-        <Slide direction="left" in={modelsOpen} mountOnEnter unmountOnExit>
-          <Box
-            sx={{
-              position: "absolute",
-              top: 16, // теперь отступ 16px, как у левой части
-              right: 16,
-              width: `${panelWidth}px`,
-              height: "calc(100vh - 72px)", // вычитаем 56px шапки + 16px отступ
-              bgcolor: "#1f1f1f",
-              borderRadius: 3,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-              p: 2,
-              overflowY: "auto",
-              "&::-webkit-scrollbar": { width: "6px" },
-              "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
-              "&::-webkit-scrollbar-thumb": { backgroundColor: "#666", borderRadius: "3px" },
-              "&::-webkit-scrollbar-thumb:hover": { backgroundColor: "#aaa" },
-            }}
-          >
-            <Typography variant="h6" sx={{ color: "#fff", mb: 2 }}>
+            <Button
+                variant="contained"
+                onClick={toggleModels}
+                endIcon={<ArrowForwardIcon/>}
+                sx={{
+                  background: "rgba(16,163,127,0.15)",
+                  color: "#10A37F",
+                  borderRadius: "12px",
+                  px: 3,
+                  "&:hover": {background: "rgba(16,163,127,0.3)"},
+                }}
+            >
               Модели
-            </Typography>
-            <ProphetBlock active={prophetActive} setActive={setProphetActive} prophetParams={prophetParams} setProphetParams={setProphetParams} />
-            <XGBoostBlock active={xgboostActive} setActive={setXgboostActive} xgboostParams={xgboostParams} setXgboostParams={setXgboostParams} />
-            <SarimaBlock active={sarimaActive} setActive={setSarimaActive} sarimaParams={sarimaParams} setSarimaParams={setSarimaParams} />
+            </Button>
           </Box>
-        </Slide>
-      </Box>
-      {/* Диалог экспорта */}
-      <Dialog open={csvDialogOpen} onClose={handleCloseCsvDialog} fullWidth maxWidth="md">
-        <DialogTitle>Сохранить результаты</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            Выберите столбцы и формат файла:
-          </Typography>
-          <RadioGroup row value={fileType} onChange={(e) => setFileType(e.target.value)} sx={{ mb: 2 }}>
-            <FormControlLabel value="csv" control={<Radio />} label="CSV" />
-            <FormControlLabel value="xlsx" control={<Radio />} label="XLSX" />
-          </RadioGroup>
-          {!allPossibleCols.length ? (
-            <Typography>Нет доступных столбцов</Typography>
-          ) : (
-            <>
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-                {allPossibleCols.map((col) => (
-                  <FormControlLabel
-                    key={col}
-                    control={
-                      <Checkbox
-                        checked={csvSelectedCols.includes(col)}
-                        onChange={(e) => {
-                          if (e.target.checked) setCsvSelectedCols((prev) => [...prev, col]);
-                          else setCsvSelectedCols((prev) => prev.filter((c) => c !== col));
-                        }}
-                      />
-                    }
-                    label={col}
-                  />
-                ))}
-              </Box>
-              {previewData && previewData.length > 0 && (
-                <Box sx={{ mt: 2, overflowX: "auto" }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Превью (первые 5 строк):
-                  </Typography>
-                  <table style={{ borderCollapse: "collapse", width: "100%", color: "#fff", fontSize: "0.85rem" }}>
-                    <thead>
-                      <tr style={{ backgroundColor: "#333" }}>
-                        {csvSelectedCols.map((col) => (
-                          <th key={col} style={{ border: "1px solid #555", padding: "4px" }}>{col}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewData.map((row, idx) => (
-                        <tr key={idx}>
-                          {csvSelectedCols.map((col) => (
-                            <td key={col} style={{ border: "1px solid #555", padding: "4px" }}>
-                              {row[col] !== undefined ? row[col] : ""}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+        <Box sx={{
+          pt: 2,
+        }}>
+          <CategoricalDataBlock
+            filteredData={filteredData}
+            selectedColumns={selectedColumns}
+            filters={filters}
+          />
+        </Box>
+
+
+          {/* ОСНОВНОЙ КОНТЕЙНЕР */}
+          <Box
+              sx={{
+                position: "relative",
+                width: "100%",
+                height: "calc(100vh - 56px)",
+                alignItems: 'center',
+              }}
+          >
+            {/* ЛЕВАЯ ЧАСТЬ */}
+            <Box
+                sx={{
+                  flexGrow: 1,
+                  transition: "margin-right 0.3s",
+                  marginRight: modelsOpen ? `${panelWidth + 16}px` : 0,
+                  overflowY: "auto",
+                  "&::-webkit-scrollbar": {display: "none"},
+                  "-ms-overflow-style": "none",
+                  "scrollbar-width": "none",
+                }}
+            >
+              <Paper sx={{
+                    background: "rgba(255, 255, 255, 0.05)",
+                    m: 2,
+                    borderRadius: "16px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backdropFilter: "blur(12px)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+                    p: 3
+              }}>
+                <Typography variant="h6" sx={{mb: 2}}>
+                  Общие параметры прогноза
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Typography gutterBottom>Горизонт: {horizon}</Typography>
+                    <Slider value={horizon} onChange={(e, val) => setHorizon(val)} min={0} max={50} step={1}
+                            valueLabelDisplay="auto" sx={{color: "#10A37F"}}/>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Typography gutterBottom>History (Test Size): {historySize}</Typography>
+                    <Slider value={historySize} onChange={(e, val) => setHistorySize(val)} min={0} max={50} step={1}
+                            valueLabelDisplay="auto" sx={{color: "#10A37F"}}/>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <FormControl fullWidth>
+                      <InputLabel>Частота</InputLabel>
+                      <Select value={freq} label="Частота" onChange={(e) => setFreq(e.target.value)}
+                              sx={{backgroundColor: "#2c2c2c", color: "#fff"}}>
+                        <MenuItem value="D">День</MenuItem>
+                        <MenuItem value="W-MON">Неделя (Пн)</MenuItem>
+                        <MenuItem value="M">Месяц</MenuItem>
+                        <MenuItem value="MS">Начало месяца</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Typography gutterBottom>Уровень доверия: {confidenceLevel}%</Typography>
+                    <Slider value={confidenceLevel} onChange={(e, val) => setConfidenceLevel(val)} min={80} max={99}
+                            step={1} valueLabelDisplay="auto" sx={{color: "#10A37F"}}/>
+                  </Grid>
+                </Grid>
+                <Box sx={{mt: 3, textAlign: "center"}}>
+                  <Button variant="contained" onClick={handleBuildForecast} disabled={loading}
+                          sx={{borderRadius: "16px", backgroundColor: "#10A37F"}}>
+                    {loading ? <CircularProgress size={24}/> : "Построить прогноз"}
+                  </Button>
                 </Box>
+              </Paper>
+
+              {/* Общий график (все модели) */}
+              {forecastResults.length > 0 && (
+                  <Paper sx={{
+                    background: "rgba(255, 255, 255, 0.05)",
+                    m: 2,
+                    borderRadius: "16px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backdropFilter: "blur(12px)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+                    p: 3
+                  }}>
+                    <Typography variant="h6" sx={{mb: 1}}>Общий график (все модели)</Typography>
+                    <Tabs value={commonTab} onChange={handleCommonTabChange} textColor="inherit"
+                          indicatorColor="primary" sx={{mb: 2}}>
+                      <Tab label="All"/>
+                      <Tab label="Train"/>
+                      <Tab label="Test"/>
+                      <Tab label="Horizon"/>
+                      <Tab label="All+Horizon"/>
+                    </Tabs>
+                    <Box sx={{height: 500}}>
+                      {(() => {
+                        const subset = forecastResults.map((mRes) => {
+                          let segment = [];
+                          if (commonTab === 0) segment = mRes.forecastAll;
+                          else if (commonTab === 1) segment = mRes.forecastTrain;
+                          else if (commonTab === 2) segment = mRes.forecastTest;
+                          else if (commonTab === 3) segment = mRes.forecastHorizon;
+                          else if (commonTab === 4) segment = [...mRes.forecastAll, ...mRes.forecastHorizon];
+                          return {modelName: mRes.modelName, segment};
+                        });
+                        const data = makeCombinedChartData(subset, modelColorMap);
+                        return <Line data={data} options={chartOptions}/>;
+                      })()}
+                    </Box>
+                    <Box sx={{textAlign: "center", mt: 2}}>
+                      <Button variant="contained" onClick={handleOpenCsvDialog}
+                              sx={{borderRadius: "12px", backgroundColor: "#10A37F"}}>
+                        Скачать (All Models)
+                      </Button>
+                    </Box>
+                  </Paper>
               )}
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseCsvDialog}>Отмена</Button>
-          <Button variant="contained" onClick={handleDownloadSelectedCols}>Скачать</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  );
-}
+
+              {/* Вкладки по отдельным моделям */}
+              {forecastResults.length > 0 && (
+                  <Paper sx={{
+                    background: "rgba(255, 255, 255, 0.05)",
+                    m: 2,
+                    borderRadius: "16px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backdropFilter: "blur(12px)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+                    p: 3
+                  }}>
+                    <Typography variant="h6" sx={{mb: 2}}>Отдельные модели</Typography>
+                    <Tabs value={modelTab} onChange={handleModelTabChange} textColor="inherit" indicatorColor="primary"
+                          variant="scrollable" scrollButtons="auto" sx={{mb: 2}}>
+                      {forecastResults.map((mRes) => (
+                          <Tab key={mRes.modelName} label={mRes.modelName}/>
+                      ))}
+                    </Tabs>
+                    {forecastResults[modelTab] &&
+                        (() => {
+                          const curModel = forecastResults[modelTab];
+                          const color = modelColorMap[curModel.modelName] || "#36A2EB";
+                          const subTab = modelSubTabs[modelTab] || 0;
+                          const handleSubTabChange = (e, val) => handleModelSubTabChange(modelTab, val);
+                          const metricsAll = computeMetricsOnStandardized(curModel.forecastAll);
+                          const metricsTrain = computeMetricsOnStandardized(curModel.forecastTrain);
+                          const metricsTest = computeMetricsOnStandardized(curModel.forecastTest);
+                          const chartAll = makeSingleModelChartData(curModel.forecastAll, color);
+                          const chartTrain = makeSingleModelChartData(curModel.forecastTrain, color);
+                          const chartTest = makeSingleModelChartData(curModel.forecastTest, color);
+                          const chartHorizon = makeSingleModelChartData(curModel.forecastHorizon, color);
+                          return (
+                              <Box>
+                                <Tabs value={subTab} onChange={handleSubTabChange} textColor="inherit"
+                                      indicatorColor="primary" sx={{mb: 2}}>
+                                  <Tab label="All" disabled={curModel.forecastAll.length === 0}/>
+                                  <Tab label="Train" disabled={curModel.forecastTrain.length === 0}/>
+                                  <Tab label="Test" disabled={curModel.forecastTest.length === 0}/>
+                                  <Tab label="Horizon" disabled={curModel.forecastHorizon.length === 0}/>
+                                </Tabs>
+                                {subTab === 0 && (
+                                    <Box sx={{height: 400}}>
+                                      <Line data={chartAll} options={chartOptions}/>
+                                      {metricsAll && (
+                                          <Box sx={{display: "flex", flexWrap: "wrap", gap: 1, mt: 2, pt: 3, pb: 10}}>
+                                            <AnimatedMetricChip label="MAE" value={metricsAll?.mae} type="mae"
+                                                                icon={<TrendingDownIcon/>}/>
+                                            <AnimatedMetricChip label="RMSE" value={metricsAll?.rmse} type="rmse"
+                                                                icon={<ShowChartIcon/>}/>
+                                            {metricsAll?.mape !== null && (
+                                                <AnimatedMetricChip label="MAPE" value={metricsAll?.mape} type="mape"
+                                                                    icon={<PercentIcon/>}/>
+                                            )}
+                                          </Box>
+                                      )}
+                                    </Box>
+                                )}
+                                {subTab === 1 && (
+                                    <Box sx={{height: 400}}>
+                                      <Line data={chartTrain} options={chartOptions}/>
+                                      {metricsTrain && (
+                                          <Box sx={{display: "flex", gap: 2, mt: 2}}>
+                                            <Typography>MAE: {metricsTrain.mae.toFixed(4)}</Typography>
+                                            <Typography>RMSE: {metricsTrain.rmse.toFixed(4)}</Typography>
+                                            {metricsTrain.mape &&
+                                                <Typography>MAPE: {metricsTrain.mape.toFixed(2)}%</Typography>}
+                                          </Box>
+                                      )}
+                                    </Box>
+                                )}
+                                {subTab === 2 && (
+                                    <Box sx={{height: 400}}>
+                                      <Line data={chartTest} options={chartOptions}/>
+                                      {metricsTest && (
+                                          <Box sx={{display: "flex", gap: 2, mt: 2}}>
+                                            <Typography>MAE: {metricsTest.mae.toFixed(4)}</Typography>
+                                            <Typography>RMSE: {metricsTest.rmse.toFixed(4)}</Typography>
+                                            {metricsTest.mape &&
+                                                <Typography>MAPE: {metricsTest.mape.toFixed(2)}%</Typography>}
+                                          </Box>
+                                      )}
+                                    </Box>
+                                )}
+                                {subTab === 3 && (
+                                    <Box sx={{height: 400}}>
+                                      <Line data={chartHorizon} options={chartOptions}/>
+                                      <Typography sx={{mt: 2}}>Прогноз будущего (факт отсутствует).</Typography>
+                                    </Box>
+                                )}
+                              </Box>
+                          );
+                        })()}
+                  </Paper>
+              )}
+            </Box>
+            {/* Панель справа – изменён верхний отступ и высота */}
+            <Slide direction="left" in={modelsOpen} mountOnEnter unmountOnExit>
+              <Box
+                  sx={{
+                    position: "absolute",
+                    top: 16, // теперь отступ 16px, как у левой части
+                    right: 16,
+                    width: `${panelWidth}px`,
+                    background: "rgba(255, 255, 255, 0.05)",
+                    borderRadius: "16px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backdropFilter: "blur(12px)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+                    height: "calc(100vh - 72px)", // вычитаем 56px шапки + 16px отступ
+                    bgcolor: "rgba(255, 255, 255, 0.05)",
+                    p: 2,
+                    overflowY: "auto",
+                    "&::-webkit-scrollbar": {width: "6px"},
+                    "&::-webkit-scrollbar-track": {backgroundColor: "transparent"},
+                    "&::-webkit-scrollbar-thumb": {backgroundColor: "#666", borderRadius: "3px"},
+                    "&::-webkit-scrollbar-thumb:hover": {backgroundColor: "#aaa"},
+                  }}
+              >
+                <Typography variant="h6" sx={{color: "#fff", mb: 2}}>
+                  Модели
+                </Typography>
+                <ProphetBlock active={prophetActive} setActive={setProphetActive} prophetParams={prophetParams}
+                              setProphetParams={setProphetParams}/>
+                <XGBoostBlock active={xgboostActive} setActive={setXgboostActive} xgboostParams={xgboostParams}
+                              setXgboostParams={setXgboostParams}/>
+                <SarimaBlock active={sarimaActive} setActive={setSarimaActive} sarimaParams={sarimaParams}
+                             setSarimaParams={setSarimaParams}/>
+              </Box>
+            </Slide>
+          </Box>
+          {/* Диалог экспорта */}
+          <Dialog open={csvDialogOpen} onClose={handleCloseCsvDialog} fullWidth maxWidth="md">
+            <DialogTitle>Сохранить результаты</DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" sx={{mb: 1}}>
+                Выберите столбцы и формат файла:
+              </Typography>
+              <RadioGroup row value={fileType} onChange={(e) => setFileType(e.target.value)} sx={{mb: 2}}>
+                <FormControlLabel value="csv" control={<Radio/>} label="CSV"/>
+                <FormControlLabel value="xlsx" control={<Radio/>} label="XLSX"/>
+              </RadioGroup>
+              {!allPossibleCols.length ? (
+                  <Typography>Нет доступных столбцов</Typography>
+              ) : (
+                  <>
+                    <Box sx={{display: "flex", flexWrap: "wrap", gap: 2}}>
+                      {allPossibleCols.map((col) => (
+                          <FormControlLabel
+                              key={col}
+                              control={
+                                <Checkbox
+                                    checked={csvSelectedCols.includes(col)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) setCsvSelectedCols((prev) => [...prev, col]);
+                                      else setCsvSelectedCols((prev) => prev.filter((c) => c !== col));
+                                    }}
+                                />
+                              }
+                              label={col}
+                          />
+                      ))}
+                    </Box>
+                    {previewData && previewData.length > 0 && (
+                        <Box sx={{mt: 2, overflowX: "auto"}}>
+                          <Typography variant="subtitle2" sx={{mb: 1}}>
+                            Превью (первые 5 строк):
+                          </Typography>
+                          <table
+                              style={{borderCollapse: "collapse", width: "100%", color: "#fff", fontSize: "0.85rem"}}>
+                            <thead>
+                            <tr style={{backgroundColor: "#333"}}>
+                              {csvSelectedCols.map((col) => (
+                                  <th key={col} style={{border: "1px solid #555", padding: "4px"}}>{col}</th>
+                              ))}
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {previewData.map((row, idx) => (
+                                <tr key={idx}>
+                                  {csvSelectedCols.map((col) => (
+                                      <td key={col} style={{border: "1px solid #555", padding: "4px"}}>
+                                        {row[col] !== undefined ? row[col] : ""}
+                                      </td>
+                                  ))}
+                                </tr>
+                            ))}
+                            </tbody>
+                          </table>
+                        </Box>
+                    )}
+                  </>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseCsvDialog}>Отмена</Button>
+              <Button variant="contained" onClick={handleDownloadSelectedCols}>Скачать</Button>
+            </DialogActions>
+          </Dialog>
+        </Box>
+      </motion.div>
+        );
+        }

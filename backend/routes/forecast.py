@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import pandas as pd
-from forecast.prophet import prophet_forecast
+from forecast.prophet_forecast import prophet_forecast
 from forecast.xgboost_forecast import xgboost_forecast
+from forecast.arima_forecast import sarima_forecast
 
 forecast_router = APIRouter()
 
@@ -48,6 +49,27 @@ async def forecast_endpoint(request: ForecastRequest):
                 freq=request.freq,
                 confidence_level=request.confidence_level,
                 xgb_params=request.uniqueParams
+            )
+        elif request.model == "SARIMA":
+            order = (request.uniqueParams.get("p", 1),
+                     request.uniqueParams.get("d", 1),
+                     request.uniqueParams.get("q", 1))
+            seasonal_order = (
+                request.uniqueParams.get("P", 1),
+                request.uniqueParams.get("D", 1),
+                request.uniqueParams.get("Q", 1),
+                request.uniqueParams.get("s", 12)
+            )
+            forecast_all, forecast_train, forecast_test, forecast_horizon = sarima_forecast(
+                df,
+                horizon=request.horizon,
+                test_size=request.history,
+                dt_name=request.dt_name,
+                y_name=request.y_name,
+                freq=request.freq,
+                confidence_level=request.confidence_level,
+                order=order,
+                seasonal_order=seasonal_order
             )
         else:
             raise HTTPException(status_code=400, detail="Unsupported model")

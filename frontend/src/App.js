@@ -27,7 +27,7 @@ const App = () => {
                 sx={{
                   maxWidth: "1200px",
                   margin: "auto",
-                  padding: "20px",
+                  // padding: "20px",
                   borderRadius: "16px",
                 }}
               >

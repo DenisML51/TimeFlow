@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useContext} from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   Button,
@@ -36,9 +36,12 @@ import { Line } from "react-chartjs-2";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 import CategoricalDataBlock from "./CategoricalDataBlock";
-import {DashboardContext} from "../context/DashboardContext";
+import { DashboardContext } from "../context/DashboardContext";
 
-// =========== 1) МЕТРИКИ НА СТАНДАРТИЗОВАННЫХ ДАННЫХ ===========
+// ================================================
+// 1) Вспомогательные функции (метрики, графики)
+// ================================================
+
 function computeMetricsOnStandardized(dataArray) {
   const rowsWithFact = dataArray.filter(
     (d) => d.y_fact !== null && d.y_fact !== undefined
@@ -79,7 +82,6 @@ function computeMetricsOnStandardized(dataArray) {
   return { mae, rmse, mape };
 }
 
-// =========== 2) График для ОДНОЙ МОДЕЛИ ===========
 function makeSingleModelChartData(dataArray, modelColor) {
   return {
     labels: dataArray.map((d) => d.ds),
@@ -126,7 +128,6 @@ function makeSingleModelChartData(dataArray, modelColor) {
   };
 }
 
-// =========== 3) График (All Models) ===========
 function makeCombinedChartData(modelsArray, modelColorMap) {
   const allDates = new Set();
   modelsArray.forEach((m) => {
@@ -173,7 +174,11 @@ function makeCombinedChartData(modelsArray, modelColorMap) {
   return { labels, datasets };
 }
 
-// =========== 4) Компонент "ProphetBlock" ===========
+// ================================================
+// 2) Компоненты для настройки моделей
+// ================================================
+
+// Компонент настройки Prophet (оставляем без изменений)
 function ProphetBlock({ active, setActive, prophetParams, setProphetParams }) {
   const [localSeasonalityMode, setLocalSeasonalityMode] = useState(
     prophetParams.seasonality_mode || "additive"
@@ -259,17 +264,160 @@ function ProphetBlock({ active, setActive, prophetParams, setProphetParams }) {
   );
 }
 
-// =========== 5) Основной компонент ForecastPage ===========
+// Новый компонент настройки XGBoost
+function XGBoostBlock({ active, setActive, xgboostParams, setXgboostParams }) {
+  const [localMaxDepth, setLocalMaxDepth] = useState(xgboostParams.max_depth || 6);
+  const [localLearningRate, setLocalLearningRate] = useState(xgboostParams.learning_rate || 0.1);
+  const [localNEstimators, setLocalNEstimators] = useState(xgboostParams.n_estimators || 100);
+  const [localSubsample, setLocalSubsample] = useState(xgboostParams.subsample || 1);
+  const [localColsampleBytree, setLocalColsampleBytree] = useState(xgboostParams.colsample_bytree || 1);
+
+  const handleApply = () => {
+    setXgboostParams({
+      max_depth: localMaxDepth,
+      learning_rate: localLearningRate,
+      n_estimators: localNEstimators,
+      subsample: localSubsample,
+      colsample_bytree: localColsampleBytree
+    });
+    setActive(true);
+  };
+
+  const handleCancel = () => {
+    setActive(false);
+  };
+
+  const borderColor = active ? "#10A37F" : "#FF4444";
+
+  return (
+    <Paper
+      sx={{
+        p: 2,
+        mb: 2,
+        border: `2px solid ${borderColor}`,
+        borderRadius: 2,
+        transition: "border-color 0.2s"
+      }}
+    >
+      <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
+        XGBoost
+      </Typography>
+      <Box sx={{ mt: 1 }}>
+        <Typography variant="body2" sx={{ color: "#fff" }}>
+          Max Depth: {localMaxDepth}
+        </Typography>
+        <Slider
+          value={localMaxDepth}
+          onChange={(e, val) => setLocalMaxDepth(val)}
+          min={1}
+          max={15}
+          step={1}
+          valueLabelDisplay="auto"
+          sx={{ color: "#10A37F", mb: 2 }}
+        />
+        <Typography variant="body2" sx={{ color: "#fff" }}>
+          Learning Rate: {localLearningRate}
+        </Typography>
+        <Slider
+          value={localLearningRate}
+          onChange={(e, val) => setLocalLearningRate(val)}
+          min={0.01}
+          max={1}
+          step={0.01}
+          valueLabelDisplay="auto"
+          sx={{ color: "#10A37F", mb: 2 }}
+        />
+        <Typography variant="body2" sx={{ color: "#fff" }}>
+          n_estimators: {localNEstimators}
+        </Typography>
+        <Slider
+          value={localNEstimators}
+          onChange={(e, val) => setLocalNEstimators(val)}
+          min={10}
+          max={500}
+          step={10}
+          valueLabelDisplay="auto"
+          sx={{ color: "#10A37F", mb: 2 }}
+        />
+        <Typography variant="body2" sx={{ color: "#fff" }}>
+          Subsample: {localSubsample}
+        </Typography>
+        <Slider
+          value={localSubsample}
+          onChange={(e, val) => setLocalSubsample(val)}
+          min={0.5}
+          max={1}
+          step={0.1}
+          valueLabelDisplay="auto"
+          sx={{ color: "#10A37F", mb: 2 }}
+        />
+        <Typography variant="body2" sx={{ color: "#fff" }}>
+          Colsample by tree: {localColsampleBytree}
+        </Typography>
+        <Slider
+          value={localColsampleBytree}
+          onChange={(e, val) => setLocalColsampleBytree(val)}
+          min={0.5}
+          max={1}
+          step={0.1}
+          valueLabelDisplay="auto"
+          sx={{ color: "#10A37F", mb: 2 }}
+        />
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+          {active ? (
+            <Button
+              variant="outlined"
+              startIcon={<CloseIcon />}
+              sx={{
+                borderColor: "#FF4444",
+                color: "#FF4444",
+                "&:hover": {
+                  borderColor: "#FF4444",
+                  backgroundColor: "#ff44441a"
+                }
+              }}
+              onClick={handleCancel}
+            >
+              Отключить
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              startIcon={<CheckIcon />}
+              sx={{
+                borderColor: "#10A37F",
+                color: "#10A37F",
+                "&:hover": {
+                  borderColor: "#10A37F",
+                  backgroundColor: "#10A37F1a"
+                }
+              }}
+              onClick={handleApply}
+            >
+              Активировать
+            </Button>
+          )}
+        </Box>
+      </Box>
+      <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444" }}>
+        {active ? "Активна" : "Выключена"}
+      </Typography>
+    </Paper>
+  );
+}
+
+// ================================================
+// 3) Основной компонент ForecastPage
+// ================================================
+
 export default function ForecastPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Чтение сохранённого состояния из sessionStorage
   const storedState = sessionStorage.getItem("forecastPageState")
     ? JSON.parse(sessionStorage.getItem("forecastPageState"))
     : null;
 
-  // Данные, переданные через location.state
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const stateModifiedData = location.state?.modifiedData || [];
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -282,7 +430,6 @@ export default function ForecastPage() {
     ? JSON.parse(sessionStorage.getItem("selectedColumns"))
     : [];
 
-  // Изначальные данные (для прогноза)
   const initialModifiedData = stateModifiedData.length
     ? stateModifiedData
     : storedModifiedData;
@@ -290,12 +437,6 @@ export default function ForecastPage() {
     ? stateSelectedColumns
     : storedSelectedColumns;
 
-  // // Получаем сохранённые категориальные фильтры из sessionStorage
-  // const storedFilters = sessionStorage.getItem("dashboardFilters")
-  //   ? JSON.parse(sessionStorage.getItem("dashboardFilters"))
-  //   : {};
-
-  // Параметры прогноза
   const [horizon, setHorizon] = useState(storedState?.horizon ?? 10);
   const [historySize, setHistorySize] = useState(storedState?.historySize ?? 5);
   const [freq, setFreq] = useState(storedState?.freq || "D");
@@ -303,44 +444,45 @@ export default function ForecastPage() {
     storedState?.confidenceLevel ?? 95
   );
 
-  // Активность моделей
+  // Модели: Prophet и XGBoost (удалён ARIMA)
   const [prophetActive, setProphetActive] = useState(
     storedState?.prophetActive ?? false
   );
   const [prophetParams, setProphetParams] = useState(
     storedState?.prophetParams || { seasonality_mode: "additive" }
   );
-  const [arimaActive, setArimaActive] = useState(
-    storedState?.arimaActive ?? false
+  const [xgboostActive, setXgboostActive] = useState(
+    storedState?.xgboostActive ?? false
+  );
+  const [xgboostParams, setXgboostParams] = useState(
+    storedState?.xgboostParams || {
+      max_depth: 6,
+      learning_rate: 0.1,
+      n_estimators: 100,
+      subsample: 1,
+      colsample_bytree: 1
+    }
   );
 
-  // Цветовая схема моделей
   const modelColorMap = {
     Prophet: "#36A2EB",
-    Arima: "#9966FF"
+    XGBoost: "#54ffbc"
   };
 
-  // Результаты прогнозирования
   const [forecastResults, setForecastResults] = useState(
     storedState?.forecastResults || []
   );
   const [loading, setLoading] = useState(false);
 
-  // Вкладки общего графика
   const [commonTab, setCommonTab] = useState(storedState?.commonTab || 0);
-
-  // Вкладки для отдельных моделей
   const [modelTab, setModelTab] = useState(storedState?.modelTab || 0);
   const [modelSubTabs, setModelSubTabs] = useState(storedState?.modelSubTabs || {});
 
-  // Меню справа
   const [modelsOpen, setModelsOpen] = useState(storedState?.modelsOpen ?? false);
 
-  // dtName, yName
   const dtName = initialSelectedColumns[0] || "ds";
   const yName = initialSelectedColumns[1] || "y";
 
-  // CSV/XLSX
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
   const [csvSelectedCols, setCsvSelectedCols] = useState(
     storedState?.csvSelectedCols || []
@@ -349,7 +491,6 @@ export default function ForecastPage() {
   const [fileType, setFileType] = useState(storedState?.fileType || "csv");
   const [previewData, setPreviewData] = useState([]);
 
-  // Сохранение состояния в sessionStorage
   useEffect(() => {
     sessionStorage.setItem(
       "forecastPageState",
@@ -360,7 +501,8 @@ export default function ForecastPage() {
         confidenceLevel,
         prophetActive,
         prophetParams,
-        arimaActive,
+        xgboostActive,
+        xgboostParams,
         forecastResults,
         commonTab,
         modelTab,
@@ -377,7 +519,8 @@ export default function ForecastPage() {
     confidenceLevel,
     prophetActive,
     prophetParams,
-    arimaActive,
+    xgboostActive,
+    xgboostParams,
     forecastResults,
     commonTab,
     modelTab,
@@ -387,7 +530,6 @@ export default function ForecastPage() {
     fileType
   ]);
 
-  // Сохранение данных, если они пришли через location.state
   useEffect(() => {
     if (stateModifiedData.length) {
       sessionStorage.setItem("modifiedData", JSON.stringify(stateModifiedData));
@@ -400,7 +542,6 @@ export default function ForecastPage() {
     }
   }, [stateModifiedData, stateSelectedColumns]);
 
-  // Если данных нет — возвращаемся назад
   useEffect(() => {
     if (
       !initialModifiedData ||
@@ -412,7 +553,6 @@ export default function ForecastPage() {
     }
   }, [initialModifiedData, initialSelectedColumns, navigate]);
 
-  // Построение прогноза
   const handleBuildForecast = async () => {
     setLoading(true);
     try {
@@ -420,14 +560,15 @@ export default function ForecastPage() {
       if (prophetActive) {
         activeModels.push({ model: "Prophet", uniqueParams: prophetParams });
       }
-      if (arimaActive) {
-        activeModels.push({ model: "Arima", uniqueParams: {} });
+      if (xgboostActive) {
+        activeModels.push({ model: "XGBoost", uniqueParams: xgboostParams });
       }
 
       const newResults = [];
       for (let m of activeModels) {
         const payload = {
           model: m.model,
+          uniqueParams: m.uniqueParams,
           horizon,
           history: historySize,
           dt_name: dtName,
@@ -454,7 +595,6 @@ export default function ForecastPage() {
     }
   };
 
-  // Формирование списка столбцов для экспорта
   useEffect(() => {
     const colSet = new Set(["ds", "y_fact"]);
     forecastResults.forEach((m) => {
@@ -473,7 +613,6 @@ export default function ForecastPage() {
     setAllPossibleCols(Array.from(colSet));
   }, [forecastResults]);
 
-  // Формирование общего массива для экспорта и превью
   const buildMergedRows = () => {
     const bigMap = new Map();
     forecastResults.forEach((m) => {
@@ -508,7 +647,6 @@ export default function ForecastPage() {
     return mergedRows;
   };
 
-  // Диалог экспорта
   const handleOpenCsvDialog = () => {
     const merged = buildMergedRows();
     setPreviewData(merged.slice(0, 5));
@@ -545,19 +683,16 @@ export default function ForecastPage() {
     setCsvDialogOpen(false);
   };
 
-  // Обработка вкладок общего графика
   const handleCommonTabChange = (e, val) => setCommonTab(val);
   const handleModelTabChange = (e, val) => setModelTab(val);
   const handleModelSubTabChange = (modelIndex, val) => {
     setModelSubTabs((prev) => ({ ...prev, [modelIndex]: val }));
   };
 
-  // Кнопка "Назад"
   const handleBack = () => {
     navigate(-1);
   };
 
-  // Панель справа
   const panelWidth = 320;
   const toggleModels = () => setModelsOpen((p) => !p);
 
@@ -585,11 +720,7 @@ export default function ForecastPage() {
     }
   };
 
-  const {
-    selectedColumns,
-    filteredData,
-    filters,
-  } = useContext(DashboardContext);
+  const { selectedColumns, filteredData, filters } = useContext(DashboardContext);
 
   return (
     <Box sx={{ position: "relative", bgcolor: "#1a1a1a", minHeight: "100vh" }}>
@@ -604,9 +735,9 @@ export default function ForecastPage() {
           color: "#fff"
         }}
       >
-          <IconButton onClick={handleBack} sx={{ position: "absolute", left: 20, top: 20, color: "#fff" }}>
-            <ArrowBackIcon />
-          </IconButton>
+        <IconButton onClick={handleBack} sx={{ position: "absolute", left: 20, top: 20, color: "#fff" }}>
+          <ArrowBackIcon />
+        </IconButton>
         <Typography variant="h5" sx={{ flexGrow: 1, textAlign: "center" }}>
           Прогнозирование
         </Typography>
@@ -620,8 +751,6 @@ export default function ForecastPage() {
         >
           {modelsOpen ? <CloseIcon /> : <SettingsIcon />}
         </IconButton>
-        {/* Интеграция компонента категориальных данных.
-            Фильтры получаем из sessionStorage (установленные на первой странице) */}
       </Box>
       <Box sx={{bgcolor: "#121212", p: 0.1}}>
         <CategoricalDataBlock
@@ -652,7 +781,6 @@ export default function ForecastPage() {
             "scrollbar-width": "none"
           }}
         >
-          {/* Общие параметры прогноза */}
           <Paper sx={{ m: 2, p: 3, borderRadius: 3, backgroundColor: "#121212" }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Общие параметры прогноза
@@ -913,57 +1041,12 @@ export default function ForecastPage() {
               prophetParams={prophetParams}
               setProphetParams={setProphetParams}
             />
-            <Paper
-              sx={{
-                p: 2,
-                mb: 2,
-                borderRadius: 2,
-                border: `2px solid ${arimaActive ? "#10A37F" : "#FF4444"}`,
-                transition: "border-color 0.2s"
-              }}
-            >
-              <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
-                ARIMA
-              </Typography>
-              <Box sx={{ mt: 1 }}>
-                {arimaActive ? (
-                  <Button
-                    variant="outlined"
-                    startIcon={<CloseIcon />}
-                    sx={{
-                      borderColor: "#FF4444",
-                      color: "#FF4444",
-                      "&:hover": {
-                        borderColor: "#FF4444",
-                        backgroundColor: "#ff44441a"
-                      }
-                    }}
-                    onClick={() => setArimaActive(false)}
-                  >
-                    Отключить
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outlined"
-                    startIcon={<CheckIcon />}
-                    sx={{
-                      borderColor: "#10A37F",
-                      color: "#10A37F",
-                      "&:hover": {
-                        borderColor: "#10A37F",
-                        backgroundColor: "#10A37F1a"
-                      }
-                    }}
-                    onClick={() => setArimaActive(true)}
-                  >
-                    Активировать
-                  </Button>
-                )}
-              </Box>
-              <Typography variant="caption" sx={{ color: arimaActive ? "#10A37F" : "#FF4444" }}>
-                {arimaActive ? "Активна" : "Выключена"}
-              </Typography>
-            </Paper>
+            <XGBoostBlock
+              active={xgboostActive}
+              setActive={setXgboostActive}
+              xgboostParams={xgboostParams}
+              setXgboostParams={setXgboostParams}
+            />
           </Box>
         </Slide>
       </Box>

@@ -27,10 +27,9 @@ def prophet_forecast(df,
       - forecast_all: прогноз/факт на всех исторических точках (если нужно)
       - forecast_train: прогноз/факт только на train-части
       - forecast_test: прогноз/факт только на test-части
-      - forecast_future: прогноз на горизонте
+      - forecast_horizon: прогноз на горизонте, начинающийся с последней даты всей истории
     """
     try:
-
         # 1. Предобработка данных
         data = df.copy()
         data[dt_name] = pd.to_datetime(data[dt_name])
@@ -75,10 +74,13 @@ def prophet_forecast(df,
         test_forecast = forecast_all[forecast_all['ds'].isin(test_df['ds'])].copy()
 
         # 6. Прогноз на будущее (horizon)
-        future = m.make_future_dataframe(periods=horizon, freq=freq, include_history=False)
+        # Здесь вместо того, чтобы начинать с конца train, мы начинаем с последней даты всей истории
+        last_date = df_prophet['ds'].max()
+        future = m.make_future_dataframe(periods=horizon, freq=freq, include_history=True)
+        # Оставляем только даты, которые идут после последней даты в исходных данных
+        future = future[future['ds'] > last_date]
         future_fore = m.predict(future)
         future_fore = apply_confidence_intervals(future_fore, confidence_level)
-
         future_fore.rename(columns={'yhat': 'y_forecast'}, inplace=True)
         forecast_horizon = future_fore[['ds', 'y_forecast', 'yhat_lower', 'yhat_upper']].copy()
         forecast_horizon['model_name'] = 'Prophet'

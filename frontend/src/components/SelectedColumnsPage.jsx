@@ -1,1004 +1,1007 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
-  Button,
-  IconButton,
-  Typography,
-  Paper,
   Grid,
+  Paper,
+  Typography,
   Slider,
-  FormControl,
-  InputLabel,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Slide,
+  Button,
   Select,
   MenuItem,
-  CircularProgress,
-  Tabs,
-  Tab,
-  Checkbox,
-  FormControlLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  RadioGroup,
-  Radio,
-  Slide
 } from "@mui/material";
-import {
-  ArrowBack as ArrowBackIcon,
-  Settings as SettingsIcon,
-  Close as CloseIcon,
-  Check as CheckIcon
-} from "@mui/icons-material";
-import { useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
+import SettingsIcon from "@mui/icons-material/Settings";
 import { Line, Bar } from "react-chartjs-2";
-import { saveAs } from "file-saver";
-import * as XLSX from "xlsx";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend,
+} from "chart.js";
+import { DashboardContext } from "../context/DashboardContext";
 import CategoricalDataBlock from "./CategoricalDataBlock";
 
-// =========== 1) МЕТРИКИ НА СТАНДАРТИЗОВАННЫХ ДАННЫХ ===========
-function computeMetricsOnStandardized(dataArray) {
-  const rowsWithFact = dataArray.filter(
-    (d) => d.y_fact !== null && d.y_fact !== undefined
-  );
-  if (!rowsWithFact.length) return null;
-  const facts = rowsWithFact.map((d) => d.y_fact);
-  const preds = rowsWithFact.map((d) => d.y_forecast);
-  const combined = [...facts, ...preds];
-  const mean = combined.reduce((acc, v) => acc + v, 0) / combined.length;
-  const variance = combined.reduce((acc, v) => acc + (v - mean) ** 2, 0) / combined.length;
-  const std = Math.sqrt(variance);
-  if (std === 0) return { mae: 0, rmse: 0, mape: 0 };
-  const factsScaled = facts.map((f) => (f - mean) / std);
-  const predsScaled = preds.map((p) => (p - mean) / std);
-  let sumAbs = 0, sumSq = 0, sumPct = 0, countPct = 0;
-  for (let i = 0; i < factsScaled.length; i++) {
-    const err = factsScaled[i] - predsScaled[i];
-    sumAbs += Math.abs(err);
-    sumSq += err * err;
-    if (factsScaled[i] !== 0) {
-      sumPct += Math.abs(err / factsScaled[i]);
-      countPct++;
-    }
-  }
-  const mae = sumAbs / factsScaled.length;
-  const rmse = Math.sqrt(sumSq / factsScaled.length);
-  const mape = countPct > 0 ? (sumPct / countPct) * 100 : null;
-  return { mae, rmse, mape };
-}
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  ChartTooltip,
+  Legend
+);
 
-// =========== 2) График для ОДНОЙ МОДЕЛИ ===========
-function makeSingleModelChartData(dataArray, modelColor) {
-  return {
-    labels: dataArray.map((d) => d.ds),
-    datasets: [
-      {
-        label: "Факт",
-        data: dataArray.map((d) => d.y_fact),
-        borderColor: "#FFD700",
-        backgroundColor: "#FFD700",
-        borderWidth: 1,
-        pointRadius: 2,
-        fill: false
-      },
-      {
-        label: "Прогноз",
-        data: dataArray.map((d) => d.y_forecast),
-        borderColor: modelColor,
-        backgroundColor: modelColor,
-        borderWidth: 1,
-        pointRadius: 2,
-        fill: false
-      },
-      {
-        label: "Нижняя",
-        data: dataArray.map((d) => d.yhat_lower),
-        fill: "-1",
-        backgroundColor: `${modelColor}33`,
-        borderColor: `${modelColor}33`,
-        borderDash: [5, 5],
-        borderWidth: 1,
-        pointRadius: 0
-      },
-      {
-        label: "Верхняя",
-        data: dataArray.map((d) => d.yhat_upper),
-        fill: "-1",
-        backgroundColor: `${modelColor}33`,
-        borderColor: `${modelColor}33`,
-        borderDash: [5, 5],
-        borderWidth: 1,
-        pointRadius: 0
-      }
-    ]
-  };
-}
-
-// =========== 3) График (All Models) ===========
-function makeCombinedChartData(modelsArray, modelColorMap) {
-  const allDates = new Set();
-  modelsArray.forEach((m) => {
-    m.segment.forEach((row) => allDates.add(row.ds));
-  });
-  const labels = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
-  const datasets = [];
-  modelsArray.forEach((m) => {
-    const color = modelColorMap[m.modelName] || "#36A2EB";
-    const mapData = new Map();
-    m.segment.forEach((row) => {
-      mapData.set(row.ds, { fact: row.y_fact, forecast: row.y_forecast });
-    });
-    datasets.push({
-      label: `Факт (${m.modelName})`,
-      data: labels.map((ds) => {
-        const item = mapData.get(ds);
-        return item ? item.fact : null;
-      }),
-      borderColor: "#FFD700",
-      backgroundColor: "#FFD700",
-      borderWidth: 1,
-      pointRadius: 2,
-      fill: false
-    });
-    datasets.push({
-      label: `Прогноз (${m.modelName})`,
-      data: labels.map((ds) => {
-        const item = mapData.get(ds);
-        return item ? item.forecast : null;
-      }),
-      borderColor: color,
-      backgroundColor: "transparent",
-      borderDash: [5, 5],
-      borderWidth: 1,
-      pointRadius: 2,
-      fill: false
-    });
-  });
-  return { labels, datasets };
-}
-
-// =========== 4) Компонент "ProphetBlock" ===========
-function ProphetBlock({ active, setActive, prophetParams, setProphetParams }) {
-  const [localSeasonalityMode, setLocalSeasonalityMode] = useState(
-    prophetParams.seasonality_mode || "additive"
-  );
-  const handleApply = () => {
-    setProphetParams((prev) => ({ ...prev, seasonality_mode: localSeasonalityMode }));
-    setActive(true);
-  };
-  const handleCancel = () => {
-    setActive(false);
-  };
-  const borderColor = active ? "#10A37F" : "#FF4444";
-  return (
-    <Paper
-      sx={{
-        p: 2,
-        mb: 2,
-        border: `2px solid ${borderColor}`,
-        borderRadius: 2,
-        transition: "border-color 0.2s"
-      }}
-    >
-      <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
-        Prophet
-      </Typography>
-      <Box sx={{ mt: 1 }}>
-        <FormControl fullWidth size="small" sx={{ mb: 1 }}>
-          <InputLabel>Seasonality Mode</InputLabel>
-          <Select
-            value={localSeasonalityMode}
-            label="Seasonality Mode"
-            onChange={(e) => setLocalSeasonalityMode(e.target.value)}
-            sx={{ backgroundColor: "#2c2c2c", color: "#fff" }}
-          >
-            <MenuItem value="additive">Additive</MenuItem>
-            <MenuItem value="multiplicative">Multiplicative</MenuItem>
-          </Select>
-        </FormControl>
-        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-          {active ? (
-            <Button
-              variant="outlined"
-              startIcon={<CloseIcon />}
-              sx={{
-                borderColor: "#FF4444",
-                color: "#FF4444",
-                "&:hover": {
-                  borderColor: "#FF4444",
-                  backgroundColor: "#ff44441a"
-                }
-              }}
-              onClick={handleCancel}
-            >
-              Отключить
-            </Button>
-          ) : (
-            <Button
-              variant="outlined"
-              startIcon={<CheckIcon />}
-              sx={{
-                borderColor: "#10A37F",
-                color: "#10A37F",
-                "&:hover": {
-                  borderColor: "#10A37F",
-                  backgroundColor: "#10A37F1a"
-                }
-              }}
-              onClick={handleApply}
-            >
-              Активировать
-            </Button>
-          )}
-        </Box>
-      </Box>
-      <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444" }}>
-        {active ? "Активна" : "Выключена"}
-      </Typography>
-    </Paper>
-  );
-}
-
-// =========== 5) Основной компонент ForecastPage ===========
-export default function ForecastPage() {
+const SelectedColumnsPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const {
+    selectedColumns,
+    filteredData,
+    filters,
+    secondPageState,
+    setSecondPageState,
+  } = useContext(DashboardContext);
 
-  // Чтение сохранённого состояния из sessionStorage
-  const storedState = sessionStorage.getItem("forecastPageState")
-    ? JSON.parse(sessionStorage.getItem("forecastPageState"))
-    : null;
+  // Состояние для анимации перехода
+  const [show, setShow] = useState(true);
+  const handleBack = () => setShow(false);
+  const handleExited = () => navigate(-1);
 
-  // Данные, переданные через location.state (если есть)
-  const stateModifiedData = location.state?.modifiedData || [];
-  const stateSelectedColumns = location.state?.selectedColumns || [];
+  // Формируем выборку данных для выбранных столбцов (данные, переданные с первой страницы)
+  const dataForDisplay = useMemo(() => {
+    return filteredData.map((row) => {
+      const newRow = {};
+      selectedColumns.forEach((col) => {
+        newRow[col] = row[col];
+      });
+      return newRow;
+    });
+  }, [filteredData, selectedColumns]);
 
-  // Если данные не пришли через location, берем сохранённые
-  const storedModifiedData = sessionStorage.getItem("modifiedData")
-    ? JSON.parse(sessionStorage.getItem("modifiedData"))
-    : [];
-  const storedSelectedColumns = sessionStorage.getItem("selectedColumns")
-    ? JSON.parse(sessionStorage.getItem("selectedColumns"))
-    : [];
-
-  // Изначальные данные для прогноза
-  const initialModifiedData = stateModifiedData.length
-    ? stateModifiedData
-    : storedModifiedData;
-  const initialSelectedColumns = stateSelectedColumns.length
-    ? stateSelectedColumns
-    : storedSelectedColumns;
-
-  // Получаем сохранённые фильтры (категориальные данные) из sessionStorage (устанавливаются на первой/второй странице)
-  const storedFilters = sessionStorage.getItem("dashboardFilters")
-    ? JSON.parse(sessionStorage.getItem("dashboardFilters"))
-    : {};
-
-  // Параметры прогноза
-  const [horizon, setHorizon] = useState(storedState?.horizon ?? 10);
-  const [historySize, setHistorySize] = useState(storedState?.historySize ?? 5);
-  const [freq, setFreq] = useState(storedState?.freq || "D");
-  const [confidenceLevel, setConfidenceLevel] = useState(
-    storedState?.confidenceLevel ?? 95
-  );
-
-  // Активность моделей
-  const [prophetActive, setProphetActive] = useState(
-    storedState?.prophetActive ?? false
-  );
-  const [prophetParams, setProphetParams] = useState(
-    storedState?.prophetParams || { seasonality_mode: "additive" }
-  );
-  const [arimaActive, setArimaActive] = useState(
-    storedState?.arimaActive ?? false
-  );
-
-  // Цветовая схема моделей
-  const modelColorMap = {
-    Prophet: "#36A2EB",
-    Arima: "#9966FF"
-  };
-
-  // Результаты прогнозирования
-  const [forecastResults, setForecastResults] = useState(
-    storedState?.forecastResults || []
-  );
-  const [loading, setLoading] = useState(false);
-
-  // Вкладки общего графика
-  const [commonTab, setCommonTab] = useState(storedState?.commonTab || 0);
-
-  // Вкладки для отдельных моделей
-  const [modelTab, setModelTab] = useState(storedState?.modelTab || 0);
-  const [modelSubTabs, setModelSubTabs] = useState(storedState?.modelSubTabs || {});
-
-  // Меню справа
-  const [modelsOpen, setModelsOpen] = useState(storedState?.modelsOpen ?? false);
-
-  // dtName и yName (из выбранных столбцов)
-  const dtName = initialSelectedColumns[0] || "ds";
-  const yName = initialSelectedColumns[1] || "y";
-
-  // CSV/XLSX
-  const [csvDialogOpen, setCsvDialogOpen] = useState(false);
-  const [csvSelectedCols, setCsvSelectedCols] = useState(
-    storedState?.csvSelectedCols || []
-  );
-  const [allPossibleCols, setAllPossibleCols] = useState([]);
-  const [fileType, setFileType] = useState(storedState?.fileType || "csv");
-  const [previewData, setPreviewData] = useState([]);
-
-  // Сохраняем состояние в sessionStorage
-  useEffect(() => {
-    sessionStorage.setItem(
-      "forecastPageState",
-      JSON.stringify({
-        horizon,
-        historySize,
-        freq,
-        confidenceLevel,
-        prophetActive,
-        prophetParams,
-        arimaActive,
-        forecastResults,
-        commonTab,
-        modelTab,
-        modelSubTabs,
-        modelsOpen,
-        csvSelectedCols,
-        fileType
-      })
-    );
+  // Локальная сортировка по выбранным столбцам
+  const sortedData = useMemo(() => {
+    if (!secondPageState.localSortColumn || !secondPageState.localSortDirection)
+      return dataForDisplay;
+    return [...dataForDisplay].sort((a, b) => {
+      const valA = a[secondPageState.localSortColumn];
+      const valB = b[secondPageState.localSortColumn];
+      if (!isNaN(valA) && !isNaN(valB)) {
+        return secondPageState.localSortDirection === "asc"
+          ? Number(valA) - Number(valB)
+          : Number(valB) - Number(valA);
+      }
+      return secondPageState.localSortDirection === "asc"
+        ? String(valA).localeCompare(String(valB))
+        : String(valB).localeCompare(String(valA));
+    });
   }, [
-    horizon,
-    historySize,
-    freq,
-    confidenceLevel,
-    prophetActive,
-    prophetParams,
-    arimaActive,
-    forecastResults,
-    commonTab,
-    modelTab,
-    modelSubTabs,
-    modelsOpen,
-    csvSelectedCols,
-    fileType
+    dataForDisplay,
+    secondPageState.localSortColumn,
+    secondPageState.localSortDirection,
   ]);
 
-  // Сохраняем данные, если они пришли через location.state
-  useEffect(() => {
-    if (stateModifiedData.length) {
-      sessionStorage.setItem("modifiedData", JSON.stringify(stateModifiedData));
-    }
-    if (stateSelectedColumns.length) {
-      sessionStorage.setItem("selectedColumns", JSON.stringify(stateSelectedColumns));
-    }
-  }, [stateModifiedData, stateSelectedColumns]);
+  // Применяем шаги предобработки к данным, полученным с первой страницы
+  const finalDataResult = useMemo(() => {
+    let data = [...sortedData];
+    let seasonalValues = null;
 
-  // Если данных нет — возвращаемся назад
-  useEffect(() => {
-    if (
-      !initialModifiedData ||
-      !initialSelectedColumns ||
-      initialModifiedData.length === 0 ||
-      initialSelectedColumns.length < 2
-    ) {
-      navigate(-1);
-    }
-  }, [initialModifiedData, initialSelectedColumns, navigate]);
-
-  // Построение прогноза
-  const handleBuildForecast = async () => {
-    setLoading(true);
-    try {
-      const activeModels = [];
-      if (prophetActive) activeModels.push({ model: "Prophet", uniqueParams: prophetParams });
-      if (arimaActive) activeModels.push({ model: "Arima", uniqueParams: {} });
-      const newResults = [];
-      for (let m of activeModels) {
-        const payload = {
-          model: m.model,
-          horizon,
-          history: historySize,
-          dt_name: dtName,
-          y_name: yName,
-          freq,
-          confidence_level: confidenceLevel,
-          data: initialModifiedData
-        };
-        const resp = await axios.post("http://localhost:8000/api/forecast", payload);
-        const { forecast_all, forecast_train, forecast_test, forecast_horizon } = resp.data;
-        newResults.push({
-          modelName: m.model,
-          forecastAll: forecast_all || [],
-          forecastTrain: forecast_train || [],
-          forecastTest: forecast_test || [],
-          forecastHorizon: forecast_horizon || []
-        });
-      }
-      setForecastResults(newResults);
-    } catch (err) {
-      console.error("Ошибка прогноза:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Формирование списка столбцов для экспорта
-  useEffect(() => {
-    const colSet = new Set(["ds", "y_fact"]);
-    forecastResults.forEach((m) => {
-      const arr = [
-        ...m.forecastAll,
-        ...m.forecastTrain,
-        ...m.forecastTest,
-        ...m.forecastHorizon
-      ];
-      arr.forEach((row) => {
-        if (row.y_forecast !== undefined) colSet.add(`${m.modelName}_y_forecast`);
-        if (row.yhat_lower !== undefined) colSet.add(`${m.modelName}_yhat_lower`);
-        if (row.yhat_upper !== undefined) colSet.add(`${m.modelName}_yhat_upper`);
-      });
-    });
-    setAllPossibleCols(Array.from(colSet));
-  }, [forecastResults]);
-
-  // Формирование общего массива для экспорта и превью
-  const buildMergedRows = () => {
-    const bigMap = new Map();
-    forecastResults.forEach((m) => {
-      const combined = [
-        ...m.forecastAll,
-        ...m.forecastTrain,
-        ...m.forecastTest,
-        ...m.forecastHorizon
-      ];
-      combined.forEach((row) => {
-        if (!bigMap.has(row.ds)) {
-          bigMap.set(row.ds, { ds: row.ds, y_fact: null });
-        }
-        const val = bigMap.get(row.ds);
-        if (row.y_fact !== undefined && row.y_fact !== null) {
-          val.y_fact = row.y_fact;
-        }
-        if (row.y_forecast !== undefined) {
-          val[`${m.modelName}_y_forecast`] = row.y_forecast;
-        }
-        if (row.yhat_lower !== undefined) {
-          val[`${m.modelName}_yhat_lower`] = row.yhat_lower;
-        }
-        if (row.yhat_upper !== undefined) {
-          val[`${m.modelName}_yhat_upper`] = row.yhat_upper;
-        }
-      });
-    });
-    const allDs = Array.from(bigMap.keys()).sort((a, b) => new Date(a) - new Date(b));
-    return allDs.map((ds) => bigMap.get(ds));
-  };
-
-  // Диалог экспорта
-  const handleOpenCsvDialog = () => {
-    const merged = buildMergedRows();
-    setPreviewData(merged.slice(0, 5));
-    setCsvDialogOpen(true);
-  };
-  const handleCloseCsvDialog = () => setCsvDialogOpen(false);
-
-  const handleDownloadSelectedCols = () => {
-    const mergedRows = buildMergedRows();
-    const finalCols = csvSelectedCols.length ? csvSelectedCols : allPossibleCols;
-    const finalData = mergedRows.map((r) => {
-      const obj = {};
-      finalCols.forEach((col) => {
-        obj[col] = r[col] !== undefined ? r[col] : "";
-      });
-      return obj;
-    });
-    if (fileType === "csv") {
-      const header = finalCols.join(",");
-      const rows = finalData.map((row) =>
-        finalCols.map((c) => (row[c] !== undefined ? row[c] : "")).join(",")
+    // 1. Заполнение пропусков (импутация)
+    if (secondPageState.processingSteps.imputation) {
+      // Сортируем данные по дате (предполагается, что selectedColumns[0] – дата)
+      let sortedByDate = [...data].sort(
+        (a, b) =>
+          new Date(a[selectedColumns[0]]) - new Date(b[selectedColumns[0]])
       );
-      const csvContent = [header, ...rows].join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      saveAs(blob, "forecast.csv");
-    } else {
-      const ws = XLSX.utils.json_to_sheet(finalData, { header: finalCols });
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "ForecastData");
-      XLSX.writeFile(wb, "forecast.xlsx");
-    }
-    setCsvDialogOpen(false);
-  };
+      const firstDate = new Date(sortedByDate[0][selectedColumns[0]]);
+      const lastDate = new Date(
+        sortedByDate[sortedByDate.length - 1][selectedColumns[0]]
+      );
 
-  // Обработка вкладок общего графика
-  const handleCommonTabChange = (e, val) => setCommonTab(val);
-  const handleModelTabChange = (e, val) => setModelTab(val);
-  const handleModelSubTabChange = (modelIndex, val) => {
-    setModelSubTabs((prev) => ({ ...prev, [modelIndex]: val }));
-  };
+      // Используем частоту, введённую пользователем (например, "D", "W-MON", "MS")
+      const frequency = secondPageState.imputationFrequency || "D";
 
-  // Кнопка "Назад"
-  const handleBack = () => navigate(-1);
+      // Функция для вычисления следующей даты по выбранной частоте
+      const getNextDate = (currentDate, frequency) => {
+        let nextDate = new Date(currentDate);
+        if (frequency === "D") {
+          nextDate.setDate(nextDate.getDate() + 1);
+        } else if (frequency === "W-MON") {
+          nextDate.setDate(nextDate.getDate() + 7);
+        } else if (frequency === "MS") {
+          nextDate = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 1);
+        }
+        return nextDate;
+      };
 
-  // Панель справа
-  const panelWidth = 320;
-  const toggleModels = () => setModelsOpen((p) => !p);
+      // Корректируем начальную дату (для "W-MON" и "MS")
+      let currentDate = new Date(firstDate);
+      if (frequency === "W-MON") {
+        const day = currentDate.getDay();
+        if (day !== 1) {
+          currentDate.setDate(currentDate.getDate() + (day === 0 ? 1 : 8 - day));
+        }
+      } else if (frequency === "MS") {
+        currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      }
 
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: "#fff" } } },
-    scales: {
-      x: {
-        ticks: {
-          color: "#fff",
-          callback: function (value) {
-            const label = this.getLabelForValue(value);
-            return label ? label.slice(0, 10) : "";
+      // Генерируем полный временной ряд дат от firstDate до lastDate по выбранной частоте
+      let completeDates = [];
+      while (currentDate <= lastDate) {
+        completeDates.push(new Date(currentDate));
+        currentDate = getNextDate(currentDate, frequency);
+      }
+
+      // Создаём карту существующих дат (формат ISO: YYYY-MM-DD)
+      const existingDataMap = {};
+      sortedByDate.forEach((row) => {
+        const dateStr = new Date(row[selectedColumns[0]])
+          .toISOString()
+          .split("T")[0];
+        existingDataMap[dateStr] = row;
+      });
+
+      // Формируем новый массив данных: для каждой даты либо берём существующую запись, либо создаём новую с пропущенным значением
+      let newData = completeDates.map((date) => {
+        const dateStr = date.toISOString().split("T")[0];
+        if (existingDataMap[dateStr]) {
+          return existingDataMap[dateStr];
+        } else {
+          let newRow = {};
+          newRow[selectedColumns[0]] = dateStr;
+          newRow[selectedColumns[1]] = null;
+          return newRow;
+        }
+      });
+
+      newData.sort(
+        (a, b) =>
+          new Date(a[selectedColumns[0]]) - new Date(b[selectedColumns[0]])
+      );
+
+      // Линейная интерполяция для заполнения пропусков в таргетном столбце
+      let filledData = [...newData];
+      for (let i = 0; i < filledData.length; i++) {
+        if (
+          filledData[i][selectedColumns[1]] === null ||
+          filledData[i][selectedColumns[1]] === ""
+        ) {
+          let prevIndex = i - 1;
+          while (
+            prevIndex >= 0 &&
+            (filledData[prevIndex][selectedColumns[1]] === null ||
+              filledData[prevIndex][selectedColumns[1]] === "")
+          ) {
+            prevIndex--;
           }
-        },
-        grid: { color: "rgba(255,255,255,0.1)" }
-      },
-      y: {
-        ticks: { color: "#fff" },
-        grid: { color: "rgba(255,255,255,0.1)" }
+          let nextIndex = i + 1;
+          while (
+            nextIndex < filledData.length &&
+            (filledData[nextIndex][selectedColumns[1]] === null ||
+              filledData[nextIndex][selectedColumns[1]] === "")
+          ) {
+            nextIndex++;
+          }
+          if (prevIndex >= 0 && nextIndex < filledData.length) {
+            const prevValue = Number(filledData[prevIndex][selectedColumns[1]]);
+            const nextValue = Number(filledData[nextIndex][selectedColumns[1]]);
+            const interpolated =
+              prevValue +
+              ((nextValue - prevValue) * (i - prevIndex)) / (nextIndex - prevIndex);
+            filledData[i][selectedColumns[1]] = interpolated;
+          } else if (prevIndex >= 0) {
+            filledData[i][selectedColumns[1]] = Number(
+              filledData[prevIndex][selectedColumns[1]]
+            );
+          } else if (nextIndex < filledData.length) {
+            filledData[i][selectedColumns[1]] = Number(
+              filledData[nextIndex][selectedColumns[1]]
+            );
+          }
+        }
+      }
+      data = filledData;
+    }
+
+    // 2. Фильтрация выбросов
+    if (secondPageState.processingSteps.outliers) {
+      const targetValues = data.map((row) => Number(row[selectedColumns[1]]));
+      const mean =
+        targetValues.reduce((a, b) => a + b, 0) / targetValues.length;
+      const std = Math.sqrt(
+        targetValues.reduce((acc, val) => acc + (val - mean) ** 2, 0) /
+          targetValues.length
+      );
+      data = data.filter(
+        (row) =>
+          Math.abs(Number(row[selectedColumns[1]]) - mean) <=
+          secondPageState.outlierThreshold * std
+      );
+    }
+
+    // 3. Сглаживание
+    if (
+      secondPageState.processingSteps.smoothing &&
+      secondPageState.smoothingWindow > 1
+    ) {
+      let smoothed = [];
+      for (let i = 0; i < data.length; i++) {
+        const windowData = data.slice(
+          Math.max(0, i - secondPageState.smoothingWindow + 1),
+          i + 1
+        );
+        const avg =
+          windowData.reduce(
+            (sum, row) => sum + Number(row[selectedColumns[1]]),
+            0
+          ) / windowData.length;
+        smoothed.push({ ...data[i], [selectedColumns[1]]: avg });
+      }
+      data = smoothed;
+    }
+
+    // 4. Преобразование
+    if (
+      secondPageState.processingSteps.transformation &&
+      secondPageState.transformation !== "none"
+    ) {
+      if (secondPageState.transformation === "log") {
+        data = data.map((row) => ({
+          ...row,
+          [selectedColumns[1]]: Math.log(Number(row[selectedColumns[1]])),
+        }));
+      } else if (secondPageState.transformation === "difference") {
+        data = data.slice(1).map((row, i) => ({
+          ...row,
+          [selectedColumns[1]]:
+            Number(row[selectedColumns[1]]) -
+            Number(data[i][selectedColumns[1]]),
+        }));
       }
     }
+
+    // 5. Декомпозиция
+    if (
+      secondPageState.processingSteps.decomposition &&
+      secondPageState.decompositionWindow > 1
+    ) {
+      let trend = [];
+      for (let i = 0; i < data.length; i++) {
+        const windowData = data.slice(
+          Math.max(0, i - secondPageState.decompositionWindow + 1),
+          i + 1
+        );
+        const avg =
+          windowData.reduce(
+            (sum, row) => sum + Number(row[selectedColumns[1]]),
+            0
+          ) / windowData.length;
+        trend.push(avg);
+      }
+      seasonalValues = data.map(
+        (row, i) => Number(row[selectedColumns[1]]) - trend[i]
+      );
+      data = data.map((row, i) => ({ ...row, [selectedColumns[1]]: trend[i] }));
+    }
+
+    // 6. Нормализация
+    if (secondPageState.processingSteps.normalization) {
+      const values = data.map((row) => Number(row[selectedColumns[1]]));
+      const minVal = Math.min(...values);
+      const maxVal = Math.max(...values);
+      data = data.map((row) => ({
+        ...row,
+        [selectedColumns[1]]:
+          (Number(row[selectedColumns[1]]) - minVal) / (maxVal - minVal),
+      }));
+    }
+    return { data, seasonalValues };
+  }, [sortedData, secondPageState, selectedColumns]);
+
+  const finalData = finalDataResult.data;
+  const labels = finalData.map((row) => row[selectedColumns[0]]);
+  const dataValues = finalData.map((row) => Number(row[selectedColumns[1]]));
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: selectedColumns[1],
+        data: dataValues,
+        fill: false,
+        backgroundColor: "rgba(16, 163, 127, 0.6)",
+        borderColor: "#10A37F",
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const computeStats = (data) => {
+    if (!data || data.length === 0) return null;
+    const numericData = data.filter((x) => !isNaN(x));
+    if (numericData.length === 0) return null;
+    const count = numericData.length;
+    const sum = numericData.reduce((a, b) => a + b, 0);
+    const mean = sum / count;
+    const sorted = [...numericData].sort((a, b) => a - b);
+    const min = sorted[0];
+    const max = sorted[sorted.length - 1];
+    const median =
+      count % 2 === 0
+        ? (sorted[count / 2 - 1] + sorted[count / 2]) / 2
+        : sorted[Math.floor(count / 2)];
+    const variance =
+      numericData.reduce((acc, val) => acc + (val - mean) ** 2, 0) / count;
+    const std = Math.sqrt(variance);
+    return { count, mean, median, std, min, max };
+  };
+
+  const stats = computeStats(dataValues);
+  const statsArray = stats
+    ? [
+        { symbol: "N", tooltip: "Количество", value: stats.count },
+        { symbol: "μ", tooltip: "Математическое ожидание", value: stats.mean.toFixed(3) },
+        { symbol: "Med", tooltip: "Медиана", value: stats.median.toFixed(3) },
+        { symbol: "σ", tooltip: "Стандартное отклонение", value: stats.std.toFixed(3) },
+        { symbol: "min", tooltip: "Минимум", value: stats.min.toFixed(3) },
+        { symbol: "max", tooltip: "Максимум", value: stats.max.toFixed(3) },
+      ]
+    : [];
+
+  const handleGoToForecast = () => {
+    navigate("/forecast", { state: { modifiedData: finalData, selectedColumns } });
   };
 
   return (
-    <Slide direction="left" in={true} mountOnEnter unmountOnExit onExited={handleBack}>
-      <Box sx={{ position: "relative", bgcolor: "#1a1a1a", minHeight: "100vh" }}>
-        {/* ШАПКА */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            p: 2,
-            bgcolor: "#121212",
-            color: "#fff"
-          }}
-        >
-          <Button onClick={handleBack} startIcon={<ArrowBackIcon />} sx={{ color: "#fff", mr: 2 }}>
-            Назад
-          </Button>
-          <Typography variant="h5" sx={{ flexGrow: 1, textAlign: "center" }}>
-            Прогнозирование
-          </Typography>
-          <IconButton
-            onClick={toggleModels}
-            sx={{
-              color: modelsOpen ? "#FF4444" : "#10A37F",
-              border: "1px solid",
-              borderColor: modelsOpen ? "#FF4444" : "#10A37F"
-            }}
-          >
-            {modelsOpen ? <CloseIcon /> : <SettingsIcon />}
+    <Slide direction="left" in={show} mountOnEnter unmountOnExit onExited={handleExited}>
+      <Box
+        sx={{
+          position: "relative",
+          p: 3,
+          backgroundColor: "#121212",
+          minHeight: "100vh",
+          color: "#fff",
+          overflow: "hidden",
+        }}
+      >
+        <Box>
+          <IconButton onClick={handleBack} sx={{ position: "absolute", left: 16, top: 16, color: "#fff" }}>
+            <ArrowBackIcon />
           </IconButton>
-          {/* Интеграция компонента категориальных данных.
-              Фильтры извлекаются из sessionStorage (установленные на первой/второй странице) */}
-          <CategoricalDataBlock
-            filteredData={initialModifiedData}
-            selectedColumns={initialSelectedColumns}
-            filters={storedFilters}
-          />
-        </Box>
+          <Typography variant="h5" sx={{ flexGrow: 1, textAlign: "center", pb: 3 }}>
+            Предобработка
+          </Typography>
+          <IconButton onClick={handleGoToForecast} sx={{ position: "absolute", right: 16, top: 16, color: "#fff" }}>
+            <ArrowForwardIcon />
+          </IconButton>
 
-        {/* ОСНОВНОЙ КОНТЕЙНЕР */}
-        <Box
-          sx={{
-            display: "flex",
-            width: "100%",
-            height: "calc(100vh - 56px)",
-            bgcolor: "#121212"
-          }}
-        >
-          {/* ЛЕВАЯ ЧАСТЬ */}
-          <Box
-            sx={{
-              flexGrow: 1,
-              transition: "margin-right 0.3s",
-              marginRight: modelsOpen ? `${panelWidth + 16}px` : 0,
-              overflowY: "auto",
-              "&::-webkit-scrollbar": { display: "none" },
-              "-ms-overflow-style": "none",
-              "scrollbar-width": "none"
-            }}
-          >
-            {/* Общие параметры прогноза */}
-            <Paper sx={{ m: 2, p: 3, borderRadius: 3, backgroundColor: "#2a2a2a" }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Общие параметры прогноза
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Typography gutterBottom>Горизонт: {horizon}</Typography>
-                  <Slider
-                    value={horizon}
-                    onChange={(e, val) => setHorizon(val)}
-                    min={0}
-                    max={50}
-                    step={1}
-                    valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Typography gutterBottom>History (Test Size): {historySize}</Typography>
-                  <Slider
-                    value={historySize}
-                    onChange={(e, val) => setHistorySize(val)}
-                    min={0}
-                    max={50}
-                    step={1}
-                    valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <FormControl fullWidth>
-                    <InputLabel>Частота</InputLabel>
-                    <Select
-                      value={freq}
-                      label="Частота"
-                      onChange={(e) => setFreq(e.target.value)}
-                      sx={{ backgroundColor: "#2c2c2c", color: "#fff" }}
-                    >
-                      <MenuItem value="D">День</MenuItem>
-                      <MenuItem value="W-MON">Неделя (Пн)</MenuItem>
-                      <MenuItem value="M">Месяц</MenuItem>
-                      <MenuItem value="MS">Начало месяца</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Typography gutterBottom>Уровень доверия: {confidenceLevel}%</Typography>
-                  <Slider
-                    value={confidenceLevel}
-                    onChange={(e, val) => setConfidenceLevel(val)}
-                    min={80}
-                    max={99}
-                    step={1}
-                    valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
-                  />
-                </Grid>
-              </Grid>
-              <Box sx={{ mt: 3, textAlign: "center" }}>
-                <Button
-                  variant="contained"
-                  onClick={handleBuildForecast}
-                  disabled={loading}
-                  sx={{ borderRadius: "20px", backgroundColor: "#10A37F" }}
-                >
-                  {loading ? <CircularProgress size={24} /> : "Построить прогноз"}
-                </Button>
-              </Box>
-            </Paper>
-
-            {/* Общий график (все модели) */}
-            {forecastResults.length > 0 && (
-              <Paper sx={{ m: 2, p: 2, borderRadius: 3, backgroundColor: "#2a2a2a" }}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  Общий график (все модели)
-                </Typography>
-                <Tabs
-                  value={commonTab}
-                  onChange={handleCommonTabChange}
-                  textColor="inherit"
-                  indicatorColor="primary"
-                  sx={{ mb: 2 }}
-                >
-                  <Tab label="All" />
-                  <Tab label="Train" />
-                  <Tab label="Test" />
-                  <Tab label="Horizon" />
-                  <Tab label="All+Horizon" />
-                </Tabs>
-                <Box sx={{ height: 500 }}>
-                  {(() => {
-                    const subset = forecastResults.map((mRes) => {
-                      let segment = [];
-                      if (commonTab === 0) segment = mRes.forecastAll;
-                      else if (commonTab === 1) segment = mRes.forecastTrain;
-                      else if (commonTab === 2) segment = mRes.forecastTest;
-                      else if (commonTab === 3) segment = mRes.forecastHorizon;
-                      else if (commonTab === 4) segment = [...mRes.forecastAll, ...mRes.forecastHorizon];
-                      return { modelName: mRes.modelName, segment };
-                    });
-                    const data = makeCombinedChartData(subset, modelColorMap);
-                    return <Line data={data} options={chartOptions} />;
-                  })()}
-                </Box>
-                <Box sx={{ textAlign: "center", mt: 2 }}>
-                  <Button
-                    variant="contained"
-                    onClick={handleOpenCsvDialog}
-                    sx={{ borderRadius: "20px", backgroundColor: "#10A37F" }}
-                  >
-                    Скачать (All Models)
-                  </Button>
-                </Box>
-              </Paper>
-            )}
-
-            {/* Вкладки по отдельным моделям */}
-            {forecastResults.length > 0 && (
-              <Paper sx={{ m: 2, p: 2, borderRadius: 3, backgroundColor: "#2a2a2a" }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Отдельные модели
-                </Typography>
-                <Tabs
-                  value={modelTab}
-                  onChange={handleModelTabChange}
-                  textColor="inherit"
-                  indicatorColor="primary"
-                  variant="scrollable"
-                  scrollButtons="auto"
-                  sx={{ mb: 2 }}
-                >
-                  {forecastResults.map((mRes) => (
-                    <Tab key={mRes.modelName} label={mRes.modelName} />
-                  ))}
-                </Tabs>
-                {forecastResults[modelTab] &&
-                  (() => {
-                    const curModel = forecastResults[modelTab];
-                    const color = modelColorMap[curModel.modelName] || "#36A2EB";
-                    const subTab = modelSubTabs[modelTab] || 0;
-                    const handleSubTabChange = (e, val) => handleModelSubTabChange(modelTab, val);
-                    const metricsAll = computeMetricsOnStandardized(curModel.forecastAll);
-                    const metricsTrain = computeMetricsOnStandardized(curModel.forecastTrain);
-                    const metricsTest = computeMetricsOnStandardized(curModel.forecastTest);
-                    const chartAll = makeSingleModelChartData(curModel.forecastAll, color);
-                    const chartTrain = makeSingleModelChartData(curModel.forecastTrain, color);
-                    const chartTest = makeSingleModelChartData(curModel.forecastTest, color);
-                    const chartHorizon = makeSingleModelChartData(curModel.forecastHorizon, color);
-                    return (
-                      <Box>
-                        <Tabs
-                          value={subTab}
-                          onChange={handleSubTabChange}
-                          textColor="inherit"
-                          indicatorColor="primary"
-                          sx={{ mb: 2 }}
-                        >
-                          <Tab label="All" disabled={curModel.forecastAll.length === 0} />
-                          <Tab label="Train" disabled={curModel.forecastTrain.length === 0} />
-                          <Tab label="Test" disabled={curModel.forecastTest.length === 0} />
-                          <Tab label="Horizon" disabled={curModel.forecastHorizon.length === 0} />
-                        </Tabs>
-                        {subTab === 0 && (
-                          <Box sx={{ height: 400 }}>
-                            <Line data={chartAll} options={chartOptions} />
-                            {metricsAll && (
-                              <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-                                <Typography>MAE: {metricsAll.mae.toFixed(4)}</Typography>
-                                <Typography>RMSE: {metricsAll.rmse.toFixed(4)}</Typography>
-                                {metricsAll.mape && (
-                                  <Typography>MAPE: {metricsAll.mape.toFixed(2)}%</Typography>
-                                )}
-                              </Box>
-                            )}
-                          </Box>
-                        )}
-                        {subTab === 1 && (
-                          <Box sx={{ height: 400 }}>
-                            <Line data={chartTrain} options={chartOptions} />
-                            {metricsTrain && (
-                              <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-                                <Typography>MAE: {metricsTrain.mae.toFixed(4)}</Typography>
-                                <Typography>RMSE: {metricsTrain.rmse.toFixed(4)}</Typography>
-                                {metricsTrain.mape && (
-                                  <Typography>MAPE: {metricsTrain.mape.toFixed(2)}%</Typography>
-                                )}
-                              </Box>
-                            )}
-                          </Box>
-                        )}
-                        {subTab === 2 && (
-                          <Box sx={{ height: 400 }}>
-                            <Line data={chartTest} options={chartOptions} />
-                            {metricsTest && (
-                              <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-                                <Typography>MAE: {metricsTest.mae.toFixed(4)}</Typography>
-                                <Typography>RMSE: {metricsTest.rmse.toFixed(4)}</Typography>
-                                {metricsTest.mape && (
-                                  <Typography>MAPE: {metricsTest.mape.toFixed(2)}%</Typography>
-                                )}
-                              </Box>
-                            )}
-                          </Box>
-                        )}
-                        {subTab === 3 && (
-                          <Box sx={{ height: 400 }}>
-                            <Line data={chartHorizon} options={chartOptions} />
-                            <Typography sx={{ mt: 2 }}>
-                              Прогноз будущего (факт отсутствует).
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    );
-                  })()}
-              </Paper>
-            )}
+          {/* Блок категориальных данных вынесен в отдельный компонент */}
+          <Box sx={{ bgcolor: "#121212", p: 0.1, pb: 2 }}>
+            <CategoricalDataBlock
+              filteredData={filteredData}
+              selectedColumns={selectedColumns}
+              filters={filters}
+            />
           </Box>
+        </Box>
+        <Grid container spacing={2}>
+          {secondPageState.preprocessingOpen && (
+            <Grid item xs={12} md={3}>
+              <Slide direction="right" in={secondPageState.preprocessingOpen} mountOnEnter unmountOnExit>
+                <Paper
+                  sx={{
+                    p: 2,
+                    backgroundColor: "#121212",
+                    borderRadius: 3,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                    border: "none",
+                  }}
+                >
+                  <Typography variant="h6" sx={{ mb: 2, color: "#fff", textAlign: "center" }}>
+                    Настройки предобработки
+                  </Typography>
 
-          {/* Панель справа */}
-          <Slide direction="left" in={modelsOpen} mountOnEnter unmountOnExit>
-            <Box
-              sx={{
-                position: "absolute",
-                top: 90,
-                right: 16,
-                width: `${panelWidth}px`,
-                height: "calc(100vh - 230px)",
-                bgcolor: "#2a2a2a",
-                borderRadius: 3,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-                p: 2,
-                overflowY: "auto",
-                "&::-webkit-scrollbar": { width: "6px" },
-                "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
-                "&::-webkit-scrollbar-thumb": { backgroundColor: "#666", borderRadius: "3px" },
-                "&::-webkit-scrollbar-thumb:hover": { backgroundColor: "#aaa" }
-              }}
-            >
-              <Typography variant="h6" sx={{ color: "#fff", mb: 2 }}>
-                Модели
-              </Typography>
-              <ProphetBlock
-                active={prophetActive}
-                setActive={setProphetActive}
-                prophetParams={prophetParams}
-                setProphetParams={setProphetParams}
-              />
-              <Paper
-                sx={{
-                  p: 2,
-                  mb: 2,
-                  borderRadius: 2,
-                  border: `2px solid ${arimaActive ? "#10A37F" : "#FF4444"}`,
-                  transition: "border-color 0.2s"
-                }}
-              >
-                <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
-                  ARIMA
-                </Typography>
-                <Box sx={{ mt: 1 }}>
-                  {arimaActive ? (
-                    <Button
-                      variant="outlined"
-                      startIcon={<CloseIcon />}
-                      sx={{
-                        borderColor: "#FF4444",
-                        color: "#FF4444",
-                        "&:hover": {
-                          borderColor: "#FF4444",
-                          backgroundColor: "#ff44441a"
-                        }
-                      }}
-                      onClick={() => setArimaActive(false)}
+                  {/* Заполнение пропусков */}
+                  <Box sx={{ mb: 2, pb: 1, borderBottom: "1px solid #333" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
+                        Заполнение пропусков
+                      </Typography>
+                      {secondPageState.processingSteps.imputation ? (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, imputation: false },
+                            }))
+                          }
+                          sx={{ color: "#FF6384" }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      ) : (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, imputation: true },
+                            }))
+                          }
+                          sx={{ color: "#10A37F" }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                    {secondPageState.processingSteps.imputation &&
+                      !["D", "W-MON", "MS"].includes(
+                        (() => {
+                          const sorted = [...sortedData].sort(
+                            (a, b) =>
+                              new Date(a[selectedColumns[0]]) - new Date(b[selectedColumns[0]])
+                          );
+                          if (sorted.length < 2) return "";
+                          const date0 = new Date(sorted[0][selectedColumns[0]]);
+                          const date1 = new Date(sorted[1][selectedColumns[0]]);
+                          if (
+                            (date0.getDate() === 1 &&
+                              date1.getDate() === 1 &&
+                              (date1.getFullYear() - date0.getFullYear()) * 12 +
+                                (date1.getMonth() - date0.getMonth()) === 1) ||
+                            Math.abs(date1 - date0 - 86400000) < 0.1 * 86400000 ||
+                            Math.abs(date1 - date0 - 604800000) < 0.1 * 604800000
+                          )
+                            return "detected";
+                          return "";
+                        })()
+                      ) && (
+                        <Box sx={{ mt: 1, display: "flex", alignItems: "center" }}>
+                          <Typography variant="caption" sx={{ color: "#fff" }}>
+                            Частота:
+                          </Typography>
+                          <Select
+                            value={secondPageState.imputationFrequency || "D"}
+                            onChange={(e) =>
+                              setSecondPageState((prev) => ({
+                                ...prev,
+                                imputationFrequency: e.target.value,
+                              }))
+                            }
+                            size="small"
+                            sx={{
+                              ml: 1,
+                              color: "#fff",
+                              borderColor: "#10A37F",
+                              "& .MuiOutlinedInput-notchedOutline": { borderColor: "#10A37F" },
+                            }}
+                          >
+                            <MenuItem value="D">Дневная (D)</MenuItem>
+                            <MenuItem value="W-MON">Недельная (W-MON)</MenuItem>
+                            <MenuItem value="MS">Начало месяца (MS)</MenuItem>
+                          </Select>
+                        </Box>
+                      )}
+                  </Box>
+
+                  {/* Выбросы */}
+                  <Box sx={{ mb: 2, pb: 1, borderBottom: "1px solid #333" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
+                        Выбросы
+                      </Typography>
+                      {secondPageState.processingSteps.outliers ? (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, outliers: false },
+                            }))
+                          }
+                          sx={{ color: "#FF6384" }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      ) : (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, outliers: true },
+                            }))
+                          }
+                          sx={{ color: "#10A37F" }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                    <Typography variant="caption" sx={{ color: "#fff" }}>
+                      Порог (σ): {secondPageState.outlierThreshold}
+                    </Typography>
+                    <Slider
+                      value={secondPageState.outlierThreshold}
+                      onChange={(e, newVal) =>
+                        setSecondPageState((prev) => ({ ...prev, outlierThreshold: newVal }))
+                      }
+                      min={1}
+                      max={5}
+                      step={0.1}
+                      valueLabelDisplay="auto"
+                      size="small"
+                    />
+                  </Box>
+
+                  {/* Сглаживание */}
+                  <Box sx={{ mb: 2, pb: 1, borderBottom: "1px solid #333" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
+                        Сглаживание
+                      </Typography>
+                      {secondPageState.processingSteps.smoothing ? (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, smoothing: false },
+                            }))
+                          }
+                          sx={{ color: "#FF6384" }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      ) : (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, smoothing: true },
+                            }))
+                          }
+                          sx={{ color: "#10A37F" }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                    <Typography variant="caption" sx={{ color: "#fff" }}>
+                      Окно: {secondPageState.smoothingWindow}
+                    </Typography>
+                    <Slider
+                      value={secondPageState.smoothingWindow}
+                      onChange={(e, newVal) =>
+                        setSecondPageState((prev) => ({ ...prev, smoothingWindow: newVal }))
+                      }
+                      min={1}
+                      max={20}
+                      step={1}
+                      valueLabelDisplay="auto"
+                      size="small"
+                    />
+                  </Box>
+
+                  {/* Преобразование */}
+                  <Box sx={{ mb: 2, pb: 1, borderBottom: "1px solid #333" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
+                        Преобразование
+                      </Typography>
+                      {secondPageState.processingSteps.transformation ? (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, transformation: false },
+                            }))
+                          }
+                          sx={{ color: "#FF6384" }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      ) : (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, transformation: true },
+                            }))
+                          }
+                          sx={{ color: "#10A37F" }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                    <RadioGroup
+                      value={secondPageState.transformation}
+                      onChange={(e) =>
+                        setSecondPageState((prev) => ({ ...prev, transformation: e.target.value }))
+                      }
+                      row
                     >
-                      Отключить
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outlined"
-                      startIcon={<CheckIcon />}
-                      sx={{
-                        borderColor: "#10A37F",
-                        color: "#10A37F",
-                        "&:hover": {
-                          borderColor: "#10A37F",
-                          backgroundColor: "#10A37F1a"
-                        }
+                      <FormControlLabel value="none" control={<Radio size="small" />} label="Нет" />
+                      <FormControlLabel value="log" control={<Radio size="small" />} label="Логарифм" />
+                      <FormControlLabel value="difference" control={<Radio size="small" />} label="Разность" />
+                    </RadioGroup>
+                  </Box>
+
+                  {/* Декомпозиция */}
+                  <Box sx={{ mb: 2, pb: 1, borderBottom: "1px solid #333" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
+                        Декомпозиция
+                      </Typography>
+                      {secondPageState.processingSteps.decomposition ? (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, decomposition: false },
+                            }))
+                          }
+                          sx={{ color: "#FF6384" }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      ) : (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, decomposition: true },
+                            }))
+                          }
+                          sx={{ color: "#10A37F" }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                    <Typography variant="caption" sx={{ color: "#fff" }}>
+                      Окно: {secondPageState.decompositionWindow}
+                    </Typography>
+                    <Slider
+                      value={secondPageState.decompositionWindow}
+                      onChange={(e, newVal) =>
+                        setSecondPageState((prev) => ({ ...prev, decompositionWindow: newVal }))
+                      }
+                      min={2}
+                      max={30}
+                      step={1}
+                      valueLabelDisplay="auto"
+                      size="small"
+                    />
+                  </Box>
+
+                  {/* Нормализация */}
+                  <Box sx={{ mb: 2, p: 1 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ color: "#fff" }}>
+                        Нормализация
+                      </Typography>
+                      {secondPageState.processingSteps.normalization ? (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, normalization: false },
+                            }))
+                          }
+                          sx={{ color: "#FF6384" }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      ) : (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setSecondPageState((prev) => ({
+                              ...prev,
+                              processingSteps: { ...prev.processingSteps, normalization: true },
+                            }))
+                          }
+                          sx={{ color: "#10A37F" }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                    <Typography variant="caption" sx={{ color: "#fff" }}>
+                      Масштабирование в диапазоне [0,1]
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Slide>
+            </Grid>
+          )}
+          <Grid item xs={12} md={secondPageState.preprocessingOpen ? 9 : 12}>
+            <Paper sx={{ p: 2, backgroundColor: "#121212", borderRadius: 3 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2, flexWrap: "wrap" }}>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <IconButton
+                    onClick={() =>
+                      setSecondPageState((prev) => ({
+                        ...prev,
+                        preprocessingOpen: !prev.preprocessingOpen,
+                      }))
+                    }
+                    sx={{
+                      borderRadius: "50%",
+                      backgroundColor: "#10A37F",
+                      color: "#fff",
+                      mr: 2,
+                      transition: "transform 0.3s",
+                      "&:hover": { backgroundColor: "#0D8F70", transform: "scale(1.1)" },
+                    }}
+                  >
+                    {secondPageState.preprocessingOpen ? (
+                      <CloseIcon fontSize="small" />
+                    ) : (
+                      <SettingsIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                  <Typography variant="h6" sx={{ color: "#fff" }}>
+                    Результаты предобработки
+                  </Typography>
+                </Box>
+                <ToggleButtonGroup
+                  value={secondPageState.chartType}
+                  exclusive
+                  onChange={(e, newType) => {
+                    if (newType !== null)
+                      setSecondPageState((prev) => ({ ...prev, chartType: newType }));
+                  }}
+                  sx={{ backgroundColor: "#1E1E1E", borderRadius: "8px", p: 0.1 }}
+                >
+                  <ToggleButton value="line" sx={{ color: "#fff", borderColor: "#10A37F" }}>
+                    Линейный
+                  </ToggleButton>
+                  <ToggleButton value="bar" sx={{ color: "#fff", borderColor: "#10A37F" }}>
+                    Столбчатый
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              <Box sx={{ mb: 3 }}>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: "12px",
+                    backgroundColor: "rgba(16,163,127,0.1)",
+                    boxShadow: 3,
+                    width: "100%",
+                    height: 400,
+                  }}
+                >
+                  {secondPageState.chartType === "line" && (
+                    <Line
+                      data={
+                        secondPageState.processingSteps.decomposition &&
+                        finalDataResult.seasonalValues
+                          ? {
+                              labels: finalDataResult.data.map(
+                                (row) => row[selectedColumns[0]]
+                              ),
+                              datasets: [
+                                {
+                                  label: "Тренд",
+                                  data: finalDataResult.data.map((row) =>
+                                    Number(row[selectedColumns[1]])
+                                  ),
+                                  fill: false,
+                                  backgroundColor: "rgba(16,163,127,0.6)",
+                                  borderColor: "#10A37F",
+                                  borderWidth: 2,
+                                },
+                                {
+                                  label: "Сезонная компонента",
+                                  data: finalDataResult.seasonalValues,
+                                  fill: false,
+                                  backgroundColor: "rgba(255,99,132,0.6)",
+                                  borderColor: "#FF6384",
+                                  borderWidth: 2,
+                                  borderDash: [5, 5],
+                                },
+                              ],
+                            }
+                          : chartData
+                      }
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: { labels: { color: "#fff" } },
+                          title: { display: true, text: "График", color: "#fff" },
+                        },
+                        scales: {
+                          x: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,0.1)" } },
+                          y: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,0.1)" } },
+                        },
                       }}
-                      onClick={() => setArimaActive(true)}
-                    >
-                      Активировать
-                    </Button>
+                    />
+                  )}
+                  {secondPageState.chartType === "bar" && (
+                    <Bar
+                      data={chartData}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: { labels: { color: "#fff" } },
+                          title: { display: true, text: "График", color: "#fff" },
+                        },
+                        scales: {
+                          x: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,0.1)" } },
+                          y: { ticks: { color: "#fff" }, grid: { color: "rgba(255,255,255,0.1)" } },
+                        },
+                      }}
+                    />
                   )}
                 </Box>
-                <Typography variant="caption" sx={{ color: arimaActive ? "#10A37F" : "#FF4444" }}>
-                  {arimaActive ? "Активна" : "Выключена"}
-                </Typography>
-              </Paper>
-            </Box>
-          </Slide>
-        </Box>
-
-        {/* Диалог экспорта */}
-        <Dialog open={csvDialogOpen} onClose={handleCloseCsvDialog} fullWidth maxWidth="md">
-          <DialogTitle>Сохранить результаты</DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              Выберите столбцы и формат файла:
-            </Typography>
-            <RadioGroup
-              row
-              value={fileType}
-              onChange={(e) => setFileType(e.target.value)}
-              sx={{ mb: 2 }}
-            >
-              <FormControlLabel value="csv" control={<Radio />} label="CSV" />
-              <FormControlLabel value="xlsx" control={<Radio />} label="XLSX" />
-            </RadioGroup>
-            {!allPossibleCols.length ? (
-              <Typography>Нет доступных столбцов</Typography>
-            ) : (
-              <>
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-                  {allPossibleCols.map((col) => (
-                    <FormControlLabel
-                      key={col}
-                      control={
-                        <Checkbox
-                          checked={csvSelectedCols.includes(col)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setCsvSelectedCols((prev) => [...prev, col]);
-                            } else {
-                              setCsvSelectedCols((prev) => prev.filter((c) => c !== col));
-                            }
+              </Box>
+              <Box>
+                <Box sx={{ mb: 2, display: "flex", flexDirection: "column", alignItems: "flex" }}>
+                  <Typography variant="h6" sx={{ color: "#fff", mb: 2 }}>
+                    Описательные статистики
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      flexWrap: "wrap",
+                      justifyContent: "center",
+                      p: 2,
+                      borderRadius: "16px",
+                      background: "linear-gradient(135deg, rgba(16,163,127,0.2), rgba(16,163,127,0.05))",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                    }}
+                  >
+                    {statsArray.map((stat, idx) => (
+                      <Tooltip key={idx} title={stat.tooltip}>
+                        <Box
+                          sx={{
+                            p: 2,
+                            textAlign: "center",
+                            borderRadius: "12px",
+                            backgroundColor: "#1e1e1a",
+                            border: "1px solid #10A37F",
+                            transition: "transform 0.2s, box-shadow 0.2s",
+                            "&:hover": {
+                              transform: "scale(1.05)",
+                              boxShadow: "0 6px 16px rgba(0,0,0,0.3)",
+                            },
                           }}
-                        />
-                      }
-                      label={col}
-                    />
-                  ))}
-                </Box>
-                {previewData && previewData.length > 0 && (
-                  <Box sx={{ mt: 2, overflowX: "auto" }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      Превью (первые 5 строк):
-                    </Typography>
-                    <table
-                      style={{
-                        borderCollapse: "collapse",
-                        width: "100%",
-                        color: "#fff",
-                        fontSize: "0.85rem"
-                      }}
-                    >
-                      <thead>
-                        <tr style={{ backgroundColor: "#333" }}>
-                          {csvSelectedCols.map((col) => (
-                            <th key={col} style={{ border: "1px solid #555", padding: "4px" }}>
-                              {col}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {previewData.map((row, idx) => (
-                          <tr key={idx}>
-                            {csvSelectedCols.map((col) => (
-                              <td key={col} style={{ border: "1px solid #555", padding: "4px" }}>
-                                {row[col] !== undefined ? row[col] : ""}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        >
+                          <Typography variant="h8" sx={{ color: "#10A37F", fontWeight: 600, fontSize: "1rem" }}>
+                            {stat.symbol}
+                          </Typography>
+                          <Typography variant="subtitle2" sx={{ color: "#fff", fontSize: "0.8rem" }}>
+                            {stat.value}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+                    ))}
                   </Box>
-                )}
-              </>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseCsvDialog}>Отмена</Button>
-            <Button variant="contained" onClick={handleDownloadSelectedCols}>
-              Скачать
-            </Button>
-          </DialogActions>
-        </Dialog>
+                </Box>
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: "480px",
+                    overflowY: "auto",
+                    "&::-webkit-scrollbar": { width: "8px", height: "8px" },
+                    "&::-webkit-scrollbar-track": { background: "#2c2c2c", borderRadius: "0px" },
+                    "&::-webkit-scrollbar-thumb": { backgroundColor: "#10A37F", borderRadius: "8px" },
+                    "&::-webkit-scrollbar-thumb:hover": { backgroundColor: "#0D8F70" },
+                  }}
+                >
+                  <Table stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        {selectedColumns.map((col) => (
+                          <TableCell
+                            key={col}
+                            sx={{
+                              bgcolor: "#10A37F",
+                              color: "#fff",
+                              fontWeight: "bold",
+                              whiteSpace: "nowrap",
+                              p: 1,
+                            }}
+                          >
+                            <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
+                              {col.replace("_", " ")}
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSecondPageState((prev) => ({
+                                    ...prev,
+                                    localSortColumn: col,
+                                    localSortDirection: "asc",
+                                  }));
+                                }}
+                                sx={{ color: "#fff", p: 0.5 }}
+                              >
+                                <ArrowUpwardIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSecondPageState((prev) => ({
+                                    ...prev,
+                                    localSortColumn: col,
+                                    localSortDirection: "desc",
+                                  }));
+                                }}
+                                sx={{ color: "#fff", p: 0.5 }}
+                              >
+                                <ArrowDownwardIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {finalData.slice(0, 10).map((row, index) => (
+                        <TableRow key={index} sx={{ "&:hover": { backgroundColor: "rgba(255,255,255,0.03)" } }}>
+                          {selectedColumns.map((col) => (
+                            <TableCell key={col} sx={{ whiteSpace: "nowrap", color: "#fff", fontWeight: "normal" }}>
+                              {row[col]}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            </Paper>
+          </Grid>
+        </Grid>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+          <Button variant="contained" color="primary" onClick={handleGoToForecast} disabled={finalData.length === 0}>
+            Перейти к прогнозу
+          </Button>
+        </Box>
       </Box>
     </Slide>
   );
-}
+};
+
+export default SelectedColumnsPage;

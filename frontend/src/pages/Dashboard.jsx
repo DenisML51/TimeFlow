@@ -142,19 +142,34 @@ const Dashboard = () => {
   };
 
   const handleConfirmSelection = () => {
+    console.log('Переход на страницу обработки')
     if (selectedColumns.length === 2) {
+      console.log('Выбраны', {selectedColumns})
+      console.log('Выбраны все столбцы')
       navigate("/selected", { state: { selectedColumns, filteredData, filters } });
-    }
+    } else {
+    console.warn("Выбрано недостаточно столбцов:", selectedColumns);
+    console.log('Переход на страницу предобработки')}
   };
 
   // Сброс состояния при загрузке нового файла
-  const handleReset = () => {
-    resetDashboardState();
-    setFile(null);
-    setMessage("");
-    const fileInput = document.getElementById("upload-file");
-    if (fileInput) fileInput.value = "";
-  };
+// Функция сброса состояния при загрузке нового файла
+const handleReset = () => {
+  // Сброс состояния дашборда (уже реализовано)
+  resetDashboardState();
+  setFile(null);
+  setMessage("");
+
+  // Очистка sessionStorage для сброса состояния страницы прогноза
+  sessionStorage.removeItem("forecastPageState");
+  sessionStorage.removeItem("modifiedData");
+  sessionStorage.removeItem("selectedColumns");
+
+  // Сброс значения инпута файла
+  const fileInput = document.getElementById("upload-file");
+  if (fileInput) fileInput.value = "";
+};
+
 
   return (
     <Box sx={{ minHeight: "91vh", background: "#121212", p: 3 }}>

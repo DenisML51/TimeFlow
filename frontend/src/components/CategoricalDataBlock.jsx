@@ -1,3 +1,4 @@
+// CategoricalDataBlock.jsx
 import React from "react";
 import { Box, Typography, Chip } from "@mui/material";
 
@@ -19,7 +20,7 @@ const CategoricalDataBlock = ({ filteredData, selectedColumns, filters }) => {
         mb: 3,
         display: "flex",
         gap: 2,
-        flexWrap: "wrap",
+        // flexWrap: "wrap",
         justifyContent: "center",
       }}
     >

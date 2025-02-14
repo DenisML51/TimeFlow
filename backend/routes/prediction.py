@@ -15,6 +15,7 @@ logger.setLevel(logging.DEBUG)
 
 prediction_router = APIRouter()
 
+
 @prediction_router.post("/upload")
 async def upload_file(
     background_tasks: BackgroundTasks,

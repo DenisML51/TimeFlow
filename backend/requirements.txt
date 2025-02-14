@@ -8,6 +8,5 @@ pandas
 python-multipart
 bcrypt
 aiofiles
-prophet
 python-dotenv
 pydantic[email]

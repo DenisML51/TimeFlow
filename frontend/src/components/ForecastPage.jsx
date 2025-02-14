@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useContext} from "react";
 import {
   Box,
   Button,
@@ -36,6 +36,7 @@ import { Line } from "react-chartjs-2";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 import CategoricalDataBlock from "./CategoricalDataBlock";
+import {DashboardContext} from "../context/DashboardContext";
 
 // =========== 1) МЕТРИКИ НА СТАНДАРТИЗОВАННЫХ ДАННЫХ ===========
 function computeMetricsOnStandardized(dataArray) {
@@ -269,7 +270,9 @@ export default function ForecastPage() {
     : null;
 
   // Данные, переданные через location.state
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const stateModifiedData = location.state?.modifiedData || [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const stateSelectedColumns = location.state?.selectedColumns || [];
 
   const storedModifiedData = sessionStorage.getItem("modifiedData")
@@ -287,10 +290,10 @@ export default function ForecastPage() {
     ? stateSelectedColumns
     : storedSelectedColumns;
 
-  // Получаем сохранённые категориальные фильтры из sessionStorage
-  const storedFilters = sessionStorage.getItem("dashboardFilters")
-    ? JSON.parse(sessionStorage.getItem("dashboardFilters"))
-    : {};
+  // // Получаем сохранённые категориальные фильтры из sessionStorage
+  // const storedFilters = sessionStorage.getItem("dashboardFilters")
+  //   ? JSON.parse(sessionStorage.getItem("dashboardFilters"))
+  //   : {};
 
   // Параметры прогноза
   const [horizon, setHorizon] = useState(storedState?.horizon ?? 10);
@@ -582,6 +585,12 @@ export default function ForecastPage() {
     }
   };
 
+  const {
+    selectedColumns,
+    filteredData,
+    filters,
+  } = useContext(DashboardContext);
+
   return (
     <Box sx={{ position: "relative", bgcolor: "#1a1a1a", minHeight: "100vh" }}>
       {/* ШАПКА */}
@@ -590,13 +599,14 @@ export default function ForecastPage() {
           display: "flex",
           alignItems: "center",
           p: 2,
+          pt: 2.8,
           bgcolor: "#121212",
           color: "#fff"
         }}
       >
-        <Button onClick={handleBack} startIcon={<ArrowBackIcon />} sx={{ color: "#fff", mr: 2 }}>
-          Назад
-        </Button>
+          <IconButton onClick={handleBack} sx={{ position: "absolute", left: 20, top: 20, color: "#fff" }}>
+            <ArrowBackIcon />
+          </IconButton>
         <Typography variant="h5" sx={{ flexGrow: 1, textAlign: "center" }}>
           Прогнозирование
         </Typography>
@@ -612,17 +622,19 @@ export default function ForecastPage() {
         </IconButton>
         {/* Интеграция компонента категориальных данных.
             Фильтры получаем из sessionStorage (установленные на первой странице) */}
+      </Box>
+      <Box sx={{bgcolor: "#121212", p: 0.1}}>
         <CategoricalDataBlock
-          filteredData={initialModifiedData}
-          selectedColumns={initialSelectedColumns}
-          filters={storedFilters}
+          filteredData={filteredData}
+          selectedColumns={selectedColumns}
+          filters={filters}
         />
       </Box>
 
       {/* ОСНОВНОЙ КОНТЕЙНЕР */}
       <Box
         sx={{
-          display: "flex",
+          display: "static",
           width: "100%",
           height: "calc(100vh - 56px)",
           bgcolor: "#121212"
@@ -641,7 +653,7 @@ export default function ForecastPage() {
           }}
         >
           {/* Общие параметры прогноза */}
-          <Paper sx={{ m: 2, p: 3, borderRadius: 3, backgroundColor: "#2a2a2a" }}>
+          <Paper sx={{ m: 2, p: 3, borderRadius: 3, backgroundColor: "#121212" }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Общие параметры прогноза
             </Typography>
@@ -715,7 +727,7 @@ export default function ForecastPage() {
 
           {/* Общий график (все модели) */}
           {forecastResults.length > 0 && (
-            <Paper sx={{ m: 2, p: 2, borderRadius: 3, backgroundColor: "#2a2a2a" }}>
+            <Paper sx={{ m: 2, p: 2, borderRadius: 3, backgroundColor: "#121212" }}>
               <Typography variant="h6" sx={{ mb: 1 }}>
                 Общий график (все модели)
               </Typography>
@@ -767,7 +779,7 @@ export default function ForecastPage() {
 
           {/* Вкладки по отдельным моделям */}
           {forecastResults.length > 0 && (
-            <Paper sx={{ m: 2, p: 2, borderRadius: 3, backgroundColor: "#2a2a2a" }}>
+            <Paper sx={{ m: 2, p: 2, borderRadius: 3, backgroundColor: "#121212" }}>
               <Typography variant="h6" sx={{ mb: 2 }}>
                 Отдельные модели
               </Typography>
@@ -877,11 +889,11 @@ export default function ForecastPage() {
           <Box
             sx={{
               position: "absolute",
-              top: 90,
+              top: 200,
               right: 16,
               width: `${panelWidth}px`,
               height: "calc(100vh - 230px)",
-              bgcolor: "#2a2a2a",
+              bgcolor: "#1f1f1f",
               borderRadius: 3,
               boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
               p: 2,

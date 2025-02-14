@@ -1,13 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Response, BackgroundTasks, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from models.user import User
 from models.history import History  # Добавлен импорт модели History
-from utils.auth import get_password_hash, verify_password, create_access_token, get_current_user
+from utils.auth import get_password_hash, verify_password, create_access_token, get_current_user, create_refresh_token
 from database import get_db
 from pydantic import BaseModel, EmailStr, Field, validator
 import re
 from services.history_service import record_history_bg
+from config import ALGORITHM, SECRET_KEY
+from jose import jwt
 
 auth_router = APIRouter()
 
@@ -46,13 +48,24 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+
 @auth_router.post("/login")
-async def login(user_data: UserLogin, response: Response, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+async def login(
+        user_data: UserLogin,
+        response: Response,
+        background_tasks: BackgroundTasks,
+        db: AsyncSession = Depends(get_db)
+):
     result = await db.execute(select(User).where(User.username == user_data.username))
     user = result.scalar_one_or_none()
     if not user or not verify_password(user_data.password, user.hashed_password):
-         raise HTTPException(status_code=400, detail="Неверные учетные данные")
+        raise HTTPException(status_code=400, detail="Неверные учетные данные")
+
+    # Генерация токенов
     access_token = create_access_token(data={"sub": user.username})
+    refresh_token = create_refresh_token(data={"sub": user.username})
+
+    # Установка cookies (access token и refresh token)
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -60,8 +73,60 @@ async def login(user_data: UserLogin, response: Response, background_tasks: Back
         samesite="lax",
         path="/"
     )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        samesite="lax",
+        path="/"
+    )
+
     background_tasks.add_task(record_history_bg, user.id, "Пользователь вошел в систему")
     return {"message": "Успешный вход"}
+
+
+@auth_router.post("/refresh")
+async def refresh_token(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+    # Получаем refresh token из cookies
+    token = request.cookies.get("refresh_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Refresh token не предоставлен")
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Некорректный refresh token")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Некорректный refresh token")
+
+    # (Опционально) Проверяем, существует ли пользователь
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=401, detail="Пользователь не найден")
+
+    # Генерируем новые токены
+    new_access_token = create_access_token(data={"sub": username})
+    new_refresh_token = create_refresh_token(data={"sub": username})
+
+    # Обновляем cookies с новыми токенами
+    response.set_cookie(
+        key="access_token",
+        value=new_access_token,
+        httponly=True,
+        samesite="lax",
+        path="/"
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        samesite="lax",
+        path="/"
+    )
+
+    return {"message": "Токены обновлены", "access_token": new_access_token}
 
 @auth_router.get("/me")
 async def read_me(current_user: User = Depends(get_current_user)):
@@ -79,4 +144,6 @@ async def get_history(db: AsyncSession = Depends(get_db), current_user: User = D
 async def logout(response: Response, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user)):
     background_tasks.add_task(record_history_bg, current_user.id, "Пользователь вышел из системы")
     response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
     return {"message": "Вы успешно вышли"}
+

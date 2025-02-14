@@ -22,7 +22,8 @@ import {
   DialogActions,
   RadioGroup,
   Radio,
-  Slide
+  Slide,
+  Collapse,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -183,6 +184,8 @@ function ProphetBlock({ active, setActive, prophetParams, setProphetParams }) {
   const [localSeasonalityMode, setLocalSeasonalityMode] = useState(
     prophetParams.seasonality_mode || "additive"
   );
+  // Состояние, управляющее видимостью параметров внутри блока
+  const [paramsOpen, setParamsOpen] = useState(false);
 
   const handleApply = () => {
     setProphetParams((prev) => ({ ...prev, seasonality_mode: localSeasonalityMode }));
@@ -191,6 +194,11 @@ function ProphetBlock({ active, setActive, prophetParams, setProphetParams }) {
 
   const handleCancel = () => {
     setActive(false);
+  };
+
+  // Переключение видимости области с параметрами
+  const toggleParams = () => {
+    setParamsOpen((prev) => !prev);
   };
 
   const borderColor = active ? "#10A37F" : "#FF4444";
@@ -205,65 +213,83 @@ function ProphetBlock({ active, setActive, prophetParams, setProphetParams }) {
         transition: "border-color 0.2s"
       }}
     >
-      <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
-        Prophet
-      </Typography>
-      <Box sx={{ mt: 1 }}>
-        <FormControl fullWidth size="small" sx={{ mb: 1 }}>
-          <InputLabel>Seasonality Mode</InputLabel>
-          <Select
-            value={localSeasonalityMode}
-            label="Seasonality Mode"
-            onChange={(e) => setLocalSeasonalityMode(e.target.value)}
-            sx={{ backgroundColor: "#2c2c2c", color: "#fff" }}
-          >
-            <MenuItem value="additive">Additive</MenuItem>
-            <MenuItem value="multiplicative">Multiplicative</MenuItem>
-          </Select>
-        </FormControl>
-        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-          {active ? (
-            <Button
-              variant="outlined"
-              startIcon={<CloseIcon />}
-              sx={{
-                borderColor: "#FF4444",
-                color: "#FF4444",
-                "&:hover": {
-                  borderColor: "#FF4444",
-                  backgroundColor: "#ff44441a"
-                }
-              }}
-              onClick={handleCancel}
-            >
-              Отключить
-            </Button>
-          ) : (
-            <Button
-              variant="outlined"
-              startIcon={<CheckIcon />}
-              sx={{
-                borderColor: "#10A37F",
-                color: "#10A37F",
-                "&:hover": {
-                  borderColor: "#10A37F",
-                  backgroundColor: "#10A37F1a"
-                }
-              }}
-              onClick={handleApply}
-            >
-              Активировать
-            </Button>
-          )}
-        </Box>
+      {/* Заголовок и кнопка для показа/скрытия параметров */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}
+      >
+        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
+          Prophet
+        </Typography>
+        <Button onClick={toggleParams} variant="text" sx={{ color: "#10A37F" }}>
+          {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
+        </Button>
       </Box>
+
+      {/* Область с параметрами, которая скрывается/раскрывается вниз */}
+      <Collapse in={paramsOpen}>
+        <Box sx={{ mt: 1 }}>
+          <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+            <InputLabel>Seasonality Mode</InputLabel>
+            <Select
+              value={localSeasonalityMode}
+              label="Seasonality Mode"
+              onChange={(e) => setLocalSeasonalityMode(e.target.value)}
+              sx={{ backgroundColor: "#2c2c2c", color: "#fff" }}
+            >
+              <MenuItem value="additive">Additive</MenuItem>
+              <MenuItem value="multiplicative">Multiplicative</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+      </Collapse>
+
+      {/* Кнопки активации/деактивации */}
+      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+        {active ? (
+          <Button
+            variant="outlined"
+            startIcon={<CloseIcon />}
+            sx={{
+              borderColor: "#FF4444",
+              color: "#FF4444",
+              "&:hover": {
+                borderColor: "#FF4444",
+                backgroundColor: "#ff44441a"
+              }
+            }}
+            onClick={handleCancel}
+          >
+            Отключить
+          </Button>
+        ) : (
+          <Button
+            variant="outlined"
+            startIcon={<CheckIcon />}
+            sx={{
+              borderColor: "#10A37F",
+              color: "#10A37F",
+              "&:hover": {
+                borderColor: "#10A37F",
+                backgroundColor: "#10A37F1a"
+              }
+            }}
+            onClick={handleApply}
+          >
+            Активировать
+          </Button>
+        )}
+      </Box>
+
       <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444" }}>
         {active ? "Активна" : "Выключена"}
       </Typography>
     </Paper>
   );
 }
-
 // Новый компонент настройки XGBoost
 function XGBoostBlock({ active, setActive, xgboostParams, setXgboostParams }) {
   const [localMaxDepth, setLocalMaxDepth] = useState(xgboostParams.max_depth || 6);
@@ -271,6 +297,9 @@ function XGBoostBlock({ active, setActive, xgboostParams, setXgboostParams }) {
   const [localNEstimators, setLocalNEstimators] = useState(xgboostParams.n_estimators || 100);
   const [localSubsample, setLocalSubsample] = useState(xgboostParams.subsample || 1);
   const [localColsampleBytree, setLocalColsampleBytree] = useState(xgboostParams.colsample_bytree || 1);
+
+  // Состояние для управления видимостью области с параметрами
+  const [paramsOpen, setParamsOpen] = useState(false);
 
   const handleApply = () => {
     setXgboostParams({
@@ -287,6 +316,11 @@ function XGBoostBlock({ active, setActive, xgboostParams, setXgboostParams }) {
     setActive(false);
   };
 
+  // Переключение области с параметрами
+  const toggleParams = () => {
+    setParamsOpen((prev) => !prev);
+  };
+
   const borderColor = active ? "#10A37F" : "#FF4444";
 
   return (
@@ -299,113 +333,129 @@ function XGBoostBlock({ active, setActive, xgboostParams, setXgboostParams }) {
         transition: "border-color 0.2s"
       }}
     >
-      <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
-        XGBoost
-      </Typography>
-      <Box sx={{ mt: 1 }}>
-        <Typography variant="body2" sx={{ color: "#fff" }}>
-          Max Depth: {localMaxDepth}
+      {/* Заголовок с названием модели */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
+          XGBoost
         </Typography>
-        <Slider
-          value={localMaxDepth}
-          onChange={(e, val) => setLocalMaxDepth(val)}
-          min={1}
-          max={15}
-          step={1}
-          valueLabelDisplay="auto"
-          sx={{ color: "#10A37F", mb: 2 }}
-        />
-        <Typography variant="body2" sx={{ color: "#fff" }}>
-          Learning Rate: {localLearningRate}
-        </Typography>
-        <Slider
-          value={localLearningRate}
-          onChange={(e, val) => setLocalLearningRate(val)}
-          min={0.01}
-          max={1}
-          step={0.01}
-          valueLabelDisplay="auto"
-          sx={{ color: "#10A37F", mb: 2 }}
-        />
-        <Typography variant="body2" sx={{ color: "#fff" }}>
-          n_estimators: {localNEstimators}
-        </Typography>
-        <Slider
-          value={localNEstimators}
-          onChange={(e, val) => setLocalNEstimators(val)}
-          min={10}
-          max={500}
-          step={10}
-          valueLabelDisplay="auto"
-          sx={{ color: "#10A37F", mb: 2 }}
-        />
-        <Typography variant="body2" sx={{ color: "#fff" }}>
-          Subsample: {localSubsample}
-        </Typography>
-        <Slider
-          value={localSubsample}
-          onChange={(e, val) => setLocalSubsample(val)}
-          min={0.5}
-          max={1}
-          step={0.1}
-          valueLabelDisplay="auto"
-          sx={{ color: "#10A37F", mb: 2 }}
-        />
-        <Typography variant="body2" sx={{ color: "#fff" }}>
-          Colsample by tree: {localColsampleBytree}
-        </Typography>
-        <Slider
-          value={localColsampleBytree}
-          onChange={(e, val) => setLocalColsampleBytree(val)}
-          min={0.5}
-          max={1}
-          step={0.1}
-          valueLabelDisplay="auto"
-          sx={{ color: "#10A37F", mb: 2 }}
-        />
-        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-          {active ? (
-            <Button
-              variant="outlined"
-              startIcon={<CloseIcon />}
-              sx={{
-                borderColor: "#FF4444",
-                color: "#FF4444",
-                "&:hover": {
-                  borderColor: "#FF4444",
-                  backgroundColor: "#ff44441a"
-                }
-              }}
-              onClick={handleCancel}
-            >
-              Отключить
-            </Button>
-          ) : (
-            <Button
-              variant="outlined"
-              startIcon={<CheckIcon />}
-              sx={{
-                borderColor: "#10A37F",
-                color: "#10A37F",
-                "&:hover": {
-                  borderColor: "#10A37F",
-                  backgroundColor: "#10A37F1a"
-                }
-              }}
-              onClick={handleApply}
-            >
-              Активировать
-            </Button>
-          )}
-        </Box>
+        {/* Кнопка для переключения области с параметрами */}
+        <Button onClick={toggleParams} variant="text" sx={{ color: "#10A37F" }}>
+          {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
+        </Button>
       </Box>
-      <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444" }}>
+
+      {/* Область с параметрами, которая скрывается/раскрывается вниз */}
+      <Collapse in={paramsOpen}>
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="body2" sx={{ color: "#fff" }}>
+            Max Depth: {localMaxDepth}
+          </Typography>
+          <Slider
+            value={localMaxDepth}
+            onChange={(e, val) => setLocalMaxDepth(val)}
+            min={1}
+            max={15}
+            step={1}
+            valueLabelDisplay="auto"
+            sx={{ color: "#10A37F", mb: 2 }}
+          />
+          <Typography variant="body2" sx={{ color: "#fff" }}>
+            Learning Rate: {localLearningRate}
+          </Typography>
+          <Slider
+            value={localLearningRate}
+            onChange={(e, val) => setLocalLearningRate(val)}
+            min={0.01}
+            max={1}
+            step={0.01}
+            valueLabelDisplay="auto"
+            sx={{ color: "#10A37F", mb: 2 }}
+          />
+          <Typography variant="body2" sx={{ color: "#fff" }}>
+            n_estimators: {localNEstimators}
+          </Typography>
+          <Slider
+            value={localNEstimators}
+            onChange={(e, val) => setLocalNEstimators(val)}
+            min={10}
+            max={500}
+            step={10}
+            valueLabelDisplay="auto"
+            sx={{ color: "#10A37F", mb: 2 }}
+          />
+          <Typography variant="body2" sx={{ color: "#fff" }}>
+            Subsample: {localSubsample}
+          </Typography>
+          <Slider
+            value={localSubsample}
+            onChange={(e, val) => setLocalSubsample(val)}
+            min={0.5}
+            max={1}
+            step={0.1}
+            valueLabelDisplay="auto"
+            sx={{ color: "#10A37F", mb: 2 }}
+          />
+          <Typography variant="body2" sx={{ color: "#fff" }}>
+            Colsample by tree: {localColsampleBytree}
+          </Typography>
+          <Slider
+            value={localColsampleBytree}
+            onChange={(e, val) => setLocalColsampleBytree(val)}
+            min={0.5}
+            max={1}
+            step={0.1}
+            valueLabelDisplay="auto"
+            sx={{ color: "#10A37F", mb: 2 }}
+          />
+        </Box>
+      </Collapse>
+
+      {/* Кнопки активации/деактивации */}
+      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 1 }}>
+        {active ? (
+          <Button
+            variant="outlined"
+            startIcon={<CloseIcon />}
+            sx={{
+              borderColor: "#FF4444",
+              color: "#FF4444",
+              "&:hover": {
+                borderColor: "#FF4444",
+                backgroundColor: "#ff44441a"
+              }
+            }}
+            onClick={handleCancel}
+          >
+            Отключить
+          </Button>
+        ) : (
+          <Button
+            variant="outlined"
+            startIcon={<CheckIcon />}
+            sx={{
+              borderColor: "#10A37F",
+              color: "#10A37F",
+              "&:hover": {
+                borderColor: "#10A37F",
+                backgroundColor: "#10A37F1a"
+              }
+            }}
+            onClick={handleApply}
+          >
+            Активировать
+          </Button>
+        )}
+      </Box>
+
+      <Typography
+        variant="caption"
+        sx={{ color: active ? "#10A37F" : "#FF4444", mt: 1, display: "block" }}
+      >
         {active ? "Активна" : "Выключена"}
       </Typography>
     </Paper>
   );
 }
-
 // ================================================
 // 3) Основной компонент ForecastPage
 // ================================================

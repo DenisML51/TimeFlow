@@ -7,16 +7,20 @@ import {
   Box,
   CircularProgress,
   Dialog,
-  DialogContent
+  DialogContent,
+  useTheme
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { motion } from "framer-motion";
-import { FloatingLinesBackground } from "../components/AnimatedBackground";
 import { TbLogin, TbCheck, TbAlertCircle } from "react-icons/tb";
+import { GradientText } from "../components/home/GradientText";
+import { FloatingLinesBackground } from "../components/AnimatedBackground";
 
 const Login = () => {
+  const theme = useTheme();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,14 +29,11 @@ const Login = () => {
   const navigate = useNavigate();
   const { fetchUser } = useContext(AuthContext);
 
-  // Автоматически закрываем диалог через 3 секунды, если он открыт
   useEffect(() => {
     if (dialogOpen) {
       const timer = setTimeout(() => {
         setDialogOpen(false);
-        if (dialogContent.onClose) {
-          dialogContent.onClose();
-        }
+        dialogContent.onClose?.();
       }, 1500);
       return () => clearTimeout(timer);
     }
@@ -50,18 +51,16 @@ const Login = () => {
 
       await fetchUser();
       showDialog({
-        icon: <TbCheck size={40} />,
+        icon: <TbCheck size={40} color="#10A37F" />,
         title: "Добро пожаловать!",
         message: response.data.message,
-        color: "#10A37F",
         onClose: () => navigate("/dashboard")
       });
     } catch (error) {
       showDialog({
-        icon: <TbAlertCircle size={40} />,
+        icon: <TbAlertCircle size={40} color={theme.palette.error.main} />,
         title: "Ошибка входа",
-        message: error.response?.data?.message || "Неверные учетные данные",
-        color: "#ff4444"
+        message: error.response?.data?.message || "Неверные учетные данные"
       });
     } finally {
       setLoading(false);
@@ -74,174 +73,148 @@ const Login = () => {
   };
 
   return (
-    <Box
-      sx={{
-        position: "relative",
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        overflow: "hidden"
-      }}
-    >
-      <FloatingLinesBackground />
+    <Box sx={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      <FloatingLinesBackground density={8} color={alpha(theme.palette.primary.main, 0.1)} />
 
-      {/* Добавляем позиционирование и zIndex, чтобы форма была выше анимированного фона */}
-      <Container maxWidth="sm" sx={{ position: "relative", zIndex: 1 }}>
+      <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.8 }}
         >
           <Box
             component="form"
             onSubmit={handleLogin}
             sx={{
-              background: "rgba(30, 30, 30, 0.8)",
-              backdropFilter: "blur(12px)",
-              padding: { xs: "20px", sm: "40px" },
-              borderRadius: "24px",
-              border: "1px solid rgba(255,255,255,0.1)",
-              boxShadow: "0 24px 48px rgba(0,0,0,0.4)",
-              position: "relative",
-              overflow: "hidden",
-              "&:before": {
+              background: 'rgba(255,255,255,0.05)',
+              backdropFilter: 'blur(16px)',
+              padding: theme.spacing(4),
+              borderRadius: 4,
+              border: '1px solid rgba(255,255,255,0.15)',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.3)',
+              position: 'relative',
+              '&:before': {
                 content: '""',
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: "linear-gradient(45deg, #10A37F20 0%, transparent 100%)",
-                pointerEvents: "none"
+                position: 'absolute',
+                top: -20,
+                left: -20,
+                right: -20,
+                bottom: -20,
+                background: `radial-gradient(${theme.palette.primary.main} 0%, transparent 70%)`,
+                filter: 'blur(40px)',
+                opacity: 0.1,
+                zIndex: -1
               }
             }}
           >
-            <Typography
-              variant="h3"
-              sx={{
-                textAlign: "center",
-                mb: 4,
-                fontWeight: 700,
-                background: "linear-gradient(45deg, #10A37F 30%, #00ff88 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent"
-              }}
-            >
+            <GradientText variant="h3" sx={{ textAlign: 'center', mb: 4 }}>
               Вход в систему
-            </Typography>
+            </GradientText>
 
-            <motion.div whileHover={{ scale: 1.02 }}>
-              <TextField
-                fullWidth
-                label="Имя пользователя"
-                margin="normal"
-                variant="filled"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                sx={{
-                  "& .MuiFilledInput-root": {
-                    borderRadius: "6px",
-                    background: "rgba(255,255,255,0.05)",
-                    transition: "0.3s",
-                    "&:hover": { background: "rgba(255,255,255,0.08)" },
-                    "&.Mui-focused": {
-                      background: "rgba(255,255,255,0.1)",
-                      boxShadow: "0 0 0 2px #10A37F"
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <motion.div whileHover={{ scale: 1.02 }}>
+                <TextField
+                  fullWidth
+                  label="Имя пользователя"
+                  variant="outlined"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      background: alpha(theme.palette.background.paper, 0.1),
+                      '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                      '&:hover fieldset': { borderColor: theme.palette.primary.main },
+                      '&.Mui-focused fieldset': { borderWidth: 2 }
                     }
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "#aaa",
-                    "&.Mui-focused": { color: "#10A37F" }
-                  }
-                }}
-              />
-            </motion.div>
+                  }}
+                />
+              </motion.div>
 
-            <motion.div whileHover={{ scale: 1.02 }}>
-              <TextField
-                fullWidth
-                type="password"
-                label="Пароль"
-                margin="normal"
-                variant="filled"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                sx={{
-                  "& .MuiFilledInput-root": {
-                    borderRadius: "6px",
-                    background: "rgba(255,255,255,0.05)",
-                    transition: "0.3s",
-                    "&:hover": { background: "rgba(255,255,255,0.08)" },
-                    "&.Mui-focused": {
-                      background: "rgba(255,255,255,0.1)",
-                      boxShadow: "0 0 0 2px #10A37F"
+              <motion.div whileHover={{ scale: 1.02 }}>
+                <TextField
+                  fullWidth
+                  type="password"
+                  label="Пароль"
+                  variant="outlined"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      background: alpha(theme.palette.background.paper, 0.1),
+                      '& fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                      '&:hover fieldset': { borderColor: theme.palette.primary.main },
+                      '&.Mui-focused fieldset': { borderWidth: 2 }
                     }
-                  },
-                  "& .MuiInputLabel-root": {
-                    color: "#aaa",
-                    "&.Mui-focused": { color: "#10A37F" }
-                  }
-                }}
-              />
-            </motion.div>
+                  }}
+                />
+              </motion.div>
 
-            <motion.div whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.05 }}>
-              <Button
-                type="submit"
-                fullWidth
-                disabled={loading}
-                sx={{
-                  mt: 3,
-                  py: 2,
-                  borderRadius: "12px",
-                  background: "#10A37F",
-                  fontSize: "16px",
-                  fontWeight: 600,
-                  color: "#ffffff",
-                  "&:hover": { background: "#0f8f6f" },
-                  "& .MuiCircularProgress-root": { color: "white" }
-                }}
-              >
-                {loading ? (
-                  <CircularProgress size={24} />
-                ) : (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <TbLogin size={20} />
-                    Войти в систему
-                  </Box>
-                )}
-              </Button>
-            </motion.div>
+              <motion.div whileTap={{ scale: 0.95 }}>
+                <Button
+                  type="submit"
+                  fullWidth
+                  disabled={loading}
+                  variant="contained"
+                  sx={{
+                    mt: 2,
+                    py: 2,
+                    borderRadius: 2,
+                    fontSize: 16,
+                    fontWeight: 600,
+                    background: 'linear-gradient(135deg, #10A37F 0%, #00FF88 100%)',
+                    '&:hover': {
+                      boxShadow: '0 8px 32px rgba(16,163,127,0.3)'
+                    }
+                  }}
+                >
+                  {loading ? (
+                    <CircularProgress size={24} sx={{ color: 'white' }} />
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <TbLogin size={20} />
+                      Войти
+                    </Box>
+                  )}
+                </Button>
+              </motion.div>
+            </Box>
           </Box>
         </motion.div>
       </Container>
 
-      {/* Модальное окно */}
       <Dialog
         open={dialogOpen}
-        onClose={() => {
-          setDialogOpen(false);
-          dialogContent.onClose?.();
-        }}
+        onClose={() => setDialogOpen(false)}
         PaperProps={{
           sx: {
-            borderRadius: "24px",
-            background: "rgba(30,30,30,0.9)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            boxShadow: "0 16px 32px rgba(0,0,0,0.4)"
+            background: 'rgba(30,30,30,0.95)',
+            backdropFilter: 'blur(16px)',
+            borderRadius: 4,
+            border: '1px solid rgba(255,255,255,0.15)',
+            boxShadow: '0 24px 48px rgba(0,0,0,0.4)'
           }
         }}
       >
-        <DialogContent sx={{ textAlign: "center", p: 4 }}>
-          <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }}>
-            <Box sx={{ color: dialogContent.color, fontSize: "40px", mb: 2 }}>
+        <DialogContent sx={{ textAlign: 'center', p: 4 }}>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+          >
+            <Box sx={{ mb: 2 }}>
               {dialogContent.icon}
             </Box>
-            <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
               {dialogContent.title}
             </Typography>
-            <Typography variant="body1" sx={{ color: "#aaa" }}>
+            <Typography variant="body1" sx={{ color: 'text.secondary' }}>
               {dialogContent.message}
             </Typography>
           </motion.div>

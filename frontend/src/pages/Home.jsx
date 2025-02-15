@@ -1,8 +1,7 @@
 // src/pages/Home.jsx
 import React, { useContext, useRef } from "react";
 import {
-  Box, Button, Container, Grid, Typography, Paper, useTheme,
-  styled, useMediaQuery, Stack
+  Box, Button, Container, Grid, Typography, Paper, useTheme, Stack
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
@@ -59,7 +58,7 @@ const LiveDemoPreview = () => {
         backdropFilter: 'blur(12px)',
         transformStyle: 'preserve-3d'
       }}>
-        <Box component="img" src="/assets/live-demo-preview.png" 
+        <Box component="img" src="assets/dashboard-preview.png" 
           sx={{ width: '100%', borderRadius: 4 }} />
         
         <motion.div 

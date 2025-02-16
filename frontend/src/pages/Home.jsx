@@ -265,7 +265,7 @@ const Home = () => {
                   }}>
                     <Box component="img" src="/assets/dashboard-preview.png"
                       sx={{ width: '100%', borderRadius: '24px' }} />
-                    {[0, 1, 2].map(i => (
+                    {/* {[0, 1, 2].map(i => (
                       <motion.div
                         key={i}
                         animate={{
@@ -288,7 +288,7 @@ const Home = () => {
                           filter: 'blur(1px)'
                         }}
                       />
-                    ))}
+                    ))} */}
                   </Box>
                 </Box>
               </motion.div>

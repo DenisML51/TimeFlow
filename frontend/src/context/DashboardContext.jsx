@@ -12,12 +12,12 @@ export const DashboardProvider = ({ children }) => {
   const [columns, setColumns] = useState([]);
   const [selectedColumns, setSelectedColumns] = useState([]);
   const [uploadedFile, setUploadedFile] = useState(null);
-
-  // Новое состояние для сохранения пагинации таблицы
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [currentSessionId, setCurrentSessionId] = useState(null);
   const [tablePage, setTablePage] = useState(0);
   const [tableRowsPerPage, setTableRowsPerPage] = useState(25);
 
-  // Дополнительное состояние для второй страницы и настроек предобработки
+  // Состояния для второй страницы (SelectedColumnsPage и ForecastPage)
   const [secondPageState, setSecondPageState] = useState({
     localSortColumn: null,
     localSortDirection: null,
@@ -37,8 +37,20 @@ export const DashboardProvider = ({ children }) => {
     viewMode: "combined",
     preprocessingOpen: false,
   });
+  const [preprocessingSettings, setPreprocessingSettings] = useState({
+    imputationFrequency: "D",
+    outlierThreshold: 2,
+    smoothingWindow: 1,
+    decompositionWindow: 2,
+    transformation: "none",
+  });
+  const [forecastResults, setForecastResults] = useState([]);
 
-  // Функция сброса состояния (вызывается при загрузке нового файла или выходе из аккаунта)
+  // Флаги для отслеживания изменений и активности сессии
+  const [isDirty, setIsDirty] = useState(false);
+  // Если sessionLocked === true, то эта сессия загружена из истории и не обновляется автоматически
+  const [sessionLocked, setSessionLocked] = useState(false);
+
   const resetDashboardState = () => {
     setOriginalData([]);
     setFilters({});
@@ -49,6 +61,7 @@ export const DashboardProvider = ({ children }) => {
     setColumns([]);
     setSelectedColumns([]);
     setUploadedFile(null);
+    setUploadedFileName("");
     setTablePage(0);
     setTableRowsPerPage(25);
     setSecondPageState({
@@ -70,6 +83,17 @@ export const DashboardProvider = ({ children }) => {
       viewMode: "combined",
       preprocessingOpen: false,
     });
+    setPreprocessingSettings({
+      imputationFrequency: "D",
+      outlierThreshold: 2,
+      smoothingWindow: 1,
+      decompositionWindow: 2,
+      transformation: "none",
+    });
+    setForecastResults([]);
+    setCurrentSessionId(null);
+    setIsDirty(false);
+    setSessionLocked(false);
   };
 
   return (
@@ -93,6 +117,10 @@ export const DashboardProvider = ({ children }) => {
         setSelectedColumns,
         uploadedFile,
         setUploadedFile,
+        uploadedFileName,
+        setUploadedFileName,
+        currentSessionId,
+        setCurrentSessionId,
         tablePage,
         setTablePage,
         tableRowsPerPage,
@@ -100,6 +128,14 @@ export const DashboardProvider = ({ children }) => {
         resetDashboardState,
         secondPageState,
         setSecondPageState,
+        preprocessingSettings,
+        setPreprocessingSettings,
+        forecastResults,
+        setForecastResults,
+        isDirty,
+        setIsDirty,
+        sessionLocked,
+        setSessionLocked,
       }}
     >
       {children}

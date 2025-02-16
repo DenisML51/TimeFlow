@@ -7,7 +7,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import SelectedColumnsPage from "./components/Preprocessing";
-import ForecastPage from "./components/ForecastPage"; // Добавляем импорт новой страницы
+import ForecastPage from "./components/ForecastPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Header from "./components/Header";
 import { DashboardProvider } from "./context/DashboardContext";
@@ -27,7 +27,6 @@ const App = () => {
                 sx={{
                   maxWidth: "1200px",
                   margin: "auto",
-                  // padding: "20px",
                   borderRadius: "16px",
                 }}
               >
@@ -52,7 +51,6 @@ const App = () => {
                       </ProtectedRoute>
                     }
                   />
-                  {/* Добавляем новый маршрут для страницы прогнозирования */}
                   <Route
                     path="/forecast"
                     element={

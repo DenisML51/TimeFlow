@@ -265,30 +265,7 @@ const Home = () => {
                   }}>
                     <Box component="img" src="/assets/dashboard-preview.png"
                       sx={{ width: '100%', borderRadius: '24px' }} />
-                    {/* {[0, 1, 2].map(i => (
-                      <motion.div
-                        key={i}
-                        animate={{
-                          y: [0, -20, 0],
-                          scale: [1, 1.2, 1]
-                        }}
-                        transition={{
-                          duration: 4 + i,
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                        style={{
-                          position: 'absolute',
-                          background: theme.palette.primary.main,
-                          width: 12,
-                          height: 12,
-                          borderRadius: '50%',
-                          top: `${30 + i * 15}%`,
-                          left: `${50 + i * 10}%`,
-                          filter: 'blur(1px)'
-                        }}
-                      />
-                    ))} */}
+
                   </Box>
                 </Box>
               </motion.div>

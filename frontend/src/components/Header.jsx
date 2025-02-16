@@ -11,12 +11,11 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import HistoryIcon from "@mui/icons-material/History";
-import HistoryModal from "./HistoryModal";
-import { DashboardContext } from "../context/DashboardContext";
 import { AuthContext } from "../context/AuthContext";
+import { DashboardContext } from "../context/DashboardContext";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { TbWaveSine } from "react-icons/tb";
-import { FloatingLinesBackground } from "../components/AnimatedBackground";
+import PersonalCabinetDrawer from "../pages/PersonalCabinetDrawer";
 
 const GlassButton = styled(Button)(({ theme }) => ({
   backdropFilter: 'blur(12px)',
@@ -36,7 +35,7 @@ const Header = () => {
   const theme = useTheme();
   const { resetDashboardState } = useContext(DashboardContext);
   const { user, logout } = useContext(AuthContext);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [cabinetOpen, setCabinetOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const { scrollY } = useScroll();
   const headerHeight = useTransform(scrollY, [0, 100], [96, 72]);
@@ -65,12 +64,6 @@ const Header = () => {
             borderBottom: '1px solid rgba(255,255,255,0.1)'
           }}
         >
-          <FloatingLinesBackground
-            density={8}
-            speed={0.4}
-            color={alpha(theme.palette.primary.main, 0.1)}
-          />
-
           <Toolbar sx={{ height: '100%', position: 'relative', zIndex: 1 }}>
             <Box
               component={motion.div}
@@ -113,7 +106,7 @@ const Header = () => {
                 <GlassButton
                   component={motion.div}
                   whileHover={{ scale: 1.05 }}
-                  onClick={() => setHistoryOpen(true)}
+                  onClick={() => setCabinetOpen(true)}
                   startIcon={<HistoryIcon />}
                 >
                   История
@@ -154,7 +147,7 @@ const Header = () => {
         </AppBar>
       </motion.div>
 
-      <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} />
+      <PersonalCabinetDrawer open={cabinetOpen} onClose={() => setCabinetOpen(false)} />
     </>
   );
 };

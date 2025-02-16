@@ -195,14 +195,14 @@ const CTASection = () => {
           backdropFilter: 'blur(12px)'
         }}>
           <Typography variant="h3" sx={{ mb: 3, fontWeight: 700 }}>
-            Start Your AI Journey Today
+            Начните анализировать уже сегодня
           </Typography>
           <Typography variant="body1" sx={{ 
             color: 'text.secondary',
             fontSize: '1.25rem',
             mb: 6 
           }}>
-            Join thousands of data scientists and businesses transforming their operations with AI.
+            Изспользуйте современные методы анализа и прогнозирования временных рядов
           </Typography>
           <AnimatedButton
             variant="contained"
@@ -220,7 +220,7 @@ const CTASection = () => {
               boxShadow: '0 8px 32px rgba(16,163,127,0.3)'
             }}
           >
-            {user ? "Open Dashboard" : "Get Started Free"}
+            {user ? "Начать анализ" : "Зарегистрироваться"}
           </AnimatedButton>
         </Box>
       </Container>
@@ -247,9 +247,9 @@ const Home = () => {
               transition={{ duration: 0.8 }}
             >
               <GradientText variant="h1">
-                AI-Powered Time Series
+                Time Series
                 <Box component="span" sx={{ display: 'block' }}>
-                  Forecasting Platform
+                  Forecasting Tool
                 </Box>
               </GradientText>
               
@@ -263,9 +263,9 @@ const Home = () => {
                 borderRadius: 4,
                 border: '1px solid rgba(255,255,255,0.1)'
               }}>
-                Transform raw data into actionable predictions with our next-gen deep learning models.
+                Загружайте, преобразуйте сырые данные и используйте их для прогноза.
                 <Box component="span" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                  {" "}Get started in 30 seconds.
+                  {" "}Начните анализ за 30 секунд.
                 </Box>
               </Typography>
               
@@ -289,7 +289,7 @@ const Home = () => {
                     }
                   }}
                 >
-                  {user ? "Open Dashboard" : "Start Free Trial"}
+                  {user ? "Начать анализ" : "Зарегистрироваться"}
                 </AnimatedButton>
                 
                 <Button

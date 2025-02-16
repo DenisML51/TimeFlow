@@ -68,13 +68,14 @@ const Header = () => {
         component={motion.div}
         variants={headerVariants}
         initial={{ y: -100 }}
-                animate="visible"
-        position="fixed"
+        animate="visible"
+        position="related"
         sx={{
           background: alpha(theme.palette.background.default, 0.88),
           backdropFilter: 'blur(20px)',
           boxShadow: 'none',
-          borderBottom: '1px solid rgba(255,255,255,0.12)'
+          borderBottom: '1px solid rgba(255,255,255,0.12)',
+          
         }}
       >
         <Toolbar sx={{ 
@@ -110,7 +111,7 @@ const Header = () => {
                 fontFamily: 'inherit'
               }}
             >
-              ForecastAI
+              TSFT
             </Typography>
           </Box>
 

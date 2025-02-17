@@ -4,12 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="87aacc28-dd70-4bb9-b83a-40324653cc6e" name="Changes" comment="version 7.1 User Cabinet and User Sessions">
+    <list default="true" id="87aacc28-dd70-4bb9-b83a-40324653cc6e" name="Changes" comment="new global design 2">
       <change beforePath="$PROJECT_DIR$/../backend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../backend/app.db" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/app.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/ForecastPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/ForecastPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/Home.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Home.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -90,7 +90,15 @@
       <option name="project" value="LOCAL" />
       <updated>1739762520645</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="new global design 2">
+      <option name="closed" value="true" />
+      <created>1739769839211</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1739769839211</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -109,6 +117,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="version 7 User Cabinet and User Sessions" />
-    <option name="LAST_COMMIT_MESSAGE" value="version 7 User Cabinet and User Sessions" />
+    <MESSAGE value="new global design 2" />
+    <option name="LAST_COMMIT_MESSAGE" value="new global design 2" />
   </component>
 </project>

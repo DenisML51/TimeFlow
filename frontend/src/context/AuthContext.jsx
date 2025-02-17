@@ -1,5 +1,6 @@
+// AuthContext.js
 import React, { createContext, useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../components/axios"; // Импортируем наш настроенный экземпляр axios
 
 export const AuthContext = createContext();
 
@@ -9,7 +10,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/auth/me", { withCredentials: true });
+      const response = await axios.get("/auth/me");
       setUser(response.data);
     } catch (error) {
       setUser(null);
@@ -24,7 +25,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await axios.post("http://localhost:8000/auth/logout", {}, { withCredentials: true });
+      await axios.post("/auth/logout");
     } catch (error) {
       console.error("Ошибка выхода:", error);
     }

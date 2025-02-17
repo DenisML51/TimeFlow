@@ -265,7 +265,7 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
                 WebkitTextFillColor: "transparent",
               }}
             >
-              История
+              Аккаунт
             </Typography>
           </Box>
 

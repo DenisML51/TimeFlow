@@ -110,7 +110,7 @@ const Header = () => {
                   onClick={() => setCabinetOpen(true)}
                   startIcon={<HistoryIcon />}
                 >
-                  История
+                  Аккаунт
                 </GlassButton>
 
                 <GlassButton

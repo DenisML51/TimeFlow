@@ -1,6 +1,7 @@
+// ProtectedRoute.js
 import React, { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import axios from "axios";
+import axios from "./axios"; // Используем настроенный экземпляр axios
 
 const ProtectedRoute = ({ children }) => {
   const [authChecked, setAuthChecked] = useState(false);
@@ -9,15 +10,14 @@ const ProtectedRoute = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await axios.get("http://localhost:8000/auth/me", { withCredentials: true });
-        console.log("Auth check response:", response.data);
+        const response = await axios.get("/auth/me");
         if (response.data && response.data.username) {
           setAuthenticated(true);
         } else {
           setAuthenticated(false);
         }
       } catch (error) {
-        console.error("Auth check error:", error);
+        console.error("Ошибка проверки аутентификации:", error);
         setAuthenticated(false);
       } finally {
         setAuthChecked(true);

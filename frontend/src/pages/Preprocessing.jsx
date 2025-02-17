@@ -41,9 +41,9 @@ import {
 } from "chart.js";
 import { DashboardContext } from "../context/DashboardContext";
 import CategoricalDataBlock from "../components/CategoricalDataBlock";
-import { FloatingLinesBackground } from "../components/AnimatedBackground";
-import {Canvas} from "@react-three/fiber";
-import {ParticleBackground} from "../components/home/ParticleBackground";
+import { Canvas } from "@react-three/fiber";
+import { ParticleBackground } from "../components/home/ParticleBackground";
+import { Slide } from "@mui/material";
 
 ChartJS.register(
   CategoryScale,
@@ -105,6 +105,7 @@ const SelectedColumnsPage = () => {
     filters,
     secondPageState,
     setSecondPageState,
+    setIsDirty,
   } = useContext(DashboardContext);
 
   const [show, setShow] = useState(true);
@@ -147,7 +148,7 @@ const SelectedColumnsPage = () => {
     secondPageState.localSortDirection,
   ]);
 
-  // Последовательная предобработка данных (аналогично предыдущим вариантам)
+  // Последовательная предобработка данных (без изменений)
   const finalDataResult = useMemo(() => {
     let data = [...sortedData];
     let seasonalValues = null;
@@ -312,8 +313,7 @@ const SelectedColumnsPage = () => {
         data = data.slice(1).map((row, i) => ({
           ...row,
           [selectedColumns[1]]:
-            Number(row[selectedColumns[1]]) -
-            Number(data[i][selectedColumns[1]]),
+            Number(row[selectedColumns[1]]) - Number(data[i][selectedColumns[1]]),
         }));
       }
     }
@@ -360,7 +360,7 @@ const SelectedColumnsPage = () => {
   const labels = finalData.map((row) => row[selectedColumns[0]]);
   const trendValues = finalData.map((row) => Number(row[selectedColumns[1]]));
 
-  // Формирование данных для графика: если декомпозиция включена – две линии
+  // Формирование данных для графика
   const chartData =
     secondPageState.processingSteps.decomposition && finalDataResult.seasonalValues
       ? {
@@ -452,6 +452,7 @@ const SelectedColumnsPage = () => {
       }
       return { ...prev, localSortColumn: col, localSortDirection: newDirection };
     });
+    setIsDirty(true);
   };
 
   const handleGoToForecast = () => {
@@ -466,7 +467,7 @@ const SelectedColumnsPage = () => {
       transition={{ duration: 0.3 }}
       style={{ position: "relative", minHeight: "100vh" }}
     >
-            <Canvas camera={{ position: [0, 0, 1] }} style={{ position: 'fixed', top: 0, left: 0 }}>
+      <Canvas camera={{ position: [0, 0, 1] }} style={{ position: "fixed", top: 0, left: 0 }}>
         <ParticleBackground />
       </Canvas>
 
@@ -523,228 +524,15 @@ const SelectedColumnsPage = () => {
           filters={filters}
         />
 
-        {/* Grid‑контейнер, в котором при открытии боковой панели ширина второй колонки = calc(100% - 300px) */}
-        <Box
-          component={motion.div}
-          animate={{
-            gridTemplateColumns: secondPageState.preprocessingOpen
-              ? "300px calc(100% - 300px)"
-              : "0px 100%",
-          }}
-          transition={{ duration: 0.3 }}
-          sx={{
-            display: "grid",
-            gap: 2,
-            mt: 2,
-            width: "100%",
-            pr: 3
-          }}
-        >
-          {/* Боковая панель */}
-          <Box sx={{ overflow: "hidden" }}>
-            <GlassPaper sx={{ height: "100%" }}>
-              <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between" }}>
-                <Typography variant="h6" sx={{ color: "#fff" }}>
-                  Настройки обработки
-                </Typography>
-                <IconButton
-                  onClick={() =>
-                    setSecondPageState((prev) => ({
-                      ...prev,
-                      preprocessingOpen: !prev.preprocessingOpen,
-                    }))
-                  }
-                  sx={{ color: "#10A37F" }}
-                >
-                  <SettingsIcon />
-                </IconButton>
-              </Box>
-              {[
-                { key: "imputation", label: "Заполнение пропусков" },
-                { key: "outliers", label: "Обработка выбросов" },
-                { key: "smoothing", label: "Сглаживание" },
-                { key: "transformation", label: "Преобразование" },
-                { key: "decomposition", label: "Декомпозиция" },
-                { key: "normalization", label: "Нормализация" },
-              ].map((section) => (
-                <Box key={section.key} sx={{ mb: 3 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      mb: 1,
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ color: "#fff" }}>
-                      {section.label}
-                    </Typography>
-                    <Switch
-                      checked={secondPageState.processingSteps[section.key]}
-                      onChange={() =>
-                        setSecondPageState((prev) => ({
-                          ...prev,
-                          processingSteps: {
-                            ...prev.processingSteps,
-                            [section.key]: !prev.processingSteps[section.key],
-                          },
-                        }))
-                      }
-                      size="small"
-                      sx={{
-                        "& .MuiSwitch-switchBase.Mui-checked": { color: "#10A37F" },
-                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                          backgroundColor: "#10A37F",
-                        },
-                      }}
-                    />
-                  </Box>
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    {section.key === "imputation" && (
-                      <Box sx={{ mt: 1, display: "flex", alignItems: "center" }}>
-                        <Typography variant="caption" sx={{ color: "#fff" }}>
-                          Частота:
-                        </Typography>
-                        <Select
-                          value={secondPageState.imputationFrequency || "D"}
-                          onChange={(e) =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              imputationFrequency: e.target.value,
-                            }))
-                          }
-                          size="small"
-                          disabled={!secondPageState.processingSteps.imputation}
-                          sx={{
-                            ml: 1,
-                            color: "#fff",
-                            borderColor: "#10A37F",
-                            "& .MuiOutlinedInput-notchedOutline": {
-                              borderColor: "#10A37F",
-                            },
-                          }}
-                        >
-                          <MenuItem value="D">Дневная (D)</MenuItem>
-                          <MenuItem value="W-MON">Недельная (W-MON)</MenuItem>
-                          <MenuItem value="MS">Начало месяца (MS)</MenuItem>
-                        </Select>
-                      </Box>
-                    )}
-
-                    {section.key === "outliers" && (
-                      <>
-                        <Typography variant="caption" sx={{ color: "#fff" }}>
-                          Порог (σ): {secondPageState.outlierThreshold}
-                        </Typography>
-                        <Slider
-                          value={secondPageState.outlierThreshold}
-                          onChange={(e, newVal) =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              outlierThreshold: newVal,
-                            }))
-                          }
-                          min={1}
-                          max={5}
-                          step={0.1}
-                          valueLabelDisplay="auto"
-                          size="small"
-                          disabled={!secondPageState.processingSteps.outliers}
-                        />
-                      </>
-                    )}
-
-                    {section.key === "smoothing" && (
-                      <>
-                        <Typography variant="caption" sx={{ color: "#fff" }}>
-                          Окно: {secondPageState.smoothingWindow}
-                        </Typography>
-                        <Slider
-                          value={secondPageState.smoothingWindow}
-                          onChange={(e, newVal) =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              smoothingWindow: newVal,
-                            }))
-                          }
-                          min={1}
-                          max={20}
-                          step={1}
-                          valueLabelDisplay="auto"
-                          size="small"
-                          disabled={!secondPageState.processingSteps.smoothing}
-                        />
-                      </>
-                    )}
-
-                    {section.key === "transformation" && (
-                      <RadioGroup
-                        value={secondPageState.transformation}
-                        onChange={(e) =>
-                          setSecondPageState((prev) => ({
-                            ...prev,
-                            transformation: e.target.value,
-                          }))
-                        }
-                        row
-                      >
-                        <FormControlLabel
-                          value="none"
-                          control={<Radio size="small" />}
-                          label="Нет"
-                          disabled={!secondPageState.processingSteps.transformation}
-                        />
-                        <FormControlLabel
-                          value="log"
-                          control={<Radio size="small" />}
-                          label="Логарифм"
-                          disabled={!secondPageState.processingSteps.transformation}
-                        />
-                        <FormControlLabel
-                          value="difference"
-                          control={<Radio size="small" />}
-                          label="Разность"
-                          disabled={!secondPageState.processingSteps.transformation}
-                        />
-                      </RadioGroup>
-                    )}
-
-                    {section.key === "decomposition" && (
-                      <>
-                        <Typography variant="caption" sx={{ color: "#fff" }}>
-                          Окно: {secondPageState.decompositionWindow}
-                        </Typography>
-                        <Slider
-                          value={secondPageState.decompositionWindow}
-                          onChange={(e, newVal) =>
-                            setSecondPageState((prev) => ({
-                              ...prev,
-                              decompositionWindow: newVal,
-                            }))
-                          }
-                          min={2}
-                          max={30}
-                          step={1}
-                          valueLabelDisplay="auto"
-                          size="small"
-                          disabled={!secondPageState.processingSteps.decomposition}
-                        />
-                      </>
-                    )}
-
-                    {section.key === "normalization" && (
-                      <Typography variant="caption" sx={{ color: "#fff" }}>
-                        Масштабирование в диапазоне [0,1]
-                      </Typography>
-                    )}
-                  </motion.div>
-                </Box>
-              ))}
-            </GlassPaper>
-          </Box>
-
-          {/* Основной контент */}
-          <Box>
+        {/* Контейнер для основного контента и боковой панели предобработки */}
+        <Box sx={{ position: "relative", mt: 2, pr: 3 }}>
+          {/* Основной контент – с анимацией marginLeft */}
+          <Box
+            sx={{
+              transition: "margin-left 0.3s",
+              marginLeft: secondPageState.preprocessingOpen ? "320px" : 0,
+            }}
+          >
             <GlassPaper>
               <Box
                 sx={{
@@ -756,10 +544,14 @@ const SelectedColumnsPage = () => {
                 <Button
                   variant="contained"
                   onClick={() =>
-                    setSecondPageState((prev) => ({
-                      ...prev,
-                      preprocessingOpen: !prev.preprocessingOpen,
-                    }))
+                    setSecondPageState((prev) => {
+                      const newState = {
+                        ...prev,
+                        preprocessingOpen: !prev.preprocessingOpen,
+                      };
+                      setIsDirty(true);
+                      return newState;
+                    })
                   }
                   startIcon={<SettingsIcon />}
                   sx={{
@@ -778,7 +570,11 @@ const SelectedColumnsPage = () => {
                   exclusive
                   onChange={(e, newType) =>
                     newType &&
-                    setSecondPageState((prev) => ({ ...prev, chartType: newType }))
+                    setSecondPageState((prev) => {
+                      const newState = { ...prev, chartType: newType };
+                      setIsDirty(true);
+                      return newState;
+                    })
                   }
                   sx={{
                     background: "rgba(255,255,255,0.05)",
@@ -945,6 +741,216 @@ const SelectedColumnsPage = () => {
               </Box>
             </GlassPaper>
           </Box>
+          {/* Боковая панель предобработки */}
+          <Slide direction="right" in={secondPageState.preprocessingOpen} mountOnEnter unmountOnExit>
+            <Box
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "300px",
+                height: "100%",
+                pr: 1,
+                boxSizing: "border-box",
+              }}
+            >
+              <GlassPaper sx={{ height: "100%" }}>
+                {[
+                  { key: "imputation", label: "Заполнение пропусков" },
+                  { key: "outliers", label: "Обработка выбросов" },
+                  { key: "smoothing", label: "Сглаживание" },
+                  { key: "transformation", label: "Преобразование" },
+                  { key: "decomposition", label: "Декомпозиция" },
+                  { key: "normalization", label: "Нормализация" },
+                ].map((section) => (
+                  <Box key={section.key} sx={{ mb: 3 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ color: "#fff" }}>
+                        {section.label}
+                      </Typography>
+                      <Switch
+                        checked={secondPageState.processingSteps[section.key]}
+                        onChange={() =>
+                          setSecondPageState((prev) => {
+                            const newState = {
+                              ...prev,
+                              processingSteps: {
+                                ...prev.processingSteps,
+                                [section.key]: !prev.processingSteps[section.key],
+                              },
+                            };
+                            setIsDirty(true);
+                            return newState;
+                          })
+                        }
+                        size="small"
+                        sx={{
+                          "& .MuiSwitch-switchBase.Mui-checked": { color: "#10A37F" },
+                          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                            backgroundColor: "#10A37F",
+                          },
+                        }}
+                      />
+                    </Box>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                      {section.key === "imputation" && (
+                        <Box sx={{ mt: 1, display: "flex", alignItems: "center" }}>
+                          <Typography variant="caption" sx={{ color: "#fff" }}>
+                            Частота:
+                          </Typography>
+                          <Select
+                            value={secondPageState.imputationFrequency || "D"}
+                            onChange={(e) =>
+                              setSecondPageState((prev) => {
+                                const newState = {
+                                  ...prev,
+                                  imputationFrequency: e.target.value,
+                                };
+                                setIsDirty(true);
+                                return newState;
+                              })
+                            }
+                            size="small"
+                            disabled={!secondPageState.processingSteps.imputation}
+                            sx={{
+                              ml: 1,
+                              color: "#fff",
+                              borderColor: "#10A37F",
+                              "& .MuiOutlinedInput-notchedOutline": {
+                                borderColor: "#10A37F",
+                              },
+                            }}
+                          >
+                            <MenuItem value="D">Дневная (D)</MenuItem>
+                            <MenuItem value="W-MON">Недельная (W-MON)</MenuItem>
+                            <MenuItem value="MS">Начало месяца (MS)</MenuItem>
+                          </Select>
+                        </Box>
+                      )}
+
+                      {section.key === "outliers" && (
+                        <>
+                          <Typography variant="caption" sx={{ color: "#fff" }}>
+                            Порог (σ): {secondPageState.outlierThreshold}
+                          </Typography>
+                          <Slider
+                            value={secondPageState.outlierThreshold}
+                            onChange={(e, newVal) =>
+                              setSecondPageState((prev) => {
+                                const newState = { ...prev, outlierThreshold: newVal };
+                                setIsDirty(true);
+                                return newState;
+                              })
+                            }
+                            min={1}
+                            max={5}
+                            step={0.1}
+                            valueLabelDisplay="auto"
+                            size="small"
+                            disabled={!secondPageState.processingSteps.outliers}
+                          />
+                        </>
+                      )}
+
+                      {section.key === "smoothing" && (
+                        <>
+                          <Typography variant="caption" sx={{ color: "#fff" }}>
+                            Окно: {secondPageState.smoothingWindow}
+                          </Typography>
+                          <Slider
+                            value={secondPageState.smoothingWindow}
+                            onChange={(e, newVal) =>
+                              setSecondPageState((prev) => {
+                                const newState = { ...prev, smoothingWindow: newVal };
+                                setIsDirty(true);
+                                return newState;
+                              })
+                            }
+                            min={1}
+                            max={20}
+                            step={1}
+                            valueLabelDisplay="auto"
+                            size="small"
+                            disabled={!secondPageState.processingSteps.smoothing}
+                          />
+                        </>
+                      )}
+
+                      {section.key === "transformation" && (
+                        <RadioGroup
+                          value={secondPageState.transformation}
+                          onChange={(e) =>
+                            setSecondPageState((prev) => {
+                              const newState = { ...prev, transformation: e.target.value };
+                              setIsDirty(true);
+                              return newState;
+                            })
+                          }
+                          row
+                        >
+                          <FormControlLabel
+                            value="none"
+                            control={<Radio size="small" />}
+                            label="Нет"
+                            disabled={!secondPageState.processingSteps.transformation}
+                          />
+                          <FormControlLabel
+                            value="log"
+                            control={<Radio size="small" />}
+                            label="Логарифм"
+                            disabled={!secondPageState.processingSteps.transformation}
+                          />
+                          <FormControlLabel
+                            value="difference"
+                            control={<Radio size="small" />}
+                            label="Разность"
+                            disabled={!secondPageState.processingSteps.transformation}
+                          />
+                        </RadioGroup>
+                      )}
+
+                      {section.key === "decomposition" && (
+                        <>
+                          <Typography variant="caption" sx={{ color: "#fff" }}>
+                            Окно: {secondPageState.decompositionWindow}
+                          </Typography>
+                          <Slider
+                            value={secondPageState.decompositionWindow}
+                            onChange={(e, newVal) =>
+                              setSecondPageState((prev) => {
+                                const newState = { ...prev, decompositionWindow: newVal };
+                                setIsDirty(true);
+                                return newState;
+                              })
+                            }
+                            min={2}
+                            max={30}
+                            step={1}
+                            valueLabelDisplay="auto"
+                            size="small"
+                            disabled={!secondPageState.processingSteps.decomposition}
+                          />
+                        </>
+                      )}
+
+                      {section.key === "normalization" && (
+                        <Typography variant="caption" sx={{ color: "#fff" }}>
+                          Масштабирование в диапазоне [0,1]
+                        </Typography>
+                      )}
+                    </motion.div>
+                  </Box>
+                ))}
+              </GlassPaper>
+            </Box>
+          </Slide>
         </Box>
       </Box>
     </motion.div>

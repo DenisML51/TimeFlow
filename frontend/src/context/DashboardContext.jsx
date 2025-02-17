@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import debounce from 'lodash/debounce';
 
@@ -19,7 +19,7 @@ export const DashboardProvider = ({ children }) => {
   const [tablePage, setTablePage] = useState(0);
   const [tableRowsPerPage, setTableRowsPerPage] = useState(25);
 
-  // Состояния для второй страницы (SelectedColumnsPage и ForecastPage)
+  // Состояния для второй страницы
   const [secondPageState, setSecondPageState] = useState({
     localSortColumn: null,
     localSortDirection: null,
@@ -48,7 +48,7 @@ export const DashboardProvider = ({ children }) => {
   });
   const [forecastResults, setForecastResults] = useState([]);
 
-  // Новое состояние для страницы ForecastPage
+  // Состояние для ForecastPage
   const [forecastPageState, setForecastPageState] = useState({
     horizon: 10,
     historySize: 5,
@@ -68,9 +68,8 @@ export const DashboardProvider = ({ children }) => {
     fileType: "csv",
   });
 
-  // Флаги для отслеживания изменений и активности сессии
+  // Флаги для отслеживания изменений и блокировки автосохранения
   const [isDirty, setIsDirty] = useState(false);
-  // Если sessionLocked === true, то эта сессия загружена из истории и не обновляется автоматически
   const [sessionLocked, setSessionLocked] = useState(false);
 
   const resetDashboardState = () => {
@@ -136,12 +135,12 @@ export const DashboardProvider = ({ children }) => {
     setSessionLocked(false);
   };
 
-  // При изменении ключевых состояний автоматически помечаем сессию как изменённую
+  // Отмечаем сессию как изменённую при изменении ключевых состояний
   useEffect(() => {
     setIsDirty(true);
-  }, [filters, selectedColumns, secondPageState, tablePage, tableRowsPerPage, forecastPageState]);
+  }, [filters, selectedColumns, secondPageState, tablePage, tableRowsPerPage, forecastPageState, forecastResults]);
 
-  // Debounced функция для сохранения сессии
+  // Дебаунс-сохранение сессии (функция сохраняется один раз)
   const saveSessionState = useCallback(
     debounce((sessionState) => {
       if (currentSessionId && !sessionLocked) {
@@ -158,31 +157,11 @@ export const DashboardProvider = ({ children }) => {
           .catch((err) => console.error("Error updating session:", err));
       }
     }, 1000),
-    [currentSessionId, sessionLocked, setIsDirty]
+    [currentSessionId, sessionLocked]
   );
 
-  // Автоматическое сохранение состояния сессии при изменениях
-  useEffect(() => {
-    const sessionState = {
-      originalData,
-      columns,
-      filters,
-      selectedColumns,
-      uploadedFileName,
-      sortColumn,
-      sortDirection,
-      preprocessingSettings,
-      forecastResults,
-      secondPageState,
-      tablePage,
-      tableRowsPerPage,
-      forecastPageState, // включаем настройки прогнозирования
-    };
-    if (currentSessionId && !sessionLocked && isDirty) {
-      console.log("Auto-saving session state:", sessionState);
-      saveSessionState(sessionState);
-    }
-  }, [
+  // Мемоизируем объект состояния сессии – он будет пересоздаваться только при реальных изменениях данных
+  const sessionState = useMemo(() => ({
     originalData,
     columns,
     filters,
@@ -196,11 +175,33 @@ export const DashboardProvider = ({ children }) => {
     tablePage,
     tableRowsPerPage,
     forecastPageState,
-    currentSessionId,
-    sessionLocked,
-    isDirty,
-    saveSessionState,
+  }), [
+    originalData,
+    columns,
+    filters,
+    selectedColumns,
+    uploadedFileName,
+    sortColumn,
+    sortDirection,
+    preprocessingSettings,
+    forecastResults,
+    secondPageState,
+    tablePage,
+    tableRowsPerPage,
+    forecastPageState,
   ]);
+
+  // Автоматическое сохранение состояния сессии при изменениях
+  useEffect(() => {
+    if (currentSessionId && !sessionLocked && isDirty) {
+      console.log("Auto-saving session state:", sessionState);
+      saveSessionState(sessionState);
+    }
+    // При размонтировании можно сбросить (или flush) дебаунс-функцию:
+    return () => {
+      saveSessionState.flush && saveSessionState.flush();
+    };
+  }, [sessionState, currentSessionId, sessionLocked, isDirty, saveSessionState]);
 
   return (
     <DashboardContext.Provider
@@ -238,8 +239,8 @@ export const DashboardProvider = ({ children }) => {
         setPreprocessingSettings,
         forecastResults,
         setForecastResults,
-        forecastPageState,         // Новое состояние для ForecastPage
-        setForecastPageState,      // Функция для его обновления
+        forecastPageState,
+        setForecastPageState,
         isDirty,
         setIsDirty,
         sessionLocked,

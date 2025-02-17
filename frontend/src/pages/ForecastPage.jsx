@@ -51,9 +51,8 @@ import * as XLSX from "xlsx";
 import CategoricalDataBlock from "../components/CategoricalDataBlock";
 import { DashboardContext } from "../context/DashboardContext";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import { FloatingLinesBackground } from "../components/AnimatedBackground";
-import {Canvas} from "@react-three/fiber";
-import {ParticleBackground} from "../components/home/ParticleBackground";
+import { Canvas } from "@react-three/fiber";
+import { ParticleBackground } from "../components/home/ParticleBackground";
 
 // ================================================
 // Вспомогательные функции (метрики, графики)
@@ -64,7 +63,6 @@ function computeMetricsOnStandardized(dataArray) {
     (d) => d.y_fact !== null && d.y_fact !== undefined
   );
   if (!rowsWithFact.length) return null;
-
   const facts = rowsWithFact.map((d) => d.y_fact);
   const preds = rowsWithFact.map((d) => d.y_forecast);
   const combined = [...facts, ...preds];
@@ -76,7 +74,6 @@ function computeMetricsOnStandardized(dataArray) {
 
   const factsScaled = facts.map((f) => (f - mean) / std);
   const predsScaled = preds.map((p) => (p - mean) / std);
-
   let sumAbs = 0,
     sumSq = 0,
     sumPct = 0,
@@ -155,7 +152,6 @@ function makeCombinedChartData(modelsArray, modelColorMap) {
   const labels = Array.from(allDates).sort(
     (a, b) => new Date(a) - new Date(b)
   );
-
   const datasets = [];
   modelsArray.forEach((m) => {
     const color = modelColorMap[m.modelName] || "#36A2EB";
@@ -208,16 +204,19 @@ const ProphetBlock = memo(function ProphetBlock({
     prophetParams.seasonality_mode || "additive"
   );
   const [paramsOpen, setParamsOpen] = useState(false);
+  const { setIsDirty } = useContext(DashboardContext);
 
-  useEffect(() => {
-    setProphetParams((prev) => ({
-      ...prev,
-      seasonality_mode: localSeasonalityMode,
-    }));
-  }, [localSeasonalityMode, setProphetParams]);
+  const handleApply = useCallback(() => {
+    setProphetParams({ seasonality_mode: localSeasonalityMode });
+    setActive(true);
+    setIsDirty(true);
+  }, [localSeasonalityMode, setProphetParams, setActive, setIsDirty]);
 
-  const handleApply = useCallback(() => setActive(true), [setActive]);
-  const handleCancel = useCallback(() => setActive(false), [setActive]);
+  const handleCancel = useCallback(() => {
+    setActive(false);
+    setIsDirty(true);
+  }, [setActive, setIsDirty]);
+
   const toggleParams = useCallback(() => setParamsOpen((prev) => !prev), []);
   const borderColor = active ? "#10A37F" : "#FF4444";
 
@@ -232,11 +231,7 @@ const ProphetBlock = memo(function ProphetBlock({
       }}
     >
       <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
+        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
       >
         <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
           Prophet
@@ -315,8 +310,9 @@ const XGBoostBlock = memo(function XGBoostBlock({
     xgboostParams.colsample_bytree || 1
   );
   const [paramsOpen, setParamsOpen] = useState(false);
+  const { setIsDirty } = useContext(DashboardContext);
 
-  useEffect(() => {
+  const handleApply = useCallback(() => {
     setXgboostParams({
       max_depth: localMaxDepth,
       learning_rate: localLearningRate,
@@ -324,6 +320,8 @@ const XGBoostBlock = memo(function XGBoostBlock({
       subsample: localSubsample,
       colsample_bytree: localColsampleBytree,
     });
+    setActive(true);
+    setIsDirty(true);
   }, [
     localMaxDepth,
     localLearningRate,
@@ -331,10 +329,15 @@ const XGBoostBlock = memo(function XGBoostBlock({
     localSubsample,
     localColsampleBytree,
     setXgboostParams,
+    setActive,
+    setIsDirty,
   ]);
 
-  const handleApply = useCallback(() => setActive(true), [setActive]);
-  const handleCancel = useCallback(() => setActive(false), [setActive]);
+  const handleCancel = useCallback(() => {
+    setActive(false);
+    setIsDirty(true);
+  }, [setActive, setIsDirty]);
+
   const toggleParams = useCallback(() => setParamsOpen((prev) => !prev), []);
   const borderColor = active ? "#10A37F" : "#FF4444";
 
@@ -349,11 +352,7 @@ const XGBoostBlock = memo(function XGBoostBlock({
       }}
     >
       <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
+        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
       >
         <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
           XGBoost
@@ -455,10 +454,7 @@ const XGBoostBlock = memo(function XGBoostBlock({
           </Button>
         )}
       </Box>
-      <Typography
-        variant="caption"
-        sx={{ color: active ? "#10A37F" : "#FF4444", mt: 1, display: "block" }}
-      >
+      <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444", mt: 1, display: "block" }}>
         {active ? "Активна" : "Выключена"}
       </Typography>
     </Paper>
@@ -479,8 +475,9 @@ const SarimaBlock = memo(function SarimaBlock({
   const [localQSeasonal, setLocalQSeasonal] = useState(sarimaParams.Q || 1);
   const [localS, setLocalS] = useState(sarimaParams.s || 12);
   const [paramsOpen, setParamsOpen] = useState(false);
+  const { setIsDirty } = useContext(DashboardContext);
 
-  useEffect(() => {
+  const handleApply = useCallback(() => {
     setSarimaParams({
       p: localP,
       d: localD,
@@ -490,6 +487,8 @@ const SarimaBlock = memo(function SarimaBlock({
       Q: localQSeasonal,
       s: localS,
     });
+    setActive(true);
+    setIsDirty(true);
   }, [
     localP,
     localD,
@@ -499,7 +498,14 @@ const SarimaBlock = memo(function SarimaBlock({
     localQSeasonal,
     localS,
     setSarimaParams,
+    setActive,
+    setIsDirty,
   ]);
+
+  const handleCancel = useCallback(() => {
+    setActive(false);
+    setIsDirty(true);
+  }, [setActive, setIsDirty]);
 
   const toggleParams = useCallback(() => setParamsOpen((prev) => !prev), []);
   const borderColor = active ? "#10A37F" : "#FF4444";
@@ -514,13 +520,7 @@ const SarimaBlock = memo(function SarimaBlock({
         transition: "border-color 0.2s",
       }}
     >
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
           SARIMA
         </Typography>
@@ -533,9 +533,7 @@ const SarimaBlock = memo(function SarimaBlock({
       <Collapse in={paramsOpen}>
         <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 2 }}>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>
-              p
-            </Typography>
+            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>p</Typography>
             <ToggleButtonGroup
               value={localP}
               exclusive
@@ -551,9 +549,7 @@ const SarimaBlock = memo(function SarimaBlock({
             </ToggleButtonGroup>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>
-              d
-            </Typography>
+            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>d</Typography>
             <ToggleButtonGroup
               value={localD}
               exclusive
@@ -569,9 +565,7 @@ const SarimaBlock = memo(function SarimaBlock({
             </ToggleButtonGroup>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>
-              q
-            </Typography>
+            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>q</Typography>
             <ToggleButtonGroup
               value={localQ}
               exclusive
@@ -587,9 +581,7 @@ const SarimaBlock = memo(function SarimaBlock({
             </ToggleButtonGroup>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>
-              P
-            </Typography>
+            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>P</Typography>
             <ToggleButtonGroup
               value={localPSeasonal}
               exclusive
@@ -605,9 +597,7 @@ const SarimaBlock = memo(function SarimaBlock({
             </ToggleButtonGroup>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>
-              D
-            </Typography>
+            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>D</Typography>
             <ToggleButtonGroup
               value={localDSeasonal}
               exclusive
@@ -623,9 +613,7 @@ const SarimaBlock = memo(function SarimaBlock({
             </ToggleButtonGroup>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>
-              Q
-            </Typography>
+            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>Q</Typography>
             <ToggleButtonGroup
               value={localQSeasonal}
               exclusive
@@ -665,7 +653,7 @@ const SarimaBlock = memo(function SarimaBlock({
           <Button
             startIcon={<CloseIcon />}
             variant="outlined"
-            onClick={() => setActive(false)}
+            onClick={handleCancel}
             sx={{
               mr: 1,
               borderColor: "#FF4444",
@@ -679,7 +667,7 @@ const SarimaBlock = memo(function SarimaBlock({
           <Button
             variant="outlined"
             startIcon={<CheckIcon />}
-            onClick={() => setActive(true)}
+            onClick={handleApply}
             sx={{
               mr: 1,
               borderColor: "#10A37F",
@@ -713,6 +701,7 @@ export default function ForecastPage() {
     selectedColumns,
     filteredData,
     filters,
+    setIsDirty,
   } = useContext(DashboardContext);
 
   // Данные для прогноза из предыдущей страницы
@@ -721,7 +710,6 @@ export default function ForecastPage() {
   const initialModifiedData = stateModifiedData.length ? stateModifiedData : [];
   const initialSelectedColumns = stateSelectedColumns.length ? stateSelectedColumns : [];
 
-  // Если данных для прогноза нет, возвращаем пользователя назад
   useEffect(() => {
     if (!initialModifiedData || initialModifiedData.length === 0 || initialSelectedColumns.length < 2) {
       navigate(-1);
@@ -747,10 +735,8 @@ export default function ForecastPage() {
     fileType,
   } = forecastPageState;
 
-  // Локальное состояние для списка всех возможных столбцов (для экспорта)
   const [allPossibleCols, setAllPossibleCols] = useState([]);
 
-  // Сбор всех возможных столбцов из forecastResults
   useEffect(() => {
     const colSet = new Set(["ds", "y_fact"]);
     forecastResults.forEach((m) => {
@@ -772,7 +758,6 @@ export default function ForecastPage() {
     setAllPossibleCols(Array.from(colSet));
   }, [forecastResults]);
 
-  // Мемоизированное построение объединённых строк для экспорта
   const mergedRows = useMemo(() => {
     const bigMap = new Map();
     forecastResults.forEach((m) => {
@@ -796,13 +781,10 @@ export default function ForecastPage() {
           val[`${m.modelName}_yhat_upper`] = row.yhat_upper;
       });
     });
-    const allDs = Array.from(bigMap.keys()).sort(
-      (a, b) => new Date(a) - new Date(b)
-    );
+    const allDs = Array.from(bigMap.keys()).sort((a, b) => new Date(a) - new Date(b));
     return allDs.map((ds) => bigMap.get(ds));
   }, [forecastResults]);
 
-  // Мемоизированные данные для общего графика
   const combinedChartData = useMemo(() => {
     const subset = forecastResults.map((mRes) => {
       let segment = [];
@@ -822,7 +804,6 @@ export default function ForecastPage() {
     return makeCombinedChartData(subset, modelColorMap);
   }, [forecastResults, commonTab]);
 
-  // Диалог экспорта
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
   const [previewData, setPreviewData] = useState([]);
 
@@ -859,7 +840,6 @@ export default function ForecastPage() {
     setCsvDialogOpen(false);
   }, [allPossibleCols, csvSelectedCols, fileType, mergedRows]);
 
-  // Обработчики табов и навигации
   const handleCommonTabChange = useCallback((e, val) => {
     setForecastPageState((prev) => ({ ...prev, commonTab: val }));
   }, [setForecastPageState]);
@@ -879,14 +859,15 @@ export default function ForecastPage() {
   );
 
   const handleBack = useCallback(() => navigate(-1), [navigate]);
-  const toggleModels = useCallback(
-    () =>
-      setForecastPageState((prev) => ({
-        ...prev,
-        modelsOpen: !prev.modelsOpen,
-      })),
-    [setForecastPageState]
-  );
+
+  // При переключении панели моделей также помечаем сессию как изменённую
+  const toggleModels = useCallback(() => {
+    setForecastPageState((prev) => {
+      const newState = { ...prev, modelsOpen: !prev.modelsOpen };
+      setIsDirty(true);
+      return newState;
+    });
+  }, [setForecastPageState, setIsDirty]);
 
   const chartOptions = useMemo(
     () => ({
@@ -913,7 +894,6 @@ export default function ForecastPage() {
     []
   );
 
-  // Функция для получения цвета обводки чипа по значению метрики
   const getChipBorderColor = useCallback((value, type) => {
     if (value === null || value === undefined) return "#666";
     if (type === "mae" || type === "rmse")
@@ -955,7 +935,7 @@ export default function ForecastPage() {
       transition={{ duration: 0.3 }}
       style={{ position: "relative", minHeight: "100vh" }}
     >
-            <Canvas camera={{ position: [0, 0, 1] }} style={{ position: 'fixed', top: 0, left: 0 }}>
+      <Canvas camera={{ position: [0, 0, 1] }} style={{ position: "fixed", top: 0, left: 0 }}>
         <ParticleBackground />
       </Canvas>
       <Box sx={{ position: "relative", minHeight: "100vh" }}>
@@ -1001,12 +981,8 @@ export default function ForecastPage() {
             Модели
           </Button>
         </Box>
-        <Box sx={{ pt: 2}}>
-          <CategoricalDataBlock
-            filteredData={filteredData}
-            selectedColumns={selectedColumns}
-            filters={filters}
-          />
+        <Box sx={{ pt: 2 }}>
+          <CategoricalDataBlock filteredData={filteredData} selectedColumns={selectedColumns} filters={filters} />
         </Box>
         {/* Основной контейнер */}
         <Box
@@ -1017,7 +993,6 @@ export default function ForecastPage() {
             alignItems: "center",
           }}
         >
-
           {/* Левая часть */}
           <Box
             sx={{
@@ -1110,8 +1085,6 @@ export default function ForecastPage() {
                 <Button
                   variant="contained"
                   onClick={async () => {
-                    // Построение прогноза
-                    setForecastPageState((prev) => ({ ...prev })); // для отметки изменений
                     try {
                       const activeModels = [];
                       if (prophetActive)
@@ -1326,7 +1299,7 @@ export default function ForecastPage() {
             )}
           </Box>
           {/* Правая панель */}
-          <Slide direction="left" in={modelsOpen} mountOnEnter unmountOnExit>
+          <Slide direction="left" in={modelsOpen}>
             <Box
               sx={{
                 position: "absolute",

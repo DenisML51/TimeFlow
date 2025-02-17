@@ -51,17 +51,15 @@ const DeleteConfirmationPopup = styled(motion.div)(({ theme }) => ({
   width: "280px",
 }));
 
-// Обеспечиваем фиксированную (или минимальную) высоту и относительное позиционирование
 const AccountDeleteWrapper = styled(motion.div)(({ theme }) => ({
   position: "relative",
   overflow: "hidden",
   borderRadius: "12px",
   marginTop: "32px",
   border: "1px solid rgba(255,255,255,0.1)",
-  minHeight: "80px", // гарантирует, что при переключении высота не меняется
+  minHeight: "80px",
 }));
 
-// Содержимое позиционируем абсолютно, чтобы анимация происходила без влияния на layout
 const AccountDeleteContent = styled(motion.div)(({ theme }) => ({
   position: "absolute",
   top: 0,
@@ -78,7 +76,6 @@ const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="down" ref={ref} {...props} />;
 });
 
-// Варианты анимации с направлением
 const variants = {
   enter: (direction) => ({
     x: direction > 0 ? "100%" : "-100%",
@@ -100,8 +97,8 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
   const {
     resetDashboardState,
     setOriginalData,
-    setColumns,
     setFilters,
+    setColumns,
     setSelectedColumns,
     setUploadedFileName,
     setSecondPageState,
@@ -111,12 +108,13 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
     setTableRowsPerPage,
     setSessionLocked,
     setCurrentSessionId,
+    setForecastPageState, // Важно – для загрузки настроек моделей
   } = useContext(DashboardContext);
   const [sessions, setSessions] = useState([]);
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [showAccountDeleteConfirm, setShowAccountDeleteConfirm] = useState(false);
-  const [direction, setDirection] = useState(1); // 1 – переключаемся вперёд, -1 – назад
+  const [direction, setDirection] = useState(1);
   const navigate = useNavigate();
   const cardRefs = useRef({});
 
@@ -135,7 +133,6 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
     if (open) fetchSessions();
   }, [open]);
 
-  // Сброс состояния кнопки "Удалить аккаунт" при каждом открытии/закрытии drawer
   useEffect(() => {
     setShowAccountDeleteConfirm(false);
     setDirection(1);
@@ -151,6 +148,7 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
       if (state.secondPageState) setSecondPageState(state.secondPageState);
       if (state.preprocessingSettings) setPreprocessingSettings(state.preprocessingSettings);
       if (state.forecastResults) setForecastResults(state.forecastResults);
+      if (state.forecastPageState) setForecastPageState(state.forecastPageState); // Загружаем настройки моделей
       if (state.tablePage !== undefined) setTablePage(state.tablePage);
       if (state.tableRowsPerPage !== undefined) setTableRowsPerPage(state.tableRowsPerPage);
       setSessionLocked(false);

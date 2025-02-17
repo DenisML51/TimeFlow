@@ -1,13 +1,12 @@
 // src/pages/Home.jsx
-import React, { useContext, useRef } from "react";
+import React, { useContext} from "react";
 import {
   Box, Button, Container, Grid, Typography, Paper, useTheme, Stack
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { motion } from "framer-motion";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Points, PointMaterial } from "@react-three/drei";
+import { Canvas} from "@react-three/fiber";
 import {ParticleBackground} from "../components/home/ParticleBackground";
 import { TbChartLine, TbCloudUpload, TbCpu, TbShieldLock, TbRocket } from "react-icons/tb";
 import { GradientText } from "../components/home/GradientText";
@@ -15,6 +14,7 @@ import { GradientText } from "../components/home/GradientText";
 const AnimatedButton = motion(Button);
 
 const LiveDemoPreview = () => {
+  // eslint-disable-next-line no-unused-vars
   const theme = useTheme();
 
   return (
@@ -36,7 +36,7 @@ const LiveDemoPreview = () => {
         backdropFilter: 'blur(12px)',
         transformStyle: 'preserve-3d'
       }}>
-        <Box component="img" src="assets/dashboard-preview.png"
+        <Box component="img" src="assets/img.png"
           sx={{ width: '100%', borderRadius: 4 }} />
 
       </Box>

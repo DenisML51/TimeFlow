@@ -30,7 +30,7 @@ const LiveDemoPreview = () => {
       <Box sx={{
         background: 'linear-gradient(145deg, rgba(16,163,127,0.1) 0%, rgba(16,22,35,0.8) 100%)',
         borderRadius: 6,
-        p: 3,
+        p: 2,
         border: '1px solid rgba(255,255,255,0.1)',
         boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
         backdropFilter: 'blur(12px)',
@@ -39,26 +39,6 @@ const LiveDemoPreview = () => {
         <Box component="img" src="assets/dashboard-preview.png"
           sx={{ width: '100%', borderRadius: 4 }} />
 
-        <motion.div
-          style={{
-            position: 'absolute',
-            top: '30%',
-            left: '20%',
-            width: '60%',
-            height: 2,
-            background: theme.palette.primary.main,
-            transformOrigin: 'left center'
-          }}
-          animate={{
-            scaleX: [0, 1, 0],
-            opacity: [0, 1, 0]
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: 'easeInOut'
-          }}
-        />
       </Box>
     </motion.div>
   );
@@ -283,7 +263,7 @@ const Home = () => {
                     '&:hover': { borderWidth: 2 }
                   }}
                 >
-                  Watch Demo
+                  Демонстрация
                 </Button>
               </Stack>
             </motion.div>

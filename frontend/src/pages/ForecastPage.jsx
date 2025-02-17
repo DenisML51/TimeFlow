@@ -1001,7 +1001,7 @@ export default function ForecastPage() {
             Модели
           </Button>
         </Box>
-        <Box sx={{ pt: 2 }}>
+        <Box sx={{ pt: 2}}>
           <CategoricalDataBlock
             filteredData={filteredData}
             selectedColumns={selectedColumns}
@@ -1017,6 +1017,7 @@ export default function ForecastPage() {
             alignItems: "center",
           }}
         >
+
           {/* Левая часть */}
           <Box
             sx={{

@@ -5,17 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2e1a8637-1a7f-4b70-a5e1-9d7aa5d3a7d1" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../frontend/src/components/home/GradientText.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../frontend/src/components/home/Hooks.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../frontend/src/components/home/ParticleBackground.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.db" beforeDir="false" afterPath="$PROJECT_DIR$/app.db" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/ForecastPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/ForecastPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Home.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Home.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Login.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Login.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Register.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Register.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,12 +25,12 @@
     &quot;assignee&quot;: &quot;DenisML51&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/DenisML51/Forecast_ML_Project",
-    "accountId": "9a518a06-d3cc-424d-a563-fca9a8b4a58f"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/DenisML51/Forecast_ML_Project&quot;,
+    &quot;accountId&quot;: &quot;9a518a06-d3cc-424d-a563-fca9a8b4a58f&quot;
   }
-}]]></component>
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5
 }</component>
@@ -52,7 +46,7 @@
   "keyToString": {
     "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "design",
     "last_opened_file_path": "C:/Users/Rusinov.DS/PycharmProjects/project/Forecast_ML_Project",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",

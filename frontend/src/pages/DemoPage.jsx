@@ -41,7 +41,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 const generateSyntheticData = () => {
   const data = [];
   const startYear = 2018;
-  const endYear = 2022; // генерируем данные с 2018 по 2021 год (можно изменить по необходимости)
+  const endYear = 2024; // генерируем данные с 2018 по 2021 год (можно изменить по необходимости)
   let index = 0;
   for (let year = startYear; year < endYear; year++) {
     for (let month = 0; month < 12; month++) {

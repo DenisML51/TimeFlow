@@ -5,15 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="87aacc28-dd70-4bb9-b83a-40324653cc6e" name="Changes" comment="new global design 2">
-      <change afterPath="$PROJECT_DIR$/public/assets/img.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/home/ParticleBackground2.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../backend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../backend/app.db" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/axios.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/axios.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/home/ParticleBackground.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/home/ParticleBackground.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Header.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Header.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/pages/DemoPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/DemoPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/Home.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Home.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/ForecastPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/ForecastPage.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

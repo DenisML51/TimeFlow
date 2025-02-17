@@ -707,7 +707,9 @@ export default function ForecastPage() {
   // Данные для прогноза из предыдущей страницы
   const stateModifiedData = location.state?.modifiedData || [];
   const stateSelectedColumns = location.state?.selectedColumns || [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialModifiedData = stateModifiedData.length ? stateModifiedData : [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialSelectedColumns = stateSelectedColumns.length ? stateSelectedColumns : [];
 
   useEffect(() => {

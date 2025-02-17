@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider, CssBaseline, Box } from "@mui/material";
@@ -8,6 +9,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import SelectedColumnsPage from "./pages/Preprocessing";
 import ForecastPage from "./pages/ForecastPage";
+import Demo from "./pages/DemoPage"; // импорт демонстрационной страницы
 import ProtectedRoute from "./components/ProtectedRoute";
 import Header from "./components/Header";
 import { DashboardProvider } from "./context/DashboardContext";
@@ -59,6 +61,8 @@ const App = () => {
                       </ProtectedRoute>
                     }
                   />
+                  {/* Маршрут для демо-страницы: она не защищена, сессии не сохраняются */}
+                  <Route path="/demo" element={<Demo />} />
                 </Routes>
               </Box>
             </Router>

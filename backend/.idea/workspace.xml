@@ -8,9 +8,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.db" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/context/DashboardContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/context/DashboardContext.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/ForecastPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/ForecastPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/PersonalCabinetDrawer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/PersonalCabinetDrawer.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/components/home/Hooks.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/components/home/Hooks.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Preprocessing.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Preprocessing.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -80,7 +78,7 @@
       <workItem from="1739447457063" duration="991000" />
       <workItem from="1739448471376" duration="3157000" />
       <workItem from="1739529826251" duration="6211000" />
-      <workItem from="1739790578498" duration="5539000" />
+      <workItem from="1739790578498" duration="6183000" />
     </task>
     <servers />
   </component>

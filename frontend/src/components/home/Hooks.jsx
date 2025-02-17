@@ -6,7 +6,6 @@ import {
   Grid,
   Typography,
   Paper,
-  useTheme
 } from "@mui/material";
 import { motion } from "framer-motion";
 import { Canvas, useFrame } from "@react-three/fiber";

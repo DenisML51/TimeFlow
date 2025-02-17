@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState, useCallback } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Box,
   Grid,
@@ -24,7 +24,6 @@ import { FloatingLinesBackground } from "../components/AnimatedBackground";
 import { DashboardContext } from "../context/DashboardContext";
 import { HistoryContext } from "../context/HistoryContext";
 import axios from "axios";
-import debounce from "lodash/debounce";
 
 const Dashboard = () => {
   const theme = useTheme();
@@ -55,83 +54,15 @@ const Dashboard = () => {
     secondPageState,
     preprocessingSettings,
     forecastResults,
-    isDirty,
-    setIsDirty,
-    sessionLocked,
-    setSessionLocked,
     tablePage,
     tableRowsPerPage,
   } = useContext(DashboardContext);
   const { addHistoryItem } = useContext(HistoryContext);
 
   const [file, setFile] = useState(null);
-  const [setMessage] = useState("");
+  const [, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState(null);
-
-  // При изменении фильтров (и других зависимостей можно расширить список) устанавливаем isDirty = true
-  useEffect(() => {
-    setIsDirty(true);
-  }, [filters, selectedColumns, secondPageState, tablePage, tableRowsPerPage]);
-
-  // Debounced функция для сохранения сессии
-  const saveSessionState = useCallback(
-    debounce((sessionState) => {
-      if (currentSessionId && !sessionLocked) {
-        axios
-          .put(
-            `http://localhost:8000/session/${currentSessionId}`,
-            { state: sessionState },
-            { withCredentials: true }
-          )
-          .then(() => {
-            console.log("Session updated:", sessionState);
-            setIsDirty(false);
-          })
-          .catch((err) => console.error("Error updating session:", err));
-      }
-    }, 1000),
-    [currentSessionId, sessionLocked, setIsDirty]
-  );
-
-  // Автоматическое обновление активной сессии при изменении контекста
-  useEffect(() => {
-    const sessionState = {
-      originalData,
-      columns,
-      filters,
-      selectedColumns,
-      uploadedFileName,
-      sortColumn,
-      sortDirection,
-      preprocessingSettings,
-      forecastResults,
-      secondPageState, // состояние выбранных столбцов и прочее
-      tablePage,
-      tableRowsPerPage,
-    };
-    if (currentSessionId && !sessionLocked && isDirty) {
-      console.log("Auto-saving session state:", sessionState);
-      saveSessionState(sessionState);
-    }
-  }, [
-    originalData,
-    columns,
-    filters,
-    selectedColumns,
-    uploadedFileName,
-    sortColumn,
-    sortDirection,
-    preprocessingSettings,
-    forecastResults,
-    secondPageState,
-    tablePage,
-    tableRowsPerPage,
-    currentSessionId,
-    sessionLocked,
-    isDirty,
-    saveSessionState,
-  ]);
 
   const handleFileChange = (event) => {
     const selectedFile = event.target.files?.[0];
@@ -140,9 +71,7 @@ const Dashboard = () => {
       setUploadedFile(selectedFile);
       setUploadedFileName(selectedFile.name);
       setMessage("");
-      setIsDirty(true);
       // При загрузке нового файла новая сессия активна
-      setSessionLocked(false);
     }
   };
 
@@ -166,8 +95,6 @@ const Dashboard = () => {
       setColumns(columnNames);
       addHistoryItem(file.name);
       analyzeData(receivedData);
-      setIsDirty(true);
-      setSessionLocked(false);
 
       // Формируем объект состояния для новой сессии, включая все необходимые поля
       const sessionState = {
@@ -190,7 +117,6 @@ const Dashboard = () => {
         { withCredentials: true }
       );
       setCurrentSessionId(sessionResponse.data.id);
-      setIsDirty(false);
     } catch (error) {
       setMessage("Error uploading file");
       console.error("Upload error:", error);
@@ -238,13 +164,11 @@ const Dashboard = () => {
   const handleSortAsc = (column) => {
     setSortColumn(column);
     setSortDirection("asc");
-    setIsDirty(true);
   };
 
   const handleSortDesc = (column) => {
     setSortColumn(column);
     setSortDirection("desc");
-    setIsDirty(true);
   };
 
   useEffect(() => {
@@ -359,7 +283,7 @@ const Dashboard = () => {
               </Box>
               {stats && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-                  <Box sx={{ mt: 4, display: "flex", gap: 3, flexWrap: "wrap" }}>
+                  <Box sx={{ mt: 4, display: "flex", gap: 2, flexWrap: "wrap" }}>
                     {Object.entries(stats).map(([col, values]) => (
                       <Box key={col} sx={{ bgcolor: "rgba(16,163,127,0.1)", p: 2, borderRadius: "12px", minWidth: "200px" }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 600, color: theme.palette.primary.main }}>

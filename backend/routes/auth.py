@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, BackgroundTasks, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from models.user import User
-from models.history import History  # Добавлен импорт модели History
+from models.history import History  # если используется история
+from models.session import SessionState  # для удаления сессий
 from utils.auth import get_password_hash, verify_password, create_access_token, get_current_user, create_refresh_token
 from database import get_db
 from pydantic import BaseModel, EmailStr, Field, validator
@@ -48,7 +49,6 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
-
 @auth_router.post("/login")
 async def login(
         user_data: UserLogin,
@@ -61,11 +61,9 @@ async def login(
     if not user or not verify_password(user_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Неверные учетные данные")
 
-    # Генерация токенов
     access_token = create_access_token(data={"sub": user.username})
     refresh_token = create_refresh_token(data={"sub": user.username})
 
-    # Установка cookies (access token и refresh token)
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -84,10 +82,8 @@ async def login(
     background_tasks.add_task(record_history_bg, user.id, "Пользователь вошел в систему")
     return {"message": "Успешный вход"}
 
-
 @auth_router.post("/refresh")
 async def refresh_token(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
-    # Получаем refresh token из cookies
     token = request.cookies.get("refresh_token")
     if not token:
         raise HTTPException(status_code=401, detail="Refresh token не предоставлен")
@@ -100,17 +96,14 @@ async def refresh_token(request: Request, response: Response, db: AsyncSession =
     except Exception as e:
         raise HTTPException(status_code=401, detail="Некорректный refresh token")
 
-    # (Опционально) Проверяем, существует ли пользователь
     result = await db.execute(select(User).where(User.username == username))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=401, detail="Пользователь не найден")
 
-    # Генерируем новые токены
     new_access_token = create_access_token(data={"sub": username})
     new_refresh_token = create_refresh_token(data={"sub": username})
 
-    # Обновляем cookies с новыми токенами
     response.set_cookie(
         key="access_token",
         value=new_access_token,
@@ -147,3 +140,14 @@ async def logout(response: Response, background_tasks: BackgroundTasks, current_
     response.delete_cookie("refresh_token", path="/")
     return {"message": "Вы успешно вышли"}
 
+@auth_router.delete("/account", response_model=dict)
+async def delete_account(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Удаляем все связанные с пользователем сессии
+    await db.execute(delete(SessionState).where(SessionState.user_id == current_user.id))
+    # Удаляем пользователя
+    await db.delete(current_user)
+    await db.commit()
+    return {"detail": "Аккаунт и связанные сессии успешно удалены"}

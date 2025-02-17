@@ -40,8 +40,8 @@ import {
   Legend,
 } from "chart.js";
 import { DashboardContext } from "../context/DashboardContext";
-import CategoricalDataBlock from "./CategoricalDataBlock";
-import { FloatingLinesBackground } from "./AnimatedBackground";
+import CategoricalDataBlock from "../components/CategoricalDataBlock";
+import { FloatingLinesBackground } from "../components/AnimatedBackground";
 
 ChartJS.register(
   CategoryScale,

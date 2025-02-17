@@ -83,6 +83,7 @@ const Header = () => {
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   position: 'relative'
+
                 }}
               >
                 TimeFlow Analytics

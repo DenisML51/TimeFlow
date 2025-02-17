@@ -85,3 +85,19 @@ async def get_session_state(
         "state": session_obj.state,
         "created_at": session_obj.created_at
     }
+
+@session_router.delete("/{session_id}", response_model=dict)
+async def delete_session_state(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(
+        select(SessionState).where(SessionState.id == session_id, SessionState.user_id == current_user.id)
+    )
+    session_obj = result.scalar_one_or_none()
+    if not session_obj:
+        raise HTTPException(status_code=404, detail="Session state not found")
+    await db.delete(session_obj)
+    await db.commit()
+    return {"detail": "Session deleted successfully"}

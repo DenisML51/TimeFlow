@@ -4,7 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="87aacc28-dd70-4bb9-b83a-40324653cc6e" name="Changes" comment="" />
+    <list default="true" id="87aacc28-dd70-4bb9-b83a-40324653cc6e" name="Changes" comment="version 7 User Cabinet and User Sessions">
+      <change afterPath="$PROJECT_DIR$/src/pages/ForecastPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/app.db" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/app.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/routes/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/routes/auth.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/routes/session.py" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/routes/session.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ForecastPage.jsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Header.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Header.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/HistoryModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/HistoryModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/Preprocessing.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Preprocessing.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/SelectedColumnsPage.jsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/context/DashboardContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/context/DashboardContext.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/Dashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Dashboard.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/PersonalCabinetDrawer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/PersonalCabinetDrawer.jsx" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -49,11 +65,16 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Rusinov.DS\PycharmProjects\project\Forecast_ML_Project\frontend\src\pages" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-5c90d61e3bab-JavaScript-PY-242.23339.19" />
-        <option value="bundled-python-sdk-0029f7779945-399fe30bd8c1-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-242.23339.19" />
+        <option value="bundled-js-predefined-d6986cc7102b-deb605915726-JavaScript-PY-243.22562.180" />
+        <option value="bundled-python-sdk-85c76a3b01b3-9a18a617cbe4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-243.22562.180" />
       </set>
     </attachedChunks>
   </component>
@@ -69,6 +90,7 @@
       <workItem from="1739445448905" duration="625000" />
       <workItem from="1739448462531" duration="10144000" />
       <workItem from="1739529821276" duration="23232000" />
+      <workItem from="1739748798488" duration="11717000" />
     </task>
     <servers />
   </component>
@@ -85,5 +107,9 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="version 7 User Cabinet and User Sessions" />
+    <option name="LAST_COMMIT_MESSAGE" value="version 7 User Cabinet and User Sessions" />
   </component>
 </project>

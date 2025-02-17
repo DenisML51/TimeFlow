@@ -42,6 +42,8 @@ import {
 import { DashboardContext } from "../context/DashboardContext";
 import CategoricalDataBlock from "../components/CategoricalDataBlock";
 import { FloatingLinesBackground } from "../components/AnimatedBackground";
+import {Canvas} from "@react-three/fiber";
+import {ParticleBackground} from "../components/home/ParticleBackground";
 
 ChartJS.register(
   CategoryScale,
@@ -464,7 +466,9 @@ const SelectedColumnsPage = () => {
       transition={{ duration: 0.3 }}
       style={{ position: "relative", minHeight: "100vh" }}
     >
-      <FloatingLinesBackground />
+            <Canvas camera={{ position: [0, 0, 1] }} style={{ position: 'fixed', top: 0, left: 0 }}>
+        <ParticleBackground />
+      </Canvas>
 
       {/* Общий контейнер с ограниченной шириной */}
       <Box sx={{ p: 4, position: "relative", zIndex: 1, width: "100%", maxWidth: "1200px", mx: "auto" }}>

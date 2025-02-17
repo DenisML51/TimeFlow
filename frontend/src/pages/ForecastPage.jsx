@@ -52,6 +52,8 @@ import CategoricalDataBlock from "../components/CategoricalDataBlock";
 import { DashboardContext } from "../context/DashboardContext";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { FloatingLinesBackground } from "../components/AnimatedBackground";
+import {Canvas} from "@react-three/fiber";
+import {ParticleBackground} from "../components/home/ParticleBackground";
 
 // ================================================
 // Вспомогательные функции (метрики, графики)
@@ -953,7 +955,9 @@ export default function ForecastPage() {
       transition={{ duration: 0.3 }}
       style={{ position: "relative", minHeight: "100vh" }}
     >
-      <FloatingLinesBackground />
+            <Canvas camera={{ position: [0, 0, 1] }} style={{ position: 'fixed', top: 0, left: 0 }}>
+        <ParticleBackground />
+      </Canvas>
       <Box sx={{ position: "relative", minHeight: "100vh" }}>
         {/* Шапка */}
         <Box sx={{ display: "flex", justifyContent: "space-between", m: 2, pt: 2 }}>

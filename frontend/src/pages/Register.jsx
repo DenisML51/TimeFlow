@@ -15,7 +15,9 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FloatingLinesBackground } from "../components/AnimatedBackground";
+import { ParticleBackground } from "../components/home/ParticleBackground"
 import { TbUserPlus, TbCheck, TbAlertCircle, TbLock } from "react-icons/tb";
+import {Canvas} from "@react-three/fiber";
 
 const passwordRequirements = [
   { regex: /.{8,}/, label: "Минимум 8 символов" },
@@ -99,7 +101,9 @@ const Register = () => {
       alignItems: "center",
       overflow: "hidden"
     }}>
-      <FloatingLinesBackground />
+      <Canvas camera={{ position: [0, 0, 1] }} style={{ position: 'fixed', top: 0, left: 0 }}>
+        <ParticleBackground />
+      </Canvas>
 
       <Container maxWidth="md" sx={{ position: "relative", zIndex: 1 }}>
         <motion.div

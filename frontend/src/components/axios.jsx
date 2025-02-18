@@ -6,22 +6,54 @@ const instance = axios.create({
   withCredentials: true,            // обязательно для отправки cookies
 });
 
-// Интерсептор для автоматического обновления токенов при получении 401
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 instance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    // Если получена ошибка 401 и запрос ещё не был повторен
-    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+    if (error.response && error.response.status === 401) {
+      if (originalRequest._retry) {
+        // Если уже была попытка обновления, просто отклоняем
+        return Promise.reject(error);
+      }
+      if (isRefreshing) {
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers["Authorization"] = "Bearer " + token;
+            return instance(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
       originalRequest._retry = true;
+      isRefreshing = true;
       try {
-        // Пытаемся обновить токены
-        await instance.post("/auth/refresh");
-        // После успешного обновления повторяем исходный запрос
+        const { data } = await instance.post("/auth/refresh");
+        // Если refresh успешен, установите новый access token в заголовки, если требуется
+        processQueue(null, data.access_token);
         return instance(originalRequest);
       } catch (refreshError) {
-        console.error("Ошибка обновления токена", refreshError);
+        processQueue(refreshError, null);
+        // Если refresh не удалось, больше не пытаться
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
     return Promise.reject(error);

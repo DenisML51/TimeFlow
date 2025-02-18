@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, {useState, useContext, useEffect, useRef} from "react";
 import {
   Container,
   TextField,
@@ -14,7 +14,11 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { motion } from "framer-motion";
 import { FloatingLinesBackground } from "../components/AnimatedBackground";
+import {ParticleBackground} from "../components/home/ParticleBackground";
 import { TbLogin, TbCheck, TbAlertCircle } from "react-icons/tb";
+import {Canvas, useFrame} from "@react-three/fiber";
+import {PointMaterial, Points} from "@react-three/drei";
+
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -83,7 +87,9 @@ const Login = () => {
         overflow: "hidden"
       }}
     >
-      <FloatingLinesBackground />
+        <Canvas camera={{ position: [0, 0, 1] }} style={{ position: 'fixed', top: 0, left: 0 }}>
+        <ParticleBackground />
+      </Canvas>
 
       {/* Добавляем позиционирование и zIndex, чтобы форма была выше анимированного фона */}
       <Container maxWidth="sm" sx={{ position: "relative", zIndex: 1 }}>

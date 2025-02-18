@@ -24,6 +24,8 @@ import { FloatingLinesBackground } from "../components/AnimatedBackground";
 import { DashboardContext } from "../context/DashboardContext";
 import { HistoryContext } from "../context/HistoryContext";
 import axios from "axios";
+import {Canvas} from "@react-three/fiber";
+import {ParticleBackground} from "../components/home/ParticleBackground";
 
 const Dashboard = () => {
   const theme = useTheme();
@@ -204,7 +206,9 @@ const Dashboard = () => {
         background: theme.palette.background.default,
       }}
     >
-      <FloatingLinesBackground density={6} />
+            <Canvas camera={{ position: [0, 0, 1] }} style={{ position: 'fixed', top: 0, left: 0 }}>
+        <ParticleBackground />
+      </Canvas>
       <Grid container spacing={4} sx={{ position: "relative", zIndex: 1 }}>
         {/* File Upload Section */}
         <Grid item xs={12}>

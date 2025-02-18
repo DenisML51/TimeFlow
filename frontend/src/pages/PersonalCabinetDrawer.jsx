@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
+// src/components/PersonalCabinetDrawer.jsx
+import React, { useContext, useEffect, useState, useRef } from "react";
 import {
   Drawer,
   Box,
@@ -51,17 +52,15 @@ const DeleteConfirmationPopup = styled(motion.div)(({ theme }) => ({
   width: "280px",
 }));
 
-// Обеспечиваем фиксированную (или минимальную) высоту и относительное позиционирование
 const AccountDeleteWrapper = styled(motion.div)(({ theme }) => ({
   position: "relative",
   overflow: "hidden",
   borderRadius: "12px",
   marginTop: "32px",
   border: "1px solid rgba(255,255,255,0.1)",
-  minHeight: "80px", // гарантирует, что при переключении высота не меняется
+  minHeight: "80px",
 }));
 
-// Содержимое позиционируем абсолютно, чтобы анимация происходила без влияния на layout
 const AccountDeleteContent = styled(motion.div)(({ theme }) => ({
   position: "absolute",
   top: 0,
@@ -78,20 +77,30 @@ const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="down" ref={ref} {...props} />;
 });
 
-// Варианты анимации с направлением
-const variants = {
-  enter: (direction) => ({
-    x: direction > 0 ? "100%" : "-100%",
-    opacity: 0,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-  },
-  exit: (direction) => ({
-    x: direction > 0 ? "-100%" : "100%",
-    opacity: 0,
-  }),
+// Обновлённая функция формирования сводки сессии (учтены модели, в том числе LSTM)
+const getSessionSummary = (state) => {
+  const appliedModels = [];
+  if (state.forecastPageState) {
+    if (state.forecastPageState.prophetActive) appliedModels.push("Prophet");
+    if (state.forecastPageState.xgboostActive) appliedModels.push("XGBoost");
+    if (state.forecastPageState.sarimaActive) appliedModels.push("SARIMA");
+    if (state.forecastPageState.lstmActive) appliedModels.push("LSTM");
+    if (state.forecastPageState.gruActive) appliedModels.push("GRU");
+    if (state.forecastPageState.transformerActive) appliedModels.push("Transformer");
+  }
+  return {
+    fileName: state.uploadedFileName || "Untitled Session",
+    date: state.updatedAt
+      ? new Date(state.updatedAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        })
+      : "",
+    filters: Object.entries(state.filters || {}).map(
+      ([key, value]) => `${key}: ${value}`
+    ),
+    models: appliedModels,
+  };
 };
 
 const PersonalCabinetDrawer = ({ open, onClose }) => {
@@ -100,8 +109,8 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
   const {
     resetDashboardState,
     setOriginalData,
-    setColumns,
     setFilters,
+    setColumns,
     setSelectedColumns,
     setUploadedFileName,
     setSecondPageState,
@@ -111,12 +120,13 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
     setTableRowsPerPage,
     setSessionLocked,
     setCurrentSessionId,
+    setForecastPageState, // для загрузки настроек моделей, включая LSTM
   } = useContext(DashboardContext);
   const [sessions, setSessions] = useState([]);
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [showAccountDeleteConfirm, setShowAccountDeleteConfirm] = useState(false);
-  const [direction, setDirection] = useState(1); // 1 – переключаемся вперёд, -1 – назад
+  const [direction, setDirection] = useState(1);
   const navigate = useNavigate();
   const cardRefs = useRef({});
 
@@ -135,7 +145,6 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
     if (open) fetchSessions();
   }, [open]);
 
-  // Сброс состояния кнопки "Удалить аккаунт" при каждом открытии/закрытии drawer
   useEffect(() => {
     setShowAccountDeleteConfirm(false);
     setDirection(1);
@@ -151,6 +160,7 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
       if (state.secondPageState) setSecondPageState(state.secondPageState);
       if (state.preprocessingSettings) setPreprocessingSettings(state.preprocessingSettings);
       if (state.forecastResults) setForecastResults(state.forecastResults);
+      if (state.forecastPageState) setForecastPageState(state.forecastPageState); // загружаем настройки моделей (в том числе LSTM)
       if (state.tablePage !== undefined) setTablePage(state.tablePage);
       if (state.tableRowsPerPage !== undefined) setTableRowsPerPage(state.tableRowsPerPage);
       setSessionLocked(false);
@@ -200,19 +210,6 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
       console.error("Error deleting account:", error);
     }
   };
-
-  const getSessionSummary = (state) => ({
-    fileName: state.uploadedFileName || "Untitled Session",
-    date: state.updatedAt
-      ? new Date(state.updatedAt).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        })
-      : "",
-    filters: Object.entries(state.filters || {}).map(
-      ([key, value]) => `${key}: ${value}`
-    ),
-  });
 
   return (
     <>
@@ -355,6 +352,26 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
                       </Box>
                     ))}
                   </Box>
+                  {summary.models && summary.models.length > 0 && (
+                    <Box sx={{ mt: 1, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                      {summary.models.map((model, i) => (
+                        <Box
+                          key={i}
+                          sx={{
+                            px: 1,
+                            py: 0.5,
+                            bgcolor: "rgba(16,163,127,0.15)",
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            color: "#10A37F",
+                            border: "1px solid rgba(16,163,127,0.3)",
+                          }}
+                        >
+                          {model}
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
                 </SessionCard>
               );
             })}
@@ -378,6 +395,7 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
             >
               <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
                 Удалить сессию?
@@ -421,7 +439,17 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
                 <AccountDeleteContent
                   key="confirm"
                   custom={direction}
-                  variants={variants}
+                  variants={{
+                    enter: (direction) => ({
+                      x: direction > 0 ? "100%" : "-100%",
+                      opacity: 0,
+                    }),
+                    center: { x: 0, opacity: 1 },
+                    exit: (direction) => ({
+                      x: direction > 0 ? "-100%" : "100%",
+                      opacity: 0,
+                    }),
+                  }}
                   initial="enter"
                   animate="center"
                   exit="exit"
@@ -463,7 +491,17 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
                 <AccountDeleteContent
                   key="button"
                   custom={direction}
-                  variants={variants}
+                  variants={{
+                    enter: (direction) => ({
+                      x: direction > 0 ? "100%" : "-100%",
+                      opacity: 0,
+                    }),
+                    center: { x: 0, opacity: 1 },
+                    exit: (direction) => ({
+                      x: direction > 0 ? "-100%" : "100%",
+                      opacity: 0,
+                    }),
+                  }}
                   initial="enter"
                   animate="center"
                   exit="exit"

@@ -85,6 +85,7 @@ const getSessionSummary = (state) => {
     if (state.forecastPageState.xgboostActive) appliedModels.push("XGBoost");
     if (state.forecastPageState.sarimaActive) appliedModels.push("SARIMA");
     if (state.forecastPageState.lstmActive) appliedModels.push("LSTM");
+    if (state.forecastPageState.gruActive) appliedModels.push("GRU");
   }
   return {
     fileName: state.uploadedFileName || "Untitled Session",

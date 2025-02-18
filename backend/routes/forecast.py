@@ -5,6 +5,7 @@ from forecast.prophet_forecast import prophet_forecast
 from forecast.xgboost_forecast import xgboost_forecast
 from forecast.arima_forecast import sarima_forecast
 from forecast.lstm_forecast import lstm_forecast  # импорт функции LSTM
+from forecast.gru_forecast import gru_forecast
 
 forecast_router = APIRouter()
 
@@ -67,6 +68,20 @@ async def forecast_endpoint(request: ForecastRequest):
             )
         elif request.model == "LSTM":
             forecast_all, forecast_train, forecast_test, forecast_horizon = lstm_forecast(
+                df,
+                horizon=request.horizon,
+                test_size=request.history,
+                dt_name=request.dt_name,
+                y_name=request.y_name,
+                freq=request.freq,
+                confidence_level=request.confidence_level,
+                model_params=request.uniqueParams,
+                seasonality=request.uniqueParams.get("seasonality", "MS"),
+                criterion=request.uniqueParams.get("criterion", "Huber"),
+                optimizer_type=request.uniqueParams.get("optimizer_type", "AdamW")
+            )
+        elif request.model == "GRU":  # <-- Новая ветка для вашей модели
+            forecast_all, forecast_train, forecast_test, forecast_horizon = gru_forecast(
                 df,
                 horizon=request.horizon,
                 test_size=request.history,

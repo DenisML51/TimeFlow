@@ -78,6 +78,26 @@ export const DashboardProvider = ({ children }) => {
       mc_dropout: true,
       mc_samples: 100
     },
+    gruActive: false,
+    gruParams: {
+      seq_length: 24,
+      lag_periods: 12,
+      window_sizes: "6,12,24", // как строка, чтобы потом преобразовать в список
+      num_layers: 3,
+      hidden_dim: 256,
+      dropout: 0.4,
+      batch_size: 128,
+      epochs: 300,
+      learning_rate: 0.0005,
+      patience: 20,
+      delta: 0.001,
+      bidirectional: true,
+      residual_connections: true,
+      use_layer_norm: true,
+      mc_dropout: true,
+      mc_samples: 200,
+      n_splits: 5
+    },
     commonTab: 0,
     modelTab: 0,
     modelSubTabs: {},

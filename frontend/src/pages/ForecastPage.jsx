@@ -322,9 +322,6 @@ const ProphetBlock = memo(function ProphetBlock({
           </Button>
         )}
       </Box>
-      <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444" }}>
-        {active ? "Активна" : "Выключена"}
-      </Typography>
     </Paper>
   );
 });
@@ -500,9 +497,6 @@ const XGBoostBlock = memo(function XGBoostBlock({
           </Button>
         )}
       </Box>
-      <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444", mt: 1, display: "block" }}>
-        {active ? "Активна" : "Выключена"}
-      </Typography>
     </Paper>
   );
 });
@@ -733,9 +727,6 @@ const SarimaBlock = memo(function SarimaBlock({
           </Button>
         )}
       </Box>
-      <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444", mt: 1, display: "block" }}>
-        {active ? "Активна" : "Выключена"}
-      </Typography>
     </Paper>
   );
 });
@@ -984,14 +975,16 @@ const LSTMBlock = memo(function LSTMBlock({
           </Button>
         )}
       </Box>
-      <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444" }}>
-        {active ? "Активна" : "Выключена"}
-      </Typography>
     </Paper>
   );
 });
 
-const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, setGruParams }) {
+const GRUBlock = memo(function GRUBlock({
+  active,
+  setActive,
+  gruParams,
+  setGruParams
+}) {
   // Значения по умолчанию для модели GRU
   const defaultParams = {
     seq_length: 24,
@@ -1429,9 +1422,6 @@ const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, setGruPa
           </Button>
         )}
       </Box>
-      <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444" }}>
-        {active ? "Активна" : "Выключена"}
-      </Typography>
     </Paper>
   );
 });
@@ -1776,9 +1766,7 @@ const TransformerBlock = memo(function TransformerBlock({
           </Button>
         )}
       </Box>
-      <Typography variant="caption" sx={{ color: active ? "#10A37F" : "#FF4444" }}>
-        {active ? "Активна" : "Выключена"}
-      </Typography>
+
     </Paper>
   );
 });

@@ -344,7 +344,6 @@ def gru_forecast(
                     torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                     optimizer.step()
                     train_loss += loss.item()
-                print(train_loss)
 
                 model.eval()
                 val_loss = 0.0
@@ -401,7 +400,7 @@ def gru_forecast(
     full_dataset = TimeSeriesDataset(scaled_data, params['seq_length'], horizon)
     full_loader = DataLoader(full_dataset, batch_size=params['batch_size'], shuffle=False)
     all_forecasts = make_forecast(full_loader)
-    print("Размер all_forecasts:", all_forecasts.shape)
+
 
     forecast_steps = []
     for i in range(all_forecasts.shape[0]):

@@ -5,15 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2e1a8637-1a7f-4b70-a5e1-9d7aa5d3a7d1" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/forecast/transformers_forecast.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.db" beforeDir="false" afterPath="$PROJECT_DIR$/app.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/routes/forecast.py" beforeDir="false" afterPath="$PROJECT_DIR$/routes/forecast.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/forecast/gru_forecast.py" beforeDir="false" afterPath="$PROJECT_DIR$/forecast/gru_forecast.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/context/DashboardContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/context/DashboardContext.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/src/pages/ForecastPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/ForecastPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Home.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Home.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/PersonalCabinetDrawer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/PersonalCabinetDrawer.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

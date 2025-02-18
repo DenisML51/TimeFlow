@@ -36,7 +36,7 @@ const LiveDemoPreview = () => {
         backdropFilter: 'blur(12px)',
         transformStyle: 'preserve-3d'
       }}>
-        <Box component="img" src="assets/img.png"
+        <Box component="img" src="assets/dashboard-preview.png"
           sx={{ width: '100%', borderRadius: 4 }} />
 
       </Box>

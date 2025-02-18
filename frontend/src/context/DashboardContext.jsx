@@ -78,6 +78,32 @@ export const DashboardProvider = ({ children }) => {
       mc_dropout: true,
       mc_samples: 100
     },
+    transformerActive: false,
+    transformerParams: {
+      seq_length: 24,
+      lag_periods: 12,
+      window_sizes: "6,12,24",
+      d_model: 256,
+      nhead: 8,
+      num_encoder_layers: 3,
+      num_decoder_layers: 1,
+      dim_feedforward: 512,
+      dropout: 0.2,
+      batch_size: 64,
+      epochs: 150,
+      learning_rate: 0.0005,
+      optimizer_type: "AdamW",
+      criterion: "MSE",
+      patience: 20,
+      delta: 0.001,
+      n_splits: 3,
+      mc_dropout: true,
+      mc_samples: 100,
+      use_encoder: true,
+      use_decoder: false,
+      activation: "gelu",
+    },
+
     gruActive: false,
     gruParams: {
       seq_length: 24,
@@ -105,6 +131,8 @@ export const DashboardProvider = ({ children }) => {
     csvSelectedCols: [],
     fileType: "csv",
   });
+
+
 
   // Флаги для отслеживания изменений и блокировки автосохранения
   const [isDirty, setIsDirty] = useState(false);

@@ -4,15 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="87aacc28-dd70-4bb9-b83a-40324653cc6e" name="Changes" comment="version 8.1 LSTM forecast">
-      <change afterPath="$PROJECT_DIR$/../backend/forecast/gru_forecast.py" afterDir="false" />
+    <list default="true" id="87aacc28-dd70-4bb9-b83a-40324653cc6e" name="Changes" comment="version 8.2 GRU forecast">
+      <change afterPath="$PROJECT_DIR$/../backend/forecast/transformers_forecast.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../backend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../backend/app.db" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/app.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../backend/forecast/sarima.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../backend/routes/forecast.py" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/routes/forecast.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/context/DashboardContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/context/DashboardContext.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/pages/ForecastPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/ForecastPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/Home.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Home.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/pages/PersonalCabinetDrawer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/PersonalCabinetDrawer.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -123,7 +123,15 @@
       <option name="project" value="LOCAL" />
       <updated>1739849940327</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="version 8.2 GRU forecast">
+      <option name="closed" value="true" />
+      <created>1739852927224</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1739852927224</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -145,6 +153,7 @@
     <MESSAGE value="new global design 2" />
     <MESSAGE value="version 7.9 header design new" />
     <MESSAGE value="version 8.1 LSTM forecast" />
-    <option name="LAST_COMMIT_MESSAGE" value="version 8.1 LSTM forecast" />
+    <MESSAGE value="version 8.2 GRU forecast" />
+    <option name="LAST_COMMIT_MESSAGE" value="version 8.2 GRU forecast" />
   </component>
 </project>

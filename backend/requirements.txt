@@ -14,3 +14,5 @@ numpy~=2.2.3
 prophet~=1.1.6
 xgboost~=2.1.4
 statsmodels~=0.14.4
+torch
+scikit-learn

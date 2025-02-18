@@ -109,7 +109,7 @@ const Header = () => {
                   fontSize: { xs: '1.1rem', md: '1.25rem' }
                 }}
               >
-                TimeFlow Analytics
+                TimeFlow
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: isHovered ? '100%' : 0 }}

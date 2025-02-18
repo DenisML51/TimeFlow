@@ -48,7 +48,7 @@ export const DashboardProvider = ({ children }) => {
   });
   const [forecastResults, setForecastResults] = useState([]);
 
-  // Состояние для ForecastPage
+  // Состояние для ForecastPage (настройки для всех моделей, включая LSTM)
   const [forecastPageState, setForecastPageState] = useState({
     horizon: 10,
     historySize: 5,
@@ -60,6 +60,24 @@ export const DashboardProvider = ({ children }) => {
     xgboostParams: { max_depth: 6, learning_rate: 0.1, n_estimators: 100, subsample: 1, colsample_bytree: 1 },
     sarimaActive: false,
     sarimaParams: { p: 1, d: 1, q: 1, P: 1, D: 1, Q: 1, s: 12 },
+    lstmActive: false,
+    lstmParams: {
+      seq_length: 12,
+      lag_periods: 6,
+      window_sizes: "3,6,12", // задаётся как строка, которую потом можно преобразовать в список чисел
+      num_layers: 2,
+      hidden_dim: 128,
+      dropout: 0.3,
+      batch_size: 64,
+      epochs: 200,
+      learning_rate: 0.001,
+      patience: 15,
+      delta: 0.001,
+      n_splits: 5,
+      use_attention: true,
+      mc_dropout: true,
+      mc_samples: 100
+    },
     commonTab: 0,
     modelTab: 0,
     modelSubTabs: {},
@@ -123,6 +141,8 @@ export const DashboardProvider = ({ children }) => {
       xgboostParams: { max_depth: 6, learning_rate: 0.1, n_estimators: 100, subsample: 1, colsample_bytree: 1 },
       sarimaActive: false,
       sarimaParams: { p: 1, d: 1, q: 1, P: 1, D: 1, Q: 1, s: 12 },
+      lstmActive: false,
+      lstmParams: { seq_length: 12, lag_periods: 6, window_sizes: "3,6,12", num_layers: 2, hidden_dim: 128, dropout: 0.3, batch_size: 64, epochs: 200, learning_rate: 0.001, patience: 15, delta: 0.001, n_splits: 5, use_attention: true, mc_dropout: true, mc_samples: 100 },
       commonTab: 0,
       modelTab: 0,
       modelSubTabs: {},
@@ -140,7 +160,7 @@ export const DashboardProvider = ({ children }) => {
     setIsDirty(true);
   }, [filters, selectedColumns, secondPageState, tablePage, tableRowsPerPage, forecastPageState, forecastResults]);
 
-  // Дебаунс-сохранение сессии (функция сохраняется один раз)
+  // Дебаунс-сохранение сессии
   const saveSessionState = useCallback(
     debounce((sessionState) => {
       if (currentSessionId && !sessionLocked) {
@@ -160,7 +180,7 @@ export const DashboardProvider = ({ children }) => {
     [currentSessionId, sessionLocked]
   );
 
-  // Мемоизируем объект состояния сессии – он будет пересоздаваться только при реальных изменениях данных
+  // Мемоизация состояния сессии
   const sessionState = useMemo(() => ({
     originalData,
     columns,
@@ -191,13 +211,12 @@ export const DashboardProvider = ({ children }) => {
     forecastPageState,
   ]);
 
-  // Автоматическое сохранение состояния сессии при изменениях
+  // Автосохранение сессии при изменениях
   useEffect(() => {
     if (currentSessionId && !sessionLocked && isDirty) {
       console.log("Auto-saving session state:", sessionState);
       saveSessionState(sessionState);
     }
-    // При размонтировании можно сбросить (или flush) дебаунс-функцию:
     return () => {
       saveSessionState.flush && saveSessionState.flush();
     };

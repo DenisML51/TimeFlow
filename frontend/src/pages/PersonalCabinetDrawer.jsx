@@ -77,13 +77,14 @@ const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="down" ref={ref} {...props} />;
 });
 
-// Функция формирования сводки сессии с добавлением применённых моделей
+// Обновлённая функция формирования сводки сессии (учтены модели, в том числе LSTM)
 const getSessionSummary = (state) => {
   const appliedModels = [];
   if (state.forecastPageState) {
     if (state.forecastPageState.prophetActive) appliedModels.push("Prophet");
     if (state.forecastPageState.xgboostActive) appliedModels.push("XGBoost");
     if (state.forecastPageState.sarimaActive) appliedModels.push("SARIMA");
+    if (state.forecastPageState.lstmActive) appliedModels.push("LSTM");
   }
   return {
     fileName: state.uploadedFileName || "Untitled Session",
@@ -96,7 +97,7 @@ const getSessionSummary = (state) => {
     filters: Object.entries(state.filters || {}).map(
       ([key, value]) => `${key}: ${value}`
     ),
-    models: appliedModels, // добавляем список применённых моделей
+    models: appliedModels,
   };
 };
 
@@ -117,7 +118,7 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
     setTableRowsPerPage,
     setSessionLocked,
     setCurrentSessionId,
-    setForecastPageState, // для загрузки настроек моделей
+    setForecastPageState, // для загрузки настроек моделей, включая LSTM
   } = useContext(DashboardContext);
   const [sessions, setSessions] = useState([]);
   const [sessionToDelete, setSessionToDelete] = useState(null);
@@ -157,7 +158,7 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
       if (state.secondPageState) setSecondPageState(state.secondPageState);
       if (state.preprocessingSettings) setPreprocessingSettings(state.preprocessingSettings);
       if (state.forecastResults) setForecastResults(state.forecastResults);
-      if (state.forecastPageState) setForecastPageState(state.forecastPageState); // загружаем настройки моделей
+      if (state.forecastPageState) setForecastPageState(state.forecastPageState); // загружаем настройки моделей (в том числе LSTM)
       if (state.tablePage !== undefined) setTablePage(state.tablePage);
       if (state.tableRowsPerPage !== undefined) setTableRowsPerPage(state.tableRowsPerPage);
       setSessionLocked(false);
@@ -349,7 +350,6 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
                       </Box>
                     ))}
                   </Box>
-                  {/* Отображаем применённые модели, если они есть */}
                   {summary.models && summary.models.length > 0 && (
                     <Box sx={{ mt: 1, display: "flex", gap: 1, flexWrap: "wrap" }}>
                       {summary.models.map((model, i) => (
@@ -393,6 +393,7 @@ const PersonalCabinetDrawer = ({ open, onClose }) => {
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
             >
               <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
                 Удалить сессию?

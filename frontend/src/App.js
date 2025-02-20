@@ -9,7 +9,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import SelectedColumnsPage from "./pages/Preprocessing";
 import ForecastPage from "./pages/ForecastPage";
-import Demo from "./pages/DemoPage"; // импорт демонстрационной страницы
+import Demo from "./pages/DemoPage"; 
 import ProtectedRoute from "./components/ProtectedRoute";
 import Header from "./components/Header";
 import { DashboardProvider } from "./context/DashboardContext";

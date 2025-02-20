@@ -5,7 +5,6 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 def sarima_forecast(df, horizon, test_size, dt_name, y_name, freq, confidence_level=95,
                     order=(1, 1, 1), seasonal_order=(1, 1, 1, 12)):
     try:
-        # 1. Предобработка данных
         data = df.copy()
         data[dt_name] = pd.to_datetime(data[dt_name])
         data.set_index(dt_name, inplace=True)
@@ -21,11 +20,9 @@ def sarima_forecast(df, horizon, test_size, dt_name, y_name, freq, confidence_le
             train_ts = ts.iloc[:n - test_size]
             test_ts = ts.iloc[n - test_size:]
 
-            # Обучение модели на тренировочной выборке
             model_train = SARIMAX(train_ts, order=order, seasonal_order=seasonal_order)
             model_fit = model_train.fit(disp=False)
 
-            # Прогноз для train (in-sample)
             train_pred = model_fit.predict(start=train_ts.index[0], end=train_ts.index[-1])
             forecast_train = pd.DataFrame({
                 "ds": train_ts.index,
@@ -33,7 +30,6 @@ def sarima_forecast(df, horizon, test_size, dt_name, y_name, freq, confidence_le
                 "y_forecast": train_pred.values
             })
 
-            # Прогноз для тестовой выборки (out-of-sample)
             test_pred = model_fit.forecast(steps=test_size)
             forecast_test = pd.DataFrame({
                 "ds": test_ts.index,
@@ -43,7 +39,6 @@ def sarima_forecast(df, horizon, test_size, dt_name, y_name, freq, confidence_le
 
             forecast_all = forecast_train.copy()
         else:
-            # Если тестовой выборки нет, прогнозим для всего ряда
             model = SARIMAX(ts, order=order, seasonal_order=seasonal_order)
             model_fit = model.fit(disp=False)
             all_pred = model_fit.predict(start=ts.index[0], end=ts.index[-1])
@@ -62,7 +57,6 @@ def sarima_forecast(df, horizon, test_size, dt_name, y_name, freq, confidence_le
                 df_forecast["yhat_upper"] = df_forecast["y_forecast"] * (1 + margin)
                 df_forecast["model_name"] = "SARIMA"
 
-        # Прогноз на будущее (horizon)
         model_future = SARIMAX(train_ts if (test_size > 0 and test_size < n) else ts,
                                order=order, seasonal_order=seasonal_order).fit(disp=False)
         future_pred = model_future.forecast(steps=horizon)

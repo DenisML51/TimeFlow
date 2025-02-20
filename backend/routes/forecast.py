@@ -4,7 +4,7 @@ import pandas as pd
 from forecast.prophet_forecast import prophet_forecast
 from forecast.xgboost_forecast import xgboost_forecast
 from forecast.arima_forecast import sarima_forecast
-from forecast.lstm_forecast import lstm_forecast  # импорт функции LSTM
+from forecast.lstm_forecast import lstm_forecast 
 from forecast.gru_forecast import gru_forecast
 from forecast.transformers_forecast import transformer_forecast
 
@@ -81,7 +81,7 @@ async def forecast_endpoint(request: ForecastRequest):
                 criterion=request.uniqueParams.get("criterion", "Huber"),
                 optimizer_type=request.uniqueParams.get("optimizer_type", "AdamW")
             )
-        elif request.model == "GRU":  # <-- Новая ветка для вашей модели
+        elif request.model == "GRU": 
             forecast_all, forecast_train, forecast_test, forecast_horizon = gru_forecast(
                 df,
                 horizon=request.horizon,
@@ -95,7 +95,7 @@ async def forecast_endpoint(request: ForecastRequest):
                 criterion=request.uniqueParams.get("criterion", "Huber"),
                 optimizer_type=request.uniqueParams.get("optimizer_type", "AdamW")
             )
-        elif request.model == "Transformer":  # новая ветка
+        elif request.model == "Transformer":
             print(request.model)
             forecast_all, forecast_train, forecast_test, forecast_horizon = transformer_forecast(
                 df,

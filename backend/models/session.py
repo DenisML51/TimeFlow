@@ -8,7 +8,7 @@ class SessionState(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    state = Column(JSON, nullable=False)  # Сохраняет объект состояния (DashboardContext)
+    state = Column(JSON, nullable=False) 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

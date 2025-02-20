@@ -11,9 +11,6 @@ import random
 import matplotlib.pyplot as plt
 
 
-# =============================================================================
-# Dataset для временных рядов
-# =============================================================================
 class TimeSeriesDataset(Dataset):
     def __init__(self, data: np.ndarray, seq_length: int, horizon: int):
         self.data = data
@@ -30,9 +27,7 @@ class TimeSeriesDataset(Dataset):
         return torch.FloatTensor(x), torch.FloatTensor(y)
 
 
-# =============================================================================
-# Модуль внимания (Attention)
-# =============================================================================
+
 class Attention(nn.Module):
     def __init__(self, hidden_size: int):
         super().__init__()
@@ -47,9 +42,7 @@ class Attention(nn.Module):
         return torch.sum(lstm_output * attn_weights.unsqueeze(-1), dim=1)
 
 
-# =============================================================================
-# GRU-модель с улучшениями
-# =============================================================================
+
 class GRURegressor(nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int, num_layers: int,
                  output_dim: int, dropout: float, device: str,
@@ -66,30 +59,25 @@ class GRURegressor(nn.Module):
         self.residual = residual_connections
         self.num_directions = 2 if bidirectional else 1
 
-        # Создаем несколько слоёв GRU с возможными остаточными связями
         self.gru_layers = nn.ModuleList()
         for i in range(num_layers):
             input_size = input_dim if i == 0 else hidden_dim * self.num_directions
             gru = nn.GRU(
-                input_size, hidden_dim, 1,  # один слой GRU для каждого модуля
+                input_size, hidden_dim, 1,
                 batch_first=True,
                 bidirectional=bidirectional,
                 dropout=0 if residual_connections else dropout
             )
             self.gru_layers.append(gru)
 
-        # Слой нормализации и dropout
         self.layer_norm = nn.LayerNorm(hidden_dim * self.num_directions) if use_layer_norm else None
         self.dropout = nn.Dropout(dropout)
 
-        # Механизм внимания
         if self.use_attention:
             self.attention = Attention(hidden_dim)
 
-        # Финальный линейный слой
         self.linear = nn.Linear(hidden_dim * self.num_directions, output_dim)
 
-        # Инициализация весов
         self._init_weights()
 
     def _init_weights(self):
@@ -103,40 +91,32 @@ class GRURegressor(nn.Module):
         nn.init.kaiming_normal_(self.linear.weight, mode='fan_in', nonlinearity='relu')
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Инициализируем общее скрытое состояние для всех слоёв
         h0 = torch.zeros(self.num_layers * self.num_directions, x.size(0), self.hidden_dim).to(self.device)
 
-        # Для каждого слоя выбираем свою часть скрытого состояния
         for i, gru_layer in enumerate(self.gru_layers):
             start = i * self.num_directions
             end = (i + 1) * self.num_directions
-            hidden_i = h0[start:end]  # для текущего слоя размер: (num_directions, batch, hidden_dim)
+            hidden_i = h0[start:end] 
 
             output, hidden_i = gru_layer(x, hidden_i)
 
-            # Остаточная связь (если включена)
             if self.residual and i > 0 and output.shape == x.shape:
                 output += x
 
-            # Применяем dropout, если это не последний слой
             x = self.dropout(output) if i < len(self.gru_layers) - 1 else output
 
-        # Механизм внимания или выбор последнего временного шага
         if self.use_attention:
             x = self.attention(x)
         else:
             x = x[:, -1, :]
 
-        # Применяем нормализацию, если включена
         if self.layer_norm:
             x = self.layer_norm(x)
 
         return self.linear(x)
 
 
-# =============================================================================
-# Класс ранней остановки (Early Stopping)
-# =============================================================================
+
 class EarlyStopping:
     def __init__(self, patience=5, delta=0):
         self.patience = patience
@@ -157,9 +137,7 @@ class EarlyStopping:
             self.counter = 0
 
 
-# =============================================================================
-# Функция создания признаков: лаги, скользящие статистики, сезонные признаки
-# =============================================================================
+
 def create_features(df: pd.DataFrame, dt_col: str, target_col: str,
                     lag_periods: int, seasonality: str, window_sizes: List[int] = None) -> pd.DataFrame:
     df = df.copy()
@@ -183,18 +161,14 @@ def create_features(df: pd.DataFrame, dt_col: str, target_col: str,
     return df
 
 
-# =============================================================================
-# Функция обратного масштабирования для целевой переменной
-# =============================================================================
+
 def inverse_transform_target(scaler: MinMaxScaler, y_norm: np.ndarray, target_index: int = 0) -> np.ndarray:
     data_min = scaler.data_min_[target_index]
     data_max = scaler.data_max_[target_index]
     return y_norm * (data_max - data_min) + data_min
 
 
-# =============================================================================
-# Основная функция прогнозирования с использованием GRU с вниманием и MC-Dropout
-# =============================================================================
+
 def gru_forecast(
         df: pd.DataFrame,
         horizon: int,
@@ -209,7 +183,6 @@ def gru_forecast(
         optimizer_type: str = 'AdamW',
         device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
 ) -> Union[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    # Параметры по умолчанию (можно переопределить через model_params)
     gru_params = {
         'seq_length': 24,
         'lag_periods': 12,
@@ -458,7 +431,6 @@ def gru_forecast(
         'yhat_upper': np.array(future_forecasts) + z_score * std_val
     })
 
-    # Обработка возможных NaN и inf
     forecast_all = forecast_all.replace([np.inf, -np.inf], np.nan).fillna(0)
     forecast_train = forecast_train.replace([np.inf, -np.inf], np.nan).fillna(0)
     forecast_test = forecast_test.replace([np.inf, -np.inf], np.nan).fillna(0)

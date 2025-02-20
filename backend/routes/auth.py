@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from models.user import User
-from models.history import History  # если используется история
-from models.session import SessionState  # для удаления сессий
+from models.history import History  
+from models.session import SessionState 
 from utils.auth import get_password_hash, verify_password, create_access_token, get_current_user, create_refresh_token
 from database import get_db
 from pydantic import BaseModel, EmailStr, Field, validator
@@ -145,9 +145,7 @@ async def delete_account(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Удаляем все связанные с пользователем сессии
     await db.execute(delete(SessionState).where(SessionState.user_id == current_user.id))
-    # Удаляем пользователя
     await db.delete(current_user)
     await db.commit()
     return {"detail": "Аккаунт и связанные сессии успешно удалены"}

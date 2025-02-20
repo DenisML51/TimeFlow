@@ -9,9 +9,7 @@ from sklearn.model_selection import TimeSeriesSplit
 from typing import Dict, Union, Optional, List
 import random
 
-# =============================================================================
-# Dataset для временных рядов
-# =============================================================================
+
 class TimeSeriesDataset(Dataset):
     def __init__(self, data: np.ndarray, seq_length: int, horizon: int):
         self.data = data
@@ -27,9 +25,7 @@ class TimeSeriesDataset(Dataset):
         y = self.data[idx + self.seq_length: idx + self.seq_length + self.horizon, 0]
         return torch.FloatTensor(x), torch.FloatTensor(y)
 
-# =============================================================================
-# Модуль внимания (Attention)
-# =============================================================================
+
 class Attention(nn.Module):
     def __init__(self, hidden_size: int):
         super().__init__()
@@ -43,9 +39,7 @@ class Attention(nn.Module):
         attn_weights = torch.softmax(self.attention(lstm_output).squeeze(2), dim=1)
         return torch.sum(lstm_output * attn_weights.unsqueeze(-1), dim=1)
 
-# =============================================================================
-# LSTM-модель с опциональным вниманием
-# =============================================================================
+
 class LSTMRegressor(nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int, num_layers: int,
                  output_dim: int, dropout: float, device: str, use_attention: bool = True):
@@ -92,9 +86,7 @@ class LSTMRegressor(nn.Module):
         out = self.layer_norm(out)
         return self.linear(out)
 
-# =============================================================================
-# Класс ранней остановки (Early Stopping)
-# =============================================================================
+
 class EarlyStopping:
     def __init__(self, patience=5, delta=0):
         self.patience = patience
@@ -114,9 +106,7 @@ class EarlyStopping:
             self.best_score = val_loss
             self.counter = 0
 
-# =============================================================================
-# Функция создания признаков: лаги, скользящие статистики и сезонные признаки
-# =============================================================================
+
 def create_features(df: pd.DataFrame, dt_col: str, target_col: str,
                     lag_periods: int, seasonality: str, window_sizes: List[int] = None) -> pd.DataFrame:
     df = df.copy()
@@ -139,17 +129,14 @@ def create_features(df: pd.DataFrame, dt_col: str, target_col: str,
     df.dropna(inplace=True)
     return df
 
-# =============================================================================
-# Функция обратного масштабирования для целевой переменной
-# =============================================================================
+
 def inverse_transform_target(scaler: MinMaxScaler, y_norm: np.ndarray, target_index: int = 0) -> np.ndarray:
     data_min = scaler.data_min_[target_index]
     data_max = scaler.data_max_[target_index]
     return y_norm * (data_max - data_min) + data_min
 
-# =============================================================================
-# Основная функция прогнозирования с использованием LSTM с вниманием и MC-Dropout
-# =============================================================================
+
+
 def lstm_forecast(
         df: pd.DataFrame,
         horizon: int,
@@ -164,7 +151,6 @@ def lstm_forecast(
         optimizer_type: str = 'AdamW',
         device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
 ) -> Union[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    # Задаём параметры по умолчанию и обновляем их из model_params
     default_params = {
         'seq_length': 12,
         'lag_periods': 6,
@@ -239,7 +225,6 @@ def lstm_forecast(
     else:
         raise ValueError("Unsupported loss function")
 
-    # Выбор оптимизатора на основе параметра optimizer_type
     if optimizer_type == 'AdamW':
         optimizer = optim.AdamW(model.parameters(), lr=params['learning_rate'], weight_decay=1e-4)
     elif optimizer_type == 'Adam':
@@ -314,7 +299,6 @@ def lstm_forecast(
     except Exception as foldError:
         raise foldError
 
-    # Если ни один fold не был использован, обучаем модель на полном наборе train_data
     if not trained:
         train_loader = DataLoader(
             TimeSeriesDataset(train_data, params['seq_length'], horizon),
@@ -378,7 +362,7 @@ def lstm_forecast(
 
     residuals = forecast_all['y_fact'] - forecast_all['y_forecast']
     std_val = residuals.std()
-    z_score = 1.96  # Для 95% доверительного интервала
+    z_score = 1.96 
     forecast_all['yhat_lower'] = forecast_all['y_forecast'] - z_score * std_val
     forecast_all['yhat_upper'] = forecast_all['y_forecast'] + z_score * std_val
 
@@ -412,7 +396,6 @@ def lstm_forecast(
         'yhat_upper': np.array(future_forecasts) + z_score * std_val
     })
 
-    # Заменяем возможные NaN и inf, чтобы JSON не выдавал ошибку
     forecast_all = forecast_all.replace([np.inf, -np.inf], np.nan).fillna(0)
     forecast_train = forecast_train.replace([np.inf, -np.inf], np.nan).fillna(0)
     forecast_test = forecast_test.replace([np.inf, -np.inf], np.nan).fillna(0)

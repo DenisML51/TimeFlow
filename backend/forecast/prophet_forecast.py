@@ -30,7 +30,6 @@ def prophet_forecast(df,
       - forecast_horizon: прогноз на горизонте, начинающийся с последней даты всей истории
     """
     try:
-        # 1. Предобработка данных
         data = df.copy()
         data[dt_name] = pd.to_datetime(data[dt_name])
         data.set_index(dt_name, inplace=True)
@@ -49,35 +48,25 @@ def prophet_forecast(df,
             train_df = df_prophet.iloc[:(n - test_size)].copy()
             test_df = df_prophet.iloc[(n - test_size):].copy()
         else:
-            # Нет реального разбиения, вся история - train, test пустой
             train_df = df_prophet.copy()
             test_df = pd.DataFrame(columns=['ds', 'y'])
 
-        # 2. Обучаем модель на train
         m = Prophet(interval_width=confidence_level / 100.0)
         m.fit(train_df)
 
-        # 3. Прогноз на всю историю (All History)
-        #    чтобы получить "fitted values" для каждой точки из df_prophet
         forecast_all = m.predict(df_prophet[['ds']])
         forecast_all = apply_confidence_intervals(forecast_all, confidence_level)
-        # Соединяем с фактом
         forecast_all = forecast_all.merge(df_prophet, on='ds', how='left')
         forecast_all.rename(columns={'y': 'y_fact', 'yhat': 'y_forecast'}, inplace=True)
         forecast_all['model_name'] = 'Prophet'
         forecast_all = forecast_all[['ds', 'y_fact', 'y_forecast', 'yhat_lower', 'yhat_upper', 'model_name']]
 
-        # 4. Прогноз на train-часть
         train_forecast = forecast_all[forecast_all['ds'].isin(train_df['ds'])].copy()
 
-        # 5. Прогноз на test-часть
         test_forecast = forecast_all[forecast_all['ds'].isin(test_df['ds'])].copy()
 
-        # 6. Прогноз на будущее (horizon)
-        # Здесь вместо того, чтобы начинать с конца train, мы начинаем с последней даты всей истории
         last_date = df_prophet['ds'].max()
         future = m.make_future_dataframe(periods=horizon, freq=freq, include_history=True)
-        # Оставляем только даты, которые идут после последней даты в исходных данных
         future = future[future['ds'] > last_date]
         future_fore = m.predict(future)
         future_fore = apply_confidence_intervals(future_fore, confidence_level)

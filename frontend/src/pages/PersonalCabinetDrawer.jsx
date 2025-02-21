@@ -77,7 +77,6 @@ const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="down" ref={ref} {...props} />;
 });
 
-Transition()
 
 // Обновлённая функция формирования сводки сессии (учтены модели, в том числе LSTM)
 const getSessionSummary = (state) => {

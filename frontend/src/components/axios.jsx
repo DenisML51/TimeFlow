@@ -9,12 +9,12 @@ const instance = axios.create({
 let isRefreshing = false;
 let failedQueue = [];
 
-const processQueue = (error, token = null) => {
+const processQueue = (error, data = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token);
+      prom.resolve(data);
     }
   });
   failedQueue = [];
@@ -24,33 +24,29 @@ instance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response && error.response.status === 401) {
-      if (originalRequest._retry) {
-        // Если уже была попытка обновления, просто отклоняем
-        return Promise.reject(error);
-      }
+    // Если получена ошибка 401 и запрос еще не был повторен
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      // Если уже идет процесс обновления, ставим запрос в очередь
       if (isRefreshing) {
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers["Authorization"] = "Bearer " + token;
-            return instance(originalRequest);
-          })
-          .catch((err) => {
-            return Promise.reject(err);
-          });
+        }).then(() => {
+          return instance(originalRequest);
+        }).catch((err) => {
+          return Promise.reject(err);
+        });
       }
+
       originalRequest._retry = true;
       isRefreshing = true;
       try {
-        const { data } = await instance.post("/auth/refresh");
-        // Если refresh успешен, установите новый access token в заголовки, если требуется
-        processQueue(null, data.access_token);
+        // Вызываем эндпоинт обновления токена; новые cookies установятся автоматически
+        await instance.post("/auth/refresh");
+        processQueue(null);
+        // После успешного обновления повторяем исходный запрос
         return instance(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        // Если refresh не удалось, больше не пытаться
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

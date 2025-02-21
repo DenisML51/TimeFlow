@@ -7,13 +7,10 @@
     <list default="true" id="2e1a8637-1a7f-4b70-a5e1-9d7aa5d3a7d1" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.db" beforeDir="false" afterPath="$PROJECT_DIR$/app.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/routes/prediction.py" beforeDir="false" afterPath="$PROJECT_DIR$/routes/prediction.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Dashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Dashboard.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/ForecastPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/ForecastPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Login.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Login.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/components/FileUpload.jsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/components/axios.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/components/axios.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/src/pages/PersonalCabinetDrawer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/PersonalCabinetDrawer.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Preprocessing.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Preprocessing.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -82,7 +79,7 @@
       <workItem from="1739447457063" duration="991000" />
       <workItem from="1739448471376" duration="3157000" />
       <workItem from="1739529826251" duration="6211000" />
-      <workItem from="1740093291683" duration="3513000" />
+      <workItem from="1740093291683" duration="4165000" />
     </task>
     <servers />
   </component>

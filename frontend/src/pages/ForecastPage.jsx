@@ -16,9 +16,6 @@ import {
   Slider,
   TextField,
   CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
   Tabs,
   Tab,
   Checkbox,
@@ -28,18 +25,12 @@ import {
   DialogContent,
   DialogActions,
   RadioGroup,
-  ToggleButtonGroup,
-  ToggleButton,
   Radio,
   Slide,
-  Collapse,
   Chip,
-  MenuItem
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
-  Close as CloseIcon,
-  Check as CheckIcon,
   TrendingDown as TrendingDownIcon,
   ShowChart as ShowChartIcon,
   Percent as PercentIcon,
@@ -55,6 +46,12 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { Canvas } from "@react-three/fiber";
 import { ParticleBackground } from "../components/home/ParticleBackground";
 import CategoricalDataBlock from "../components/CategoricalDataBlock";
+import { LSTMBlock } from "../components/models/LSTMBlock";
+import { GRUBlock } from "../components/models/GRUBlock";
+import { TransformerBlock } from "../components/models/TransformerBlock";
+import { SarimaBlock } from "../components/models/SARIMABlock";
+import { ProphetBlock } from "../components/models/ProphetBlock";
+import { XGBoostBlock } from "../components/models/XGBoostBlock";
 
 // =======================
 // Вспомогательные функции для графиков и метрик
@@ -221,1559 +218,6 @@ const AnimatedMetricChip = memo(function AnimatedMetricChip({ label, value, type
 });
 
 // =======================
-// Внутренние компоненты для ввода параметров моделей
-// =======================
-const ProphetBlock = memo(function ProphetBlock({
-  active,
-  setActive,
-  prophetParams,
-  setProphetParams,
-}) {
-  const [localSeasonalityMode, setLocalSeasonalityMode] = useState(
-    prophetParams.seasonality_mode || "additive"
-  );
-  const [paramsOpen, setParamsOpen] = useState(false);
-  const { setIsDirty } = useContext(DashboardContext);
-
-  const handleApply = useCallback(() => {
-    setProphetParams({ seasonality_mode: localSeasonalityMode });
-    setActive(true);
-    setIsDirty(true);
-    setParamsOpen(false);
-  }, [localSeasonalityMode, setProphetParams, setActive, setIsDirty]);
-
-  const handleCancel = useCallback(() => {
-    setActive(false);
-    setIsDirty(true);
-  }, [setActive, setIsDirty]);
-
-  const toggleParams = useCallback(() => {
-    // Если параметры закрыты и модель активна, деактивируем её
-    if (!paramsOpen && active) {
-      setActive(false);
-      setIsDirty(true);
-    }
-    setParamsOpen((prev) => !prev);
-  }, [paramsOpen, active, setActive, setIsDirty]);
-  const borderColor = active ? "#10A37F" : "#FF4444";
-
-  return (
-    <Paper
-      sx={{
-        p: 2,
-        mb: 2,
-        border: `2px solid ${borderColor}`,
-        borderRadius: 2,
-        transition: "border-color 0.2s",
-      }}
-    >
-      <Box
-        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-      >
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
-          Prophet
-        </Typography>
-        <Button onClick={toggleParams} variant="text" sx={{ color: "#10A37F" }}>
-          {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
-        </Button>
-      </Box>
-      <Collapse in={paramsOpen}>
-        <Box sx={{ mt: 1 }}>
-          <FormControl fullWidth size="small" sx={{ mb: 1 }}>
-            <InputLabel>Seasonality Mode</InputLabel>
-            <Select
-              value={localSeasonalityMode}
-              label="Seasonality Mode"
-              onChange={(e) => setLocalSeasonalityMode(e.target.value)}
-              sx={{ backgroundColor: "#2c2c2c", color: "#fff" }}
-            >
-              <MenuItem value="additive">Additive</MenuItem>
-              <MenuItem value="multiplicative">Multiplicative</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </Collapse>
-      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-        {active ? (
-          <Button
-            variant="outlined"
-            startIcon={<CloseIcon />}
-            sx={{
-              borderColor: "#FF4444",
-              color: "#FF4444",
-              "&:hover": { borderColor: "#FF4444", backgroundColor: "#ff44441a" },
-            }}
-            onClick={handleCancel}
-          >
-            Отключить
-          </Button>
-        ) : (
-          <Button
-            variant="outlined"
-            startIcon={<CheckIcon />}
-            sx={{
-              borderColor: "#10A37F",
-              color: "#10A37F",
-              "&:hover": { borderColor: "#10A37F", backgroundColor: "#10A37F1a" },
-            }}
-            onClick={handleApply}
-          >
-            Активировать
-          </Button>
-        )}
-      </Box>
-    </Paper>
-  );
-});
-
-const XGBoostBlock = memo(function XGBoostBlock({
-  active,
-  setActive,
-  xgboostParams,
-  setXgboostParams,
-}) {
-  const [localMaxDepth, setLocalMaxDepth] = useState(xgboostParams.max_depth || 6);
-  const [localLearningRate, setLocalLearningRate] = useState(
-    xgboostParams.learning_rate || 0.1
-  );
-  const [localNEstimators, setLocalNEstimators] = useState(
-    xgboostParams.n_estimators || 100
-  );
-  const [localSubsample, setLocalSubsample] = useState(xgboostParams.subsample || 1);
-  const [localColsampleBytree, setLocalColsampleBytree] = useState(
-    xgboostParams.colsample_bytree || 1
-  );
-  const [paramsOpen, setParamsOpen] = useState(false);
-  const { setIsDirty } = useContext(DashboardContext);
-
-  const handleApply = useCallback(() => {
-    setXgboostParams({
-      max_depth: localMaxDepth,
-      learning_rate: localLearningRate,
-      n_estimators: localNEstimators,
-      subsample: localSubsample,
-      colsample_bytree: localColsampleBytree,
-    });
-    setActive(true);
-    setIsDirty(true);
-    setParamsOpen(false); // скрываем параметры при активации
-  }, [
-    localMaxDepth,
-    localLearningRate,
-    localNEstimators,
-    localSubsample,
-    localColsampleBytree,
-    setXgboostParams,
-    setActive,
-    setIsDirty,
-    setParamsOpen,
-  ]);
-
-  const handleCancel = useCallback(() => {
-    setActive(false);
-    setIsDirty(true);
-  }, [setActive, setIsDirty]);
-
-  const toggleParams = useCallback(() => {
-    if (!paramsOpen && active) {
-      setActive(false);
-      setIsDirty(true);
-    }
-    setParamsOpen((prev) => !prev);
-  }, [paramsOpen, active, setActive, setIsDirty]);
-
-  const borderColor = active ? "#10A37F" : "#FF4444";
-
-  return (
-    <Paper
-      sx={{
-        p: 2,
-        mb: 2,
-        border: `2px solid ${borderColor}`,
-        borderRadius: 2,
-        transition: "border-color 0.2s",
-      }}
-    >
-      <Box
-        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-      >
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
-          XGBoost
-        </Typography>
-        <Button onClick={toggleParams} variant="text" sx={{ color: "#10A37F" }}>
-          {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
-        </Button>
-      </Box>
-      <Collapse in={paramsOpen}>
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" sx={{ color: "#fff" }} gutterBottom>
-            Max Depth: {localMaxDepth}
-          </Typography>
-          <Slider
-            value={localMaxDepth}
-            onChange={(e, val) => setLocalMaxDepth(val)}
-            min={1}
-            max={15}
-            step={1}
-            valueLabelDisplay="auto"
-            sx={{ color: "#10A37F", mb: 2 }}
-          />
-          <Typography variant="body2" sx={{ color: "#fff" }} gutterBottom>
-            Learning Rate: {localLearningRate}
-          </Typography>
-          <Slider
-            value={localLearningRate}
-            onChange={(e, val) => setLocalLearningRate(val)}
-            min={0.01}
-            max={1}
-            step={0.01}
-            valueLabelDisplay="auto"
-            sx={{ color: "#10A37F", mb: 2 }}
-          />
-          <Typography variant="body2" sx={{ color: "#fff" }} gutterBottom>
-            n_estimators: {localNEstimators}
-          </Typography>
-          <Slider
-            value={localNEstimators}
-            onChange={(e, val) => setLocalNEstimators(val)}
-            min={10}
-            max={500}
-            step={10}
-            valueLabelDisplay="auto"
-            sx={{ color: "#10A37F", mb: 2 }}
-          />
-          <Typography variant="body2" sx={{ color: "#fff" }} gutterBottom>
-            Subsample: {localSubsample}
-          </Typography>
-          <Slider
-            value={localSubsample}
-            onChange={(e, val) => setLocalSubsample(val)}
-            min={0.5}
-            max={1}
-            step={0.1}
-            valueLabelDisplay="auto"
-            sx={{ color: "#10A37F", mb: 2 }}
-          />
-          <Typography variant="body2" sx={{ color: "#fff" }} gutterBottom>
-            Colsample by tree: {localColsampleBytree}
-          </Typography>
-          <Slider
-            value={localColsampleBytree}
-            onChange={(e, val) => setLocalColsampleBytree(val)}
-            min={0.5}
-            max={1}
-            step={0.1}
-            valueLabelDisplay="auto"
-            sx={{ color: "#10A37F", mb: 2 }}
-          />
-        </Box>
-      </Collapse>
-      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 1 }}>
-        {active ? (
-          <Button
-            variant="outlined"
-            startIcon={<CloseIcon />}
-            onClick={handleCancel}
-            sx={{
-              borderColor: "#FF4444",
-              color: "#FF4444",
-              "&:hover": { borderColor: "#FF4444", backgroundColor: "#ff44441a" },
-            }}
-          >
-            Отключить
-          </Button>
-        ) : (
-          <Button
-            variant="outlined"
-            startIcon={<CheckIcon />}
-            onClick={handleApply}
-            sx={{
-              borderColor: "#10A37F",
-              color: "#10A37F",
-              "&:hover": { borderColor: "#10A37F", backgroundColor: "#10A37F1a" },
-            }}
-          >
-            Активировать
-          </Button>
-        )}
-      </Box>
-    </Paper>
-  );
-});
-
-const SarimaBlock = memo(function SarimaBlock({
-  active,
-  setActive,
-  sarimaParams,
-  setSarimaParams,
-}) {
-  const [localP, setLocalP] = useState(sarimaParams.p || 1);
-  const [localD, setLocalD] = useState(sarimaParams.d || 1);
-  const [localQ, setLocalQ] = useState(sarimaParams.q || 1);
-  const [localPSeasonal, setLocalPSeasonal] = useState(sarimaParams.P || 1);
-  const [localDSeasonal, setLocalDSeasonal] = useState(sarimaParams.D || 1);
-  const [localQSeasonal, setLocalQSeasonal] = useState(sarimaParams.Q || 1);
-  const [localS, setLocalS] = useState(sarimaParams.s || 12);
-  const [paramsOpen, setParamsOpen] = useState(false);
-  const { setIsDirty } = useContext(DashboardContext);
-
-  const handleApply = useCallback(() => {
-    setSarimaParams({
-      p: localP,
-      d: localD,
-      q: localQ,
-      P: localPSeasonal,
-      D: localDSeasonal,
-      Q: localQSeasonal,
-      s: localS,
-    });
-    setActive(true);
-    setIsDirty(true);
-    setParamsOpen(false); // скрываем параметры при активации
-  }, [
-    localP,
-    localD,
-    localQ,
-    localPSeasonal,
-    localDSeasonal,
-    localQSeasonal,
-    localS,
-    setSarimaParams,
-    setActive,
-    setIsDirty,
-  ]);
-
-  const handleCancel = useCallback(() => {
-    setActive(false);
-    setIsDirty(true);
-  }, [setActive, setIsDirty]);
-
-  const toggleParams = useCallback(() => {
-    if (!paramsOpen && active) {
-      setActive(false);
-      setIsDirty(true);
-    }
-    setParamsOpen((prev) => !prev);
-  }, [paramsOpen, active, setActive, setIsDirty]);
-
-  const borderColor = active ? "#10A37F" : "#FF4444";
-
-  return (
-    <Paper
-      sx={{
-        p: 2,
-        mb: 2,
-        border: `2px solid ${borderColor}`,
-        borderRadius: 2,
-        transition: "border-color 0.2s",
-      }}
-    >
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
-          SARIMA
-        </Typography>
-        <Box>
-          <Button onClick={toggleParams} variant="text" size="small" sx={{ color: "#10A37F" }}>
-            {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
-          </Button>
-        </Box>
-      </Box>
-      <Collapse in={paramsOpen}>
-        <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 2 }}>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>p</Typography>
-            <ToggleButtonGroup
-              value={localP}
-              exclusive
-              onChange={(e, newVal) => newVal !== null && setLocalP(newVal)}
-              size="small"
-              color="primary"
-            >
-              {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
-                  {val}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>d</Typography>
-            <ToggleButtonGroup
-              value={localD}
-              exclusive
-              onChange={(e, newVal) => newVal !== null && setLocalD(newVal)}
-              size="small"
-              color="primary"
-            >
-              {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
-                  {val}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>q</Typography>
-            <ToggleButtonGroup
-              value={localQ}
-              exclusive
-              onChange={(e, newVal) => newVal !== null && setLocalQ(newVal)}
-              size="small"
-              color="primary"
-            >
-              {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
-                  {val}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>P</Typography>
-            <ToggleButtonGroup
-              value={localPSeasonal}
-              exclusive
-              onChange={(e, newVal) => newVal !== null && setLocalPSeasonal(newVal)}
-              size="small"
-              color="primary"
-            >
-              {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
-                  {val}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>D</Typography>
-            <ToggleButtonGroup
-              value={localDSeasonal}
-              exclusive
-              onChange={(e, newVal) => newVal !== null && setLocalDSeasonal(newVal)}
-              size="small"
-              color="primary"
-            >
-              {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
-                  {val}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>Q</Typography>
-            <ToggleButtonGroup
-              value={localQSeasonal}
-              exclusive
-              onChange={(e, newVal) => newVal !== null && setLocalQSeasonal(newVal)}
-              size="small"
-              color="primary"
-            >
-              {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
-                  {val}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>
-              Seasonal Period (s)
-            </Typography>
-            <ToggleButtonGroup
-              value={localS}
-              exclusive
-              onChange={(e, newVal) => newVal !== null && setLocalS(newVal)}
-              size="small"
-              color="primary"
-            >
-              {[1, 2, 3, 4, 6, 12, 24].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
-                  {val}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-        </Box>
-      </Collapse>
-      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 1 }}>
-        {active ? (
-          <Button
-            startIcon={<CloseIcon />}
-            variant="outlined"
-            onClick={handleCancel}
-            sx={{
-              mr: 1,
-              borderColor: "#FF4444",
-              color: "#FF4444",
-              "&:hover": { borderColor: "#FF4444", backgroundColor: "#ff44441a" },
-            }}
-          >
-            Отключить
-          </Button>
-        ) : (
-          <Button
-            variant="outlined"
-            startIcon={<CheckIcon />}
-            onClick={handleApply}
-            sx={{
-              mr: 1,
-              borderColor: "#10A37F",
-              color: "#10A37F",
-              "&:hover": { borderColor: "#10A37F", backgroundColor: "#10A37F1a" },
-            }}
-          >
-            Активировать
-          </Button>
-        )}
-      </Box>
-    </Paper>
-  );
-});
-
-const LSTMBlock = memo(function LSTMBlock({
-  active,
-  setActive,
-  lstmParams,
-  setLstmParams
-}) {
-  const defaultParams = {
-    seq_length: 12,
-    lag_periods: 6,
-    window_sizes: "3,6,12",
-    num_layers: 2,
-    hidden_dim: 128,
-    dropout: 0.3,
-    batch_size: 64,
-    epochs: 200,
-    learning_rate: 0.001,
-    patience: 15,
-    delta: 0.001,
-    n_splits: 5,
-    use_attention: true,
-    mc_dropout: true,
-    mc_samples: 100,
-    optimizer_type: "AdamW",
-    criterion: "Huber",
-  };
-  const init = lstmParams || defaultParams;
-  const [localSeqLength, setLocalSeqLength] = useState(init.seq_length);
-  const [localLagPeriods, setLocalLagPeriods] = useState(init.lag_periods);
-  const [localWindowSizes, setLocalWindowSizes] = useState(init.window_sizes);
-  const [localNumLayers, setLocalNumLayers] = useState(init.num_layers);
-  const [localHiddenDim, setLocalHiddenDim] = useState(init.hidden_dim);
-  const [localDropout, setLocalDropout] = useState(init.dropout);
-  const [localBatchSize, setLocalBatchSize] = useState(init.batch_size);
-  const [localEpochs, setLocalEpochs] = useState(init.epochs);
-  const [localLearningRate, setLocalLearningRate] = useState(init.learning_rate);
-  const [localPatience, setLocalPatience] = useState(init.patience);
-  const [localDelta, setLocalDelta] = useState(init.delta);
-  const [localNSplits, setLocalNSplits] = useState(init.n_splits);
-  const [localUseAttention, setLocalUseAttention] = useState(init.use_attention);
-  const [localMCDropout, setLocalMCDropout] = useState(init.mc_dropout);
-  const [localMCSamples, setLocalMCSamples] = useState(init.mc_samples);
-  const [localOptimizer, setLocalOptimizer] = useState(init.optimizer_type || "AdamW");
-  const [localCriterion, setLocalCriterion] = useState(init.criterion || "Huber");
-  const [paramsOpen, setParamsOpen] = useState(false);
-  const { setIsDirty } = useContext(DashboardContext);
-
-  const handleApply = useCallback(() => {
-    setLstmParams({
-      seq_length: localSeqLength,
-      lag_periods: localLagPeriods,
-      window_sizes: localWindowSizes.split(',').map(val => parseInt(val.trim())).filter(val => !isNaN(val)),
-      num_layers: localNumLayers,
-      hidden_dim: localHiddenDim,
-      dropout: localDropout,
-      batch_size: localBatchSize,
-      epochs: localEpochs,
-      learning_rate: localLearningRate,
-      patience: localPatience,
-      delta: localDelta,
-      n_splits: localNSplits,
-      use_attention: localUseAttention,
-      mc_dropout: localMCDropout,
-      mc_samples: localMCSamples,
-      optimizer_type: localOptimizer,
-      criterion: localCriterion,
-    });
-    setActive(true);
-    setIsDirty(true);
-    setParamsOpen(false); // скрываем параметры при активации
-  }, [
-    localSeqLength,
-    localLagPeriods,
-    localWindowSizes,
-    localNumLayers,
-    localHiddenDim,
-    localDropout,
-    localBatchSize,
-    localEpochs,
-    localLearningRate,
-    localPatience,
-    localDelta,
-    localNSplits,
-    localUseAttention,
-    localMCDropout,
-    localMCSamples,
-    localOptimizer,
-    localCriterion,
-    setLstmParams,
-    setActive,
-    setIsDirty,
-    setParamsOpen,
-  ]);
-
-
-
-
-  const handleCancel = useCallback(() => {
-    setActive(false);
-    setIsDirty(true);
-  }, [setActive, setIsDirty]);
-
-  const toggleParams = useCallback(() => {
-    if (!paramsOpen && active) {
-      setActive(false);
-      setIsDirty(true);
-    }
-    setParamsOpen((prev) => !prev);
-  }, [paramsOpen, active, setActive, setIsDirty]);
-
-  const borderColor = active ? "#10A37F" : "#FF4444";
-
-  return (
-    <Paper sx={{ p: 2, mb: 2, border: `2px solid ${borderColor}`, borderRadius: 2 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
-          LSTM
-        </Typography>
-        <Button onClick={toggleParams} variant="text" sx={{ color: "#10A37F" }}>
-          {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
-        </Button>
-      </Box>
-      <Collapse in={paramsOpen}>
-        <Box
-          sx={{
-            mt: 1,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: 2,
-          }}
-        >
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Длина последовательности (seq_length)</Typography>
-            <Slider value={localSeqLength} onChange={(e, val) => setLocalSeqLength(val)} min={1} max={50} step={1} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Периоды задержки (lag_periods)</Typography>
-            <Slider value={localLagPeriods} onChange={(e, val) => setLocalLagPeriods(val)} min={1} max={50} step={1} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Размеры окон (window_sizes, через запятую)</Typography>
-            <TextField
-              value={localWindowSizes}
-              onChange={(e) => setLocalWindowSizes(e.target.value)}
-              variant="outlined"
-              fullWidth
-              sx={{ backgroundColor: "#2c2c2c", input: { color: "#fff" } }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Число слоёв (num_layers)</Typography>
-            <Slider value={localNumLayers} onChange={(e, val) => setLocalNumLayers(val)} min={1} max={4} step={1} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Размер скрытого состояния (hidden_dim)</Typography>
-            <Slider value={localHiddenDim} onChange={(e, val) => setLocalHiddenDim(val)} min={16} max={512} step={16} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Dropout</Typography>
-            <Slider value={localDropout} onChange={(e, val) => setLocalDropout(val)} min={0} max={1} step={0.05} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Batch Size</Typography>
-            <Slider value={localBatchSize} onChange={(e, val) => setLocalBatchSize(val)} min={8} max={128} step={8} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Эпохи (epochs)</Typography>
-            <Slider value={localEpochs} onChange={(e, val) => setLocalEpochs(val)} min={10} max={500} step={10} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Learning Rate</Typography>
-            <Slider value={localLearningRate} onChange={(e, val) => setLocalLearningRate(val)} min={0.0001} max={0.01} step={0.0001} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Patience</Typography>
-            <Slider value={localPatience} onChange={(e, val) => setLocalPatience(val)} min={1} max={50} step={1} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Delta</Typography>
-            <Slider value={localDelta} onChange={(e, val) => setLocalDelta(val)} min={0} max={0.01} step={0.0001} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>n_splits</Typography>
-            <Slider value={localNSplits} onChange={(e, val) => setLocalNSplits(val)} min={2} max={10} step={1} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <FormControlLabel
-              control={<Checkbox checked={localUseAttention} onChange={(e) => setLocalUseAttention(e.target.checked)} sx={{ color: "#10A37F" }} />}
-              label="Использовать внимание"
-            />
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <FormControlLabel
-              control={<Checkbox checked={localMCDropout} onChange={(e) => setLocalMCDropout(e.target.checked)} sx={{ color: "#10A37F" }} />}
-              label="MC-Dropout"
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>MC-Samples</Typography>
-            <Slider value={localMCSamples} onChange={(e, val) => setLocalMCSamples(val)} min={1} max={200} step={1} valueLabelDisplay="auto" sx={{ color: "#10A37F" }} />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Тип оптимизатора</Typography>
-            <TextField
-              select
-              fullWidth
-              variant="outlined"
-              value={localOptimizer}
-              onChange={(e) => setLocalOptimizer(e.target.value)}
-              sx={{ backgroundColor: "#2c2c2c", input: { color: "#fff" } }}
-            >
-              <MenuItem value="AdamW">AdamW</MenuItem>
-              <MenuItem value="Adam">Adam</MenuItem>
-              <MenuItem value="SGD">SGD</MenuItem>
-              <MenuItem value="RMSprop">RMSprop</MenuItem>
-            </TextField>
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Критерий</Typography>
-            <TextField
-              select
-              fullWidth
-              variant="outlined"
-              value={localCriterion}
-              onChange={(e) => setLocalCriterion(e.target.value)}
-              sx={{ backgroundColor: "#2c2c2c", input: { color: "#fff" } }}
-            >
-              <MenuItem value="MSE">MSE</MenuItem>
-              <MenuItem value="MAE">MAE</MenuItem>
-              <MenuItem value="Huber">Huber</MenuItem>
-            </TextField>
-          </Box>
-        </Box>
-      </Collapse>
-      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
-        {active ? (
-          <Button variant="outlined" startIcon={<CloseIcon />} onClick={handleCancel} sx={{ borderColor: "#FF4444", color: "#FF4444" }}>
-            Отключить
-          </Button>
-        ) : (
-          <Button variant="outlined" startIcon={<CheckIcon />} onClick={handleApply} sx={{ borderColor: "#10A37F", color: "#10A37F" }}>
-            Активировать
-          </Button>
-        )}
-      </Box>
-    </Paper>
-  );
-});
-
-const GRUBlock = memo(function GRUBlock({
-  active,
-  setActive,
-  gruParams,
-  setGruParams
-}) {
-  // Значения по умолчанию для модели GRU
-  const defaultParams = {
-    seq_length: 24,
-    lag_periods: 12,
-    window_sizes: "6,12,24", // вводится как строка; при применении преобразуется в массив чисел
-    num_layers: 3,
-    hidden_dim: 256,
-    dropout: 0.4,
-    batch_size: 128,
-    epochs: 300,
-    learning_rate: 0.0005,
-    patience: 20,
-    delta: 0.001,
-    n_splits: 5,
-    bidirectional: true,
-    residual_connections: true,
-    use_layer_norm: true,
-    mc_dropout: true,
-    mc_samples: 200,
-    optimizer_type: "AdamW",
-    criterion: "Huber"
-  };
-
-  const init = gruParams || defaultParams;
-
-  // Локальные состояния для всех параметров модели
-  const [localSeqLength, setLocalSeqLength] = useState(init.seq_length);
-  const [localLagPeriods, setLocalLagPeriods] = useState(init.lag_periods);
-  const [localWindowSizes, setLocalWindowSizes] = useState(init.window_sizes);
-  const [localNumLayers, setLocalNumLayers] = useState(init.num_layers);
-  const [localHiddenDim, setLocalHiddenDim] = useState(init.hidden_dim);
-  const [localDropout, setLocalDropout] = useState(init.dropout);
-  const [localBatchSize, setLocalBatchSize] = useState(init.batch_size);
-  const [localEpochs, setLocalEpochs] = useState(init.epochs);
-  const [localLearningRate, setLocalLearningRate] = useState(init.learning_rate);
-  const [localPatience, setLocalPatience] = useState(init.patience);
-  const [localDelta, setLocalDelta] = useState(init.delta);
-  const [localNSplits, setLocalNSplits] = useState(init.n_splits);
-  const [localBidirectional, setLocalBidirectional] = useState(init.bidirectional);
-  const [localResidualConnections, setLocalResidualConnections] = useState(init.residual_connections);
-  const [localUseLayerNorm, setLocalUseLayerNorm] = useState(init.use_layer_norm);
-  const [localMCDropout, setLocalMCDropout] = useState(init.mc_dropout);
-  const [localMCSamples, setLocalMCSamples] = useState(init.mc_samples);
-  const [localOptimizer, setLocalOptimizer] = useState(init.optimizer_type);
-  const [localCriterion, setLocalCriterion] = useState(init.criterion);
-
-  const { setIsDirty } = useContext(DashboardContext);
-  const [paramsOpen, setParamsOpen] = useState(false);
-
-  // Функция применения настроек. Если localWindowSizes является строкой, она разбивается на массив чисел.
-  const handleApply = useCallback(() => {
-    const parsedWindowSizes = Array.isArray(localWindowSizes)
-      ? localWindowSizes
-      : typeof localWindowSizes === "string"
-      ? localWindowSizes
-          .split(",")
-          .map((val) => parseInt(val.trim()))
-          .filter((val) => !isNaN(val))
-      : [];
-
-    setGruParams({
-      seq_length: localSeqLength,
-      lag_periods: localLagPeriods,
-      window_sizes: parsedWindowSizes,
-      num_layers: localNumLayers,
-      hidden_dim: localHiddenDim,
-      dropout: localDropout,
-      batch_size: localBatchSize,
-      epochs: localEpochs,
-      learning_rate: localLearningRate,
-      patience: localPatience,
-      delta: localDelta,
-      n_splits: localNSplits,
-      bidirectional: localBidirectional,
-      residual_connections: localResidualConnections,
-      use_layer_norm: localUseLayerNorm,
-      mc_dropout: localMCDropout,
-      mc_samples: localMCSamples,
-      optimizer_type: localOptimizer,
-      criterion: localCriterion,
-    });
-    setActive(true);
-    setIsDirty(true);
-    setParamsOpen(false);
-  }, [
-    localSeqLength,
-    localLagPeriods,
-    localWindowSizes,
-    localNumLayers,
-    localHiddenDim,
-    localDropout,
-    localBatchSize,
-    localEpochs,
-    localLearningRate,
-    localPatience,
-    localDelta,
-    localNSplits,
-    localBidirectional,
-    localResidualConnections,
-    localUseLayerNorm,
-    localMCDropout,
-    localMCSamples,
-    localOptimizer,
-    localCriterion,
-    setGruParams,
-    setActive,
-    setIsDirty,
-  ]);
-
-  const handleCancel = useCallback(() => {
-    setActive(false);
-    setIsDirty(true);
-  }, [setActive, setIsDirty]);
-
-  const toggleParams = useCallback(() => {
-    if (!paramsOpen && active) {
-      setActive(false);
-      setIsDirty(true);
-    }
-    setParamsOpen((prev) => !prev);
-  }, [paramsOpen, active, setActive, setIsDirty]);
-
-  return (
-    <Paper
-      sx={{
-        p: 2,
-        mb: 2,
-        border: `2px solid ${active ? "#10A37F" : "#FF4444"}`,
-        borderRadius: 2,
-      }}
-    >
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
-          GRU
-        </Typography>
-        <Button onClick={toggleParams} variant="text" sx={{ color: "#10A37F" }}>
-          {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
-        </Button>
-      </Box>
-      <Collapse in={paramsOpen}>
-        <Box
-          sx={{
-            mt: 1,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: 2,
-          }}
-        >
-          {/* Числовые параметры */}
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              Длина последовательности (seq_length)
-            </Typography>
-            <Slider
-              value={localSeqLength}
-              onChange={(e, val) => setLocalSeqLength(val)}
-              min={1}
-              max={50}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              Периоды задержки (lag_periods)
-            </Typography>
-            <Slider
-              value={localLagPeriods}
-              onChange={(e, val) => setLocalLagPeriods(val)}
-              min={1}
-              max={50}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              Размеры окон (window_sizes, через запятую)
-            </Typography>
-            <TextField
-              value={localWindowSizes}
-              onChange={(e) => setLocalWindowSizes(e.target.value)}
-              variant="outlined"
-              fullWidth
-              sx={{
-                backgroundColor: "#2c2c2c",
-                input: { color: "#fff" },
-              }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              Число слоёв (num_layers)
-            </Typography>
-            <Slider
-              value={localNumLayers}
-              onChange={(e, val) => setLocalNumLayers(val)}
-              min={1}
-              max={10}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              Размер скрытого состояния (hidden_dim)
-            </Typography>
-            <Slider
-              value={localHiddenDim}
-              onChange={(e, val) => setLocalHiddenDim(val)}
-              min={16}
-              max={512}
-              step={16}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              Dropout
-            </Typography>
-            <Slider
-              value={localDropout}
-              onChange={(e, val) => setLocalDropout(val)}
-              min={0}
-              max={1}
-              step={0.05}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              Batch Size
-            </Typography>
-            <Slider
-              value={localBatchSize}
-              onChange={(e, val) => setLocalBatchSize(val)}
-              min={8}
-              max={256}
-              step={8}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              Эпохи (epochs)
-            </Typography>
-            <Slider
-              value={localEpochs}
-              onChange={(e, val) => setLocalEpochs(val)}
-              min={10}
-              max={500}
-              step={10}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              Learning Rate
-            </Typography>
-            <Slider
-              value={localLearningRate}
-              onChange={(e, val) => setLocalLearningRate(val)}
-              min={0.0001}
-              max={0.01}
-              step={0.0001}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              Patience
-            </Typography>
-            <Slider
-              value={localPatience}
-              onChange={(e, val) => setLocalPatience(val)}
-              min={1}
-              max={50}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              Delta
-            </Typography>
-            <Slider
-              value={localDelta}
-              onChange={(e, val) => setLocalDelta(val)}
-              min={0}
-              max={0.01}
-              step={0.0001}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              n_splits
-            </Typography>
-            <Slider
-              value={localNSplits}
-              onChange={(e, val) => setLocalNSplits(val)}
-              min={2}
-              max={10}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          {/* Булевы параметры */}
-          <Box>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={localBidirectional}
-                  onChange={(e) => setLocalBidirectional(e.target.checked)}
-                  sx={{ color: "#10A37F" }}
-                />
-              }
-              label="Bidirectional"
-            />
-          </Box>
-          <Box>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={localResidualConnections}
-                  onChange={(e) => setLocalResidualConnections(e.target.checked)}
-                  sx={{ color: "#10A37F" }}
-                />
-              }
-              label="Residual Connections"
-            />
-          </Box>
-          <Box>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={localUseLayerNorm}
-                  onChange={(e) => setLocalUseLayerNorm(e.target.checked)}
-                  sx={{ color: "#10A37F" }}
-                />
-              }
-              label="Layer Normalization"
-            />
-          </Box>
-          <Box>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={localMCDropout}
-                  onChange={(e) => setLocalMCDropout(e.target.checked)}
-                  sx={{ color: "#10A37F" }}
-                />
-              }
-              label="MC-Dropout"
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>
-              MC-Samples
-            </Typography>
-            <Slider
-              value={localMCSamples}
-              onChange={(e, val) => setLocalMCSamples(val)}
-              min={1}
-              max={200}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          {/* Выбор оптимизатора */}
-          <Box>
-            <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px" }}>
-              <InputLabel sx={{ color: "#fff" }}>Optimizer</InputLabel>
-              <Select
-                value={localOptimizer}
-                label="Optimizer"
-                onChange={(e) => setLocalOptimizer(e.target.value)}
-                sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
-              >
-                <MenuItem value="AdamW">AdamW</MenuItem>
-                <MenuItem value="Adam">Adam</MenuItem>
-                <MenuItem value="SGD">SGD</MenuItem>
-                <MenuItem value="RMSprop">RMSprop</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-          {/* Выбор критерия */}
-          <Box>
-            <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px" }}>
-              <InputLabel sx={{ color: "#fff" }}>Criterion</InputLabel>
-              <Select
-                value={localCriterion}
-                label="Criterion"
-                onChange={(e) => setLocalCriterion(e.target.value)}
-                sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
-              >
-                <MenuItem value="MSE">MSE</MenuItem>
-                <MenuItem value="MAE">MAE</MenuItem>
-                <MenuItem value="Huber">Huber</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        </Box>
-      </Collapse>
-      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
-        {active ? (
-          <Button
-            variant="outlined"
-            startIcon={<CloseIcon />}
-            onClick={handleCancel}
-            sx={{ borderColor: "#FF4444", color: "#FF4444" }}
-          >
-            Отключить
-          </Button>
-        ) : (
-          <Button
-            variant="outlined"
-            startIcon={<CheckIcon />}
-            onClick={handleApply}
-            sx={{ borderColor: "#10A37F", color: "#10A37F" }}
-          >
-            Активировать
-          </Button>
-        )}
-      </Box>
-    </Paper>
-  );
-});
-
-const TransformerBlock = memo(function TransformerBlock({
-  active,
-  setActive,
-  transformerParams,
-  setTransformerParams,
-}) {
-  // Значения по умолчанию для Transformer, включая уникальные параметры
-  const defaultTransformerParams = {
-    seq_length: 24,
-    lag_periods: 12,
-    window_sizes: "6,12,24",
-    d_model: 256,
-    nhead: 8,
-    num_encoder_layers: 3,
-    num_decoder_layers: 1,
-    dim_feedforward: 512,
-    dropout: 0.2,
-    batch_size: 64,
-    epochs: 150,
-    learning_rate: 0.0005,
-    optimizer_type: "AdamW",
-    criterion: "MSE",
-    patience: 20,
-    delta: 0.001,
-    n_splits: 3,
-    mc_dropout: true,
-    mc_samples: 100,
-    use_encoder: true,
-    use_decoder: false,
-    activation: "gelu",
-  };
-
-  // Если transformerParams не определён, используем значения по умолчанию
-  const currentTransformerParams = transformerParams || defaultTransformerParams;
-
-  // Инициализация локальных состояний
-  const [localSeqLength, setLocalSeqLength] = useState(currentTransformerParams.seq_length);
-  const [localLagPeriods, setLocalLagPeriods] = useState(currentTransformerParams.lag_periods);
-  const [localWindowSizes, setLocalWindowSizes] = useState(currentTransformerParams.window_sizes);
-  const [localDModel, setLocalDModel] = useState(currentTransformerParams.d_model);
-  const [localNHead, setLocalNHead] = useState(currentTransformerParams.nhead);
-  const [localNumEncoderLayers, setLocalNumEncoderLayers] = useState(currentTransformerParams.num_encoder_layers);
-  const [localNumDecoderLayers, setLocalNumDecoderLayers] = useState(currentTransformerParams.num_decoder_layers);
-  const [localDimFeedforward, setLocalDimFeedforward] = useState(currentTransformerParams.dim_feedforward);
-  const [localDropout, setLocalDropout] = useState(currentTransformerParams.dropout);
-  const [localBatchSize, setLocalBatchSize] = useState(currentTransformerParams.batch_size);
-  const [localEpochs, setLocalEpochs] = useState(currentTransformerParams.epochs);
-  const [localLearningRate, setLocalLearningRate] = useState(currentTransformerParams.learning_rate);
-  const [localOptimizer, setLocalOptimizer] = useState(currentTransformerParams.optimizer_type);
-  const [localCriterion, setLocalCriterion] = useState(currentTransformerParams.criterion);
-
-  const [paramsOpen, setParamsOpen] = useState(false);
-  const { setIsDirty } = useContext(DashboardContext);
-
-  const handleApply = useCallback(() => {
-    setTransformerParams({
-      seq_length: localSeqLength,
-      lag_periods: localLagPeriods,
-      window_sizes: localWindowSizes,
-      d_model: localDModel,
-      nhead: localNHead,
-      num_encoder_layers: localNumEncoderLayers,
-      num_decoder_layers: localNumDecoderLayers,
-      dim_feedforward: localDimFeedforward,
-      dropout: localDropout,
-      batch_size: localBatchSize,
-      epochs: localEpochs,
-      learning_rate: localLearningRate,
-      optimizer_type: localOptimizer,
-      criterion: localCriterion,
-      // Подставляем либо существующие, либо дефолтные значения для остальных параметров:
-      patience: transformerParams?.patience ?? defaultTransformerParams.patience,
-      delta: transformerParams?.delta ?? defaultTransformerParams.delta,
-      n_splits: transformerParams?.n_splits ?? defaultTransformerParams.n_splits,
-      mc_dropout: transformerParams?.mc_dropout ?? defaultTransformerParams.mc_dropout,
-      mc_samples: transformerParams?.mc_samples ?? defaultTransformerParams.mc_samples,
-      use_encoder: transformerParams?.use_encoder ?? defaultTransformerParams.use_encoder,
-      use_decoder: transformerParams?.use_decoder ?? defaultTransformerParams.use_decoder,
-      activation: transformerParams?.activation ?? defaultTransformerParams.activation,
-    });
-    setActive(true);
-    setIsDirty(true);
-    setParamsOpen(false);
-  }, [
-    localSeqLength,
-    localLagPeriods,
-    localWindowSizes,
-    localDModel,
-    localNHead,
-    localNumEncoderLayers,
-    localNumDecoderLayers,
-    localDimFeedforward,
-    localDropout,
-    localBatchSize,
-    localEpochs,
-    localLearningRate,
-    localOptimizer,
-    localCriterion,
-    setTransformerParams,
-    setActive,
-    setIsDirty,
-    transformerParams,
-  ]);
-
-  const handleCancel = useCallback(() => {
-    setActive(false);
-    setIsDirty(true);
-  }, [setActive, setIsDirty]);
-
-  const toggleParams = useCallback(() => {
-    if (!paramsOpen && active) {
-      setActive(false);
-      setIsDirty(true);
-    }
-    setParamsOpen((prev) => !prev);
-  }, [paramsOpen, active, setActive, setIsDirty]);
-
-  const borderColor = active ? "#10A37F" : "#FF4444";
-
-  return (
-    <Paper sx={{ p: 2, mb: 2, border: `2px solid ${borderColor}`, borderRadius: 2 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
-          Transformer
-        </Typography>
-        <Button onClick={toggleParams} variant="text" sx={{ color: "#10A37F" }}>
-          {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
-        </Button>
-      </Box>
-      <Collapse in={paramsOpen}>
-        <Box
-          sx={{
-            mt: 1,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: 2,
-          }}
-        >
-          {/* Параметры последовательности */}
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Длина последовательности (seq_length)</Typography>
-            <Slider
-              value={localSeqLength}
-              onChange={(e, val) => setLocalSeqLength(val)}
-              min={1}
-              max={50}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Периоды задержки (lag_periods)</Typography>
-            <Slider
-              value={localLagPeriods}
-              onChange={(e, val) => setLocalLagPeriods(val)}
-              min={1}
-              max={50}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Размеры окон (window_sizes)</Typography>
-            <TextField
-              value={localWindowSizes}
-              onChange={(e) => setLocalWindowSizes(e.target.value)}
-              variant="outlined"
-              fullWidth
-              sx={{ backgroundColor: "#2c2c2c", input: { color: "#fff" } }}
-            />
-          </Box>
-          {/* Параметры архитектуры Transformer */}
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>d_model</Typography>
-            <Slider
-              value={localDModel}
-              onChange={(e, val) => setLocalDModel(val)}
-              min={128}
-              max={512}
-              step={16}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>nhead</Typography>
-            <Slider
-              value={localNHead}
-              onChange={(e, val) => setLocalNHead(val)}
-              min={1}
-              max={16}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Encoder Layers</Typography>
-            <Slider
-              value={localNumEncoderLayers}
-              onChange={(e, val) => setLocalNumEncoderLayers(val)}
-              min={1}
-              max={6}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Decoder Layers</Typography>
-            <Slider
-              value={localNumDecoderLayers}
-              onChange={(e, val) => setLocalNumDecoderLayers(val)}
-              min={0}
-              max={4}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>dim_feedforward</Typography>
-            <Slider
-              value={localDimFeedforward}
-              onChange={(e, val) => setLocalDimFeedforward(val)}
-              min={256}
-              max={1024}
-              step={32}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Dropout</Typography>
-            <Slider
-              value={localDropout}
-              onChange={(e, val) => setLocalDropout(val)}
-              min={0}
-              max={1}
-              step={0.05}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          {/* Параметры обучения */}
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Batch Size</Typography>
-            <Slider
-              value={localBatchSize}
-              onChange={(e, val) => setLocalBatchSize(val)}
-              min={8}
-              max={256}
-              step={8}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Эпохи (epochs)</Typography>
-            <Slider
-              value={localEpochs}
-              onChange={(e, val) => setLocalEpochs(val)}
-              min={10}
-              max={500}
-              step={10}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Learning Rate</Typography>
-            <Slider
-              value={localLearningRate}
-              onChange={(e, val) => setLocalLearningRate(val)}
-              min={0.0001}
-              max={0.01}
-              step={0.0001}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          {/* Выбор оптимайзера */}
-          <Box>
-            <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px" }}>
-              <InputLabel sx={{ color: "#fff" }}>Optimizer</InputLabel>
-              <Select
-                value={localOptimizer}
-                label="Optimizer"
-                onChange={(e) => setLocalOptimizer(e.target.value)}
-                sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
-              >
-                <MenuItem value="AdamW">AdamW</MenuItem>
-                <MenuItem value="Adam">Adam</MenuItem>
-                <MenuItem value="SGD">SGD</MenuItem>
-                <MenuItem value="RMSprop">RMSprop</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-          {/* Выбор критерия */}
-          <Box>
-            <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px" }}>
-              <InputLabel sx={{ color: "#fff" }}>Criterion</InputLabel>
-              <Select
-                value={localCriterion}
-                label="Criterion"
-                onChange={(e) => setLocalCriterion(e.target.value)}
-                sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
-              >
-                <MenuItem value="MSE">MSE</MenuItem>
-                <MenuItem value="MAE">MAE</MenuItem>
-                <MenuItem value="Huber">Huber</MenuItem>
-                <MenuItem value="Huber">SmoothL1</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        </Box>
-      </Collapse>
-      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
-        {active ? (
-          <Button
-            variant="outlined"
-            startIcon={<CloseIcon />}
-            onClick={handleCancel}
-            sx={{ borderColor: "#FF4444", color: "#FF4444" }}
-          >
-            Отключить
-          </Button>
-        ) : (
-          <Button
-            variant="outlined"
-            startIcon={<CheckIcon />}
-            onClick={handleApply}
-            sx={{ borderColor: "#10A37F", color: "#10A37F" }}
-          >
-            Активировать
-          </Button>
-        )}
-      </Box>
-
-    </Paper>
-  );
-});
-
-
-
-// =======================
 // Основной компонент ForecastPage
 // =======================
 export default function ForecastPage() {
@@ -1787,7 +231,7 @@ export default function ForecastPage() {
     selectedColumns,
     filteredData,
     setIsDirty,
-    filters
+    filters,
   } = useContext(DashboardContext);
 
   const stateModifiedData = location.state?.modifiedData || [];
@@ -1835,6 +279,8 @@ export default function ForecastPage() {
   const [freqError, setFreqError] = useState("");
   const validFreqRegex = /^[A-Z]+(-[A-Z]+)?$/;
   const [allPossibleCols, setAllPossibleCols] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [csvCategoricalCols, setCsvCategoricalCols] = useState([]);
 
   useEffect(() => {
     const colSet = new Set(["ds", "y_fact"]);
@@ -1856,6 +302,22 @@ export default function ForecastPage() {
     });
     setAllPossibleCols(Array.from(colSet));
   }, [forecastResults]);
+
+  const categoricalCandidates = useMemo(() => {
+    if (!filteredData || filteredData.length === 0) return [];
+    const candidates = [];
+    const keys = Object.keys(filteredData[0]);
+    keys.forEach((key) => {
+      // Если столбец не является столбцом прогнозных результатов
+      if (!allPossibleCols.includes(key)) {
+        const uniqueSet = new Set(filteredData.map((row) => row[key]));
+        if (uniqueSet.size === 1) {
+          candidates.push({ column: key, value: [...uniqueSet][0] });
+        }
+      }
+    });
+    return candidates;
+  }, [filteredData, allPossibleCols]);
 
   const mergedRows = useMemo(() => {
     const bigMap = new Map();
@@ -1906,24 +368,46 @@ export default function ForecastPage() {
   }, [forecastResults, commonTab]);
 
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
-  const [previewData, setPreviewData] = useState([]);
+
+  // Вычисляем previewData через useMemo для мгновенного обновления при изменениях состояний
+  const computedPreviewData = useMemo(() => {
+    const finalForecastCols = csvSelectedCols.length ? csvSelectedCols : allPossibleCols;
+    return mergedRows.slice(0, 5).map((r) => {
+      const obj = {};
+      finalForecastCols.forEach((col) => {
+        obj[col] = r[col] !== undefined ? r[col] : "";
+      });
+      csvCategoricalCols.forEach((col) => {
+        const candidate = categoricalCandidates.find(c => c.column === col);
+        obj[col] = candidate ? candidate.value : "";
+      });
+      return obj;
+    });
+  }, [mergedRows, csvSelectedCols, csvCategoricalCols, allPossibleCols, categoricalCandidates]);
 
   const handleOpenCsvDialog = useCallback(() => {
-    setPreviewData(mergedRows.slice(0, 5));
+    // Просто открываем диалог – previewData вычисляется автоматически
     setCsvDialogOpen(true);
-  }, [mergedRows]);
+  }, []);
 
   const handleCloseCsvDialog = useCallback(() => setCsvDialogOpen(false), []);
 
   const handleDownloadSelectedCols = useCallback(() => {
-    const finalCols = csvSelectedCols.length ? csvSelectedCols : allPossibleCols;
+    const finalForecastCols = csvSelectedCols.length ? csvSelectedCols : allPossibleCols;
+    const finalCols = [...finalForecastCols, ...csvCategoricalCols];
+
     const finalData = mergedRows.map((r) => {
       const obj = {};
-      finalCols.forEach((col) => {
+      finalForecastCols.forEach((col) => {
         obj[col] = r[col] !== undefined ? r[col] : "";
+      });
+      csvCategoricalCols.forEach((col) => {
+        const candidate = categoricalCandidates.find(c => c.column === col);
+        obj[col] = candidate ? candidate.value : "";
       });
       return obj;
     });
+
     if (fileType === "csv") {
       const header = finalCols.join(",");
       const rows = finalData.map((row) =>
@@ -1939,7 +423,7 @@ export default function ForecastPage() {
       XLSX.writeFile(wb, "forecast.xlsx");
     }
     setCsvDialogOpen(false);
-  }, [allPossibleCols, csvSelectedCols, fileType, mergedRows]);
+  }, [allPossibleCols, csvSelectedCols, fileType, mergedRows, csvCategoricalCols, categoricalCandidates]);
 
   const handleCommonTabChange = useCallback((e, val) => {
     setForecastPageState((prev) => ({ ...prev, commonTab: val }));
@@ -2048,7 +532,15 @@ export default function ForecastPage() {
           <CategoricalDataBlock filteredData={filteredData} selectedColumns={selectedColumns} filters={filters} />
         </Box>
         <Box sx={{ position: "relative", width: "100%", height: "calc(100vh - 56px)", alignItems: "center" }}>
-          <Box sx={{ flexGrow: 1, transition: "margin-right 0.3s", marginRight: modelsOpen ? "336px" : 0, overflowY: "auto", "&::-webkit-scrollbar": { display: "none" } }}>
+          <Box
+            sx={{
+              flexGrow: 1,
+              transition: "margin-right 0.3s",
+              marginRight: modelsOpen ? "336px" : 0,
+              overflowY: "auto",
+              "&::-webkit-scrollbar": { display: "none" },
+            }}
+          >
             <Paper
               sx={{
                 background: "rgba(255, 255, 255, 0.05)",
@@ -2146,6 +638,7 @@ export default function ForecastPage() {
                       setFreqError("Некорректная частота");
                       return;
                     }
+                    setIsLoading(true);
                     setForecastPageState((prev) => ({
                       ...prev,
                       horizon: localCommonParams.horizon,
@@ -2186,7 +679,6 @@ export default function ForecastPage() {
                           uniqueParams: transformerParams,
                         });
 
-
                       const newResults = [];
                       for (let m of activeModels) {
                         const payload = {
@@ -2213,14 +705,14 @@ export default function ForecastPage() {
                       setForecastResults(newResults);
                     } catch (err) {
                       console.error("Ошибка прогноза:", err);
+                    } finally {
+                      setIsLoading(false);
                     }
                   }}
-
-                  disabled={false}
+                  disabled={isLoading}
                   sx={{ borderRadius: "16px", backgroundColor: "#10A37F" }}
                 >
-                  <CircularProgress size={24} sx={{ display: "none" }} />
-                  Построить прогноз
+                  {isLoading ? <CircularProgress size={24} /> : "Построить прогноз"}
                 </Button>
               </Box>
             </Paper>
@@ -2346,11 +838,13 @@ export default function ForecastPage() {
                         {subTab === 1 && (
                           <Box sx={{ height: 400 }}>
                             <Line data={chartTrain} options={chartOptions} />
-                            {metricsTrain && (
-                              <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-                                <Typography>MAE: {metricsTrain.mae.toFixed(4)}</Typography>
-                                <Typography>RMSE: {metricsTrain.rmse.toFixed(4)}</Typography>
-                                {metricsTrain.mape && <Typography>MAPE: {metricsTrain.mape.toFixed(2)}%</Typography>}
+                            {metricsAll && (
+                              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2, pt: 3, pb: 10 }}>
+                                <AnimatedMetricChip label="MAE" value={metricsTrain.mae} type="mae" icon={<TrendingDownIcon />} />
+                                <AnimatedMetricChip label="RMSE" value={metricsTrain.rmse} type="rmse" icon={<ShowChartIcon />} />
+                                {metricsAll.mape !== null && (
+                                  <AnimatedMetricChip label="MAPE" value={metricsTrain.mape} type="mape" icon={<PercentIcon />} />
+                                )}
                               </Box>
                             )}
                           </Box>
@@ -2358,11 +852,13 @@ export default function ForecastPage() {
                         {subTab === 2 && (
                           <Box sx={{ height: 400 }}>
                             <Line data={chartTest} options={chartOptions} />
-                            {metricsTest && (
-                              <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
-                                <Typography>MAE: {metricsTest.mae.toFixed(4)}</Typography>
-                                <Typography>RMSE: {metricsTest.rmse.toFixed(4)}</Typography>
-                                {metricsTest.mape && <Typography>MAPE: {metricsTest.mape.toFixed(2)}%</Typography>}
+                            {metricsAll && (
+                              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2, pt: 3, pb: 10 }}>
+                                <AnimatedMetricChip label="MAE" value={metricsTest.mae} type="mae" icon={<TrendingDownIcon />} />
+                                <AnimatedMetricChip label="RMSE" value={metricsTest.rmse} type="rmse" icon={<ShowChartIcon />} />
+                                {metricsAll.mape !== null && (
+                                  <AnimatedMetricChip label="MAPE" value={metricsTest.mape} type="mape" icon={<PercentIcon />} />
+                                )}
                               </Box>
                             )}
                           </Box>
@@ -2444,9 +940,9 @@ export default function ForecastPage() {
               />
               <GRUBlock
                 active={gruActive}
-                setActive={(val) => setForecastPageState(prev => ({ ...prev, gruActive: val }))}
+                setActive={(val) => setForecastPageState((prev) => ({ ...prev, gruActive: val }))}
                 gruParams={gruParams}
-                setGruParams={(params) => setForecastPageState(prev => ({ ...prev, gruParams: params }))}
+                setGruParams={(params) => setForecastPageState((prev) => ({ ...prev, gruParams: params }))}
               />
               <TransformerBlock
                 active={transformerActive}
@@ -2458,102 +954,220 @@ export default function ForecastPage() {
                   setForecastPageState((prev) => ({ ...prev, transformerParams: params }))
                 }
               />
-
             </Box>
           </Slide>
         </Box>
-        <Dialog open={csvDialogOpen} onClose={handleCloseCsvDialog} fullWidth maxWidth="md">
-          <DialogTitle>Сохранить результаты</DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              Выберите столбцы и формат файла:
-            </Typography>
-            <RadioGroup
-              row
-              value={fileType}
-              onChange={(e) =>
-                setForecastPageState((prev) => ({ ...prev, fileType: e.target.value }))
+        <Dialog
+          open={csvDialogOpen}
+          onClose={handleCloseCsvDialog}
+          fullWidth
+          maxWidth="md"
+          PaperProps={{
+            sx: {
+              background: 'rgba(32, 32, 32, 0.9)',
+              backdropFilter: 'blur(12px)',
+              borderRadius: '16px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+              '& .MuiDialogTitle-root': {
+                color: '#fff',
+                fontWeight: 700,
+                background: 'linear-gradient(45deg, #10A37F 30%, #00ff88 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
               }
-              sx={{ mb: 2 }}
-            >
-              <FormControlLabel value="csv" control={<Radio />} label="CSV" />
-              <FormControlLabel value="xlsx" control={<Radio />} label="XLSX" />
-            </RadioGroup>
-            {!allPossibleCols.length ? (
-              <Typography>Нет доступных столбцов</Typography>
-            ) : (
-              <>
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-                  {allPossibleCols.map((col) => (
-                    <FormControlLabel
-                      key={col}
-                      control={
-                        <Checkbox
-                          checked={csvSelectedCols.includes(col)}
-                          onChange={(e) => {
-                            if (e.target.checked)
-                              setForecastPageState((prev) => ({
-                                ...prev,
-                                csvSelectedCols: [...prev.csvSelectedCols, col],
-                              }));
-                            else
-                              setForecastPageState((prev) => ({
-                                ...prev,
-                                csvSelectedCols: prev.csvSelectedCols.filter((c) => c !== col),
-                              }));
-                          }}
-                        />
-                      }
-                      label={col}
+            }
+          }}
+        >
+          <DialogTitle>Сохранить результаты</DialogTitle>
+          <DialogContent dividers sx={{ color: '#fff' }}>
+            {/* Секция выбора категориальных переменных */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, color: '#14c59a' }}>
+                Категориальные переменные
+              </Typography>
+              {categoricalCandidates.length > 0 ? (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {categoricalCandidates.map((candidate) => (
+                    <Chip
+                      key={candidate.column}
+                      // Отображаем только название столбца, без значения
+                      label={candidate.column}
+                      variant={csvCategoricalCols.includes(candidate.column) ? 'filled' : 'outlined'}
+                      onClick={() => {
+                        setCsvCategoricalCols(prev =>
+                          prev.includes(candidate.column)
+                            ? prev.filter(c => c !== candidate.column)
+                            : [...prev, candidate.column]
+                        );
+                      }}
+                      sx={{
+                        borderColor: '#14c59a',
+                        color: csvCategoricalCols.includes(candidate.column) ? '#121212' : '#14c59a',
+                        bgcolor: csvCategoricalCols.includes(candidate.column) ? '#14c59a' : 'transparent',
+                        '&:hover': {
+                          bgcolor: '#14c59a33'
+                        }
+                      }}
                     />
                   ))}
                 </Box>
-                {previewData && previewData.length > 0 && (
-                  <Box sx={{ mt: 2, overflowX: "auto" }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      Превью (первые 5 строк):
-                    </Typography>
-                    <table
-                      style={{
-                        borderCollapse: "collapse",
-                        width: "100%",
-                        color: "#fff",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      <thead>
-                        <tr style={{ backgroundColor: "#333" }}>
-                          {csvSelectedCols.map((col) => (
-                            <th key={col} style={{ border: "1px solid #555", padding: "4px" }}>
-                              {col}
-                            </th>
+              ) : (
+                <Typography variant="body2" sx={{ color: '#aaa' }}>
+                  Нет доступных категориальных переменных
+                </Typography>
+              )}
+            </Box>
+
+            {/* Выбор формата файла */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, color: '#14c59a' }}>
+                Формат файла
+              </Typography>
+              <RadioGroup
+                row
+                value={fileType}
+                onChange={(e) =>
+                  setForecastPageState(prev => ({ ...prev, fileType: e.target.value }))
+                }
+                sx={{ gap: 2 }}
+              >
+                <FormControlLabel
+                  value="csv"
+                  control={<Radio sx={{ color: '#14c59a', '&.Mui-checked': { color: '#00ff88' } }} />}
+                  label="CSV"
+                  sx={{ color: '#fff' }}
+                />
+                <FormControlLabel
+                  value="xlsx"
+                  control={<Radio sx={{ color: '#14c59a', '&.Mui-checked': { color: '#00ff88' } }} />}
+                  label="Excel"
+                  sx={{ color: '#fff' }}
+                />
+              </RadioGroup>
+            </Box>
+
+            {/* Выбор столбцов */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, color: '#14c59a' }}>
+                Выберите столбцы
+              </Typography>
+              <Box
+                sx={{
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  p: 2,
+                  maxHeight: 200,
+                  overflowY: 'auto'
+                }}
+              >
+                {allPossibleCols.map((col) => (
+                  <FormControlLabel
+                    key={col}
+                    control={
+                      <Checkbox
+                        checked={csvSelectedCols.includes(col)}
+                        onChange={(e) => {
+                          setForecastPageState(prev => ({
+                            ...prev,
+                            csvSelectedCols: e.target.checked
+                              ? [...prev.csvSelectedCols, col]
+                              : prev.csvSelectedCols.filter(c => c !== col)
+                          }));
+                        }}
+                        sx={{ color: '#14c59a', '&.Mui-checked': { color: '#00ff88' } }}
+                      />
+                    }
+                    label={col}
+                    sx={{ color: '#fff', width: '100%', m: 0 }}
+                  />
+                ))}
+              </Box>
+            </Box>
+
+            {/* Превью данных */}
+            {computedPreviewData.length > 0 && (
+              <Box>
+                <Typography variant="subtitle1" sx={{ mb: 1, color: '#14c59a' }}>
+                  Предпросмотр данных
+                </Typography>
+                <Paper sx={{ background: 'rgba(255,255,255,0.05)', p: 1 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                        {[...csvSelectedCols, ...csvCategoricalCols].map(col => (
+                          <th
+                            key={col}
+                            style={{
+                              padding: '8px',
+                              textAlign: 'left',
+                              color: '#14c59a',
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {computedPreviewData.map((row, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                          {[...csvSelectedCols, ...csvCategoricalCols].map(col => (
+                            <td
+                              key={col}
+                              style={{
+                                padding: '8px',
+                                color: '#fff',
+                                fontSize: '0.8rem'
+                              }}
+                            >
+                              {row[col] ?? ''}
+                            </td>
                           ))}
                         </tr>
-                      </thead>
-                      <tbody>
-                        {previewData.map((row, idx) => (
-                          <tr key={idx}>
-                            {csvSelectedCols.map((col) => (
-                              <td key={col} style={{ border: "1px solid #555", padding: "4px" }}>
-                                {row[col] !== undefined ? row[col] : ""}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </Box>
-                )}
-              </>
+                      ))}
+                    </tbody>
+                  </table>
+                </Paper>
+              </Box>
             )}
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseCsvDialog}>Отмена</Button>
-            <Button variant="contained" onClick={handleDownloadSelectedCols}>
+
+          <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <Button
+              onClick={handleCloseCsvDialog}
+              sx={{
+                color: '#14c59a',
+                border: '1px solid #14c59a',
+                borderRadius: '8px',
+                px: 3,
+                '&:hover': {
+                  bgcolor: '#14c59a22'
+                }
+              }}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={handleDownloadSelectedCols}
+              sx={{
+                bgcolor: '#14c59a',
+                color: '#121212',
+                borderRadius: '8px',
+                px: 3,
+                ml: 2,
+                '&:hover': {
+                  bgcolor: '#00ff88',
+                  boxShadow: '0 0 8px rgba(16, 163, 127, 0.5)'
+                }
+              }}
+            >
               Скачать
             </Button>
           </DialogActions>
         </Dialog>
+
       </Box>
     </motion.div>
   );

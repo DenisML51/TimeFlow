@@ -13,7 +13,6 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { motion } from "framer-motion";
-import { FloatingLinesBackground } from "../components/AnimatedBackground";
 import {ParticleBackground} from "../components/home/ParticleBackground";
 import { TbLogin, TbCheck, TbAlertCircle } from "react-icons/tb";
 import {Canvas, useFrame} from "@react-three/fiber";

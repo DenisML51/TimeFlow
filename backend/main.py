@@ -6,7 +6,7 @@ from routes.forecast import forecast_router
 from routes.session import session_router  
 from database import engine, Base
 
-app = FastAPI(title="FastAPI Prediction App")
+app = FastAPI(title="TimeFlow Backend")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,4 +28,4 @@ async def on_startup():
 
 @app.get("/", summary="Home endpoint")
 def home():
-    return {"message": "FastAPI Prediction App"}
+    return {"message": "TimeFlow Backend"}

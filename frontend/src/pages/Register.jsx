@@ -14,7 +14,6 @@ import {
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FloatingLinesBackground } from "../components/AnimatedBackground";
 import { ParticleBackground } from "../components/home/ParticleBackground"
 import { TbUserPlus, TbCheck, TbAlertCircle, TbLock } from "react-icons/tb";
 import {Canvas} from "@react-three/fiber";

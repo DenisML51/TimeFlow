@@ -20,7 +20,6 @@ import {
 } from "react-icons/tb";
 import FilterPanel from "../components/FilterPanel";
 import TableDisplay from "../components/TableDisplay";
-import { FloatingLinesBackground } from "../components/AnimatedBackground";
 import { DashboardContext } from "../context/DashboardContext";
 import { HistoryContext } from "../context/HistoryContext";
 import axios from "axios";

@@ -107,7 +107,7 @@ const SelectedColumnsPage = () => {
     setIsDirty,
   } = useContext(DashboardContext);
 
-  const [show, setShow] = useState(true);
+  const [, setShow] = useState(true);
 
   const handleBack = () => {
     setShow(false);
@@ -749,7 +749,7 @@ const SelectedColumnsPage = () => {
                 left: 0,
                 width: "300px",
                 height: "100%",
-                pr: 1,
+
                 boxSizing: "border-box",
               }}
             >

@@ -1,4 +1,4 @@
-import React, {useState, useContext, useEffect, useRef} from "react";
+import React, {useState, useContext, useEffect} from "react";
 import {
   Container,
   TextField,
@@ -15,8 +15,8 @@ import { AuthContext } from "../context/AuthContext";
 import { motion } from "framer-motion";
 import {ParticleBackground} from "../components/home/ParticleBackground";
 import { TbLogin, TbCheck, TbAlertCircle } from "react-icons/tb";
-import {Canvas, useFrame} from "@react-three/fiber";
-import {PointMaterial, Points} from "@react-three/drei";
+import {Canvas} from "@react-three/fiber";
+
 
 
 const Login = () => {

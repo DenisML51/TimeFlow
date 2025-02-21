@@ -237,7 +237,7 @@ const Dashboard = () => {
                 </Typography>
               </Box>
               <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                <input type="file" accept=".csv" onChange={handleFileChange} id="upload-file" hidden />
+                <input type="file" accept=".csv, .xlsx" onChange={handleFileChange} id="upload-file" hidden />
                 <Button
                   component="label"
                   variant="contained"

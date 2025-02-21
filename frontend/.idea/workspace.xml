@@ -4,26 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="87aacc28-dd70-4bb9-b83a-40324653cc6e" name="Changes" comment="version 7 User Cabinet and User Sessions">
-      <change afterPath="$PROJECT_DIR$/src/components/models/GRUBlock.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/models/LSTMBlock.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/models/ProphetBlock.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/models/SARIMABlock.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/models/TransformerBlock.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/models/XGBoostBlock.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../backend/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../backend/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+    <list default="true" id="87aacc28-dd70-4bb9-b83a-40324653cc6e" name="Changes" comment="release 1.2 Export Window Improvements">
       <change beforePath="$PROJECT_DIR$/../backend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../backend/app.db" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/app.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../backend/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/routes/prediction.py" beforeDir="false" afterPath="$PROJECT_DIR$/../backend/routes/prediction.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/AnimatedBackground.jsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/home/ParticleBackground.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/home/ParticleBackground.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/home/ParticleBackground2.jsx" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/pages/Dashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Dashboard.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/pages/ForecastPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/ForecastPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/pages/Login.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Login.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pages/Register.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Register.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/PersonalCabinetDrawer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/PersonalCabinetDrawer.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/Preprocessing.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/Preprocessing.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -95,7 +85,7 @@
       <workItem from="1739448462531" duration="10144000" />
       <workItem from="1739529821276" duration="23232000" />
       <workItem from="1739748798488" duration="15791000" />
-      <workItem from="1740093267331" duration="5998000" />
+      <workItem from="1740093267331" duration="6798000" />
     </task>
     <task id="LOCAL-00001" summary="version 7 User Cabinet and User Sessions">
       <option name="closed" value="true" />
@@ -105,7 +95,15 @@
       <option name="project" value="LOCAL" />
       <updated>1739762520645</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="release 1.2 Export Window Improvements">
+      <option name="closed" value="true" />
+      <created>1740099887186</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1740099887186</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -124,6 +122,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="version 7 User Cabinet and User Sessions" />
-    <option name="LAST_COMMIT_MESSAGE" value="version 7 User Cabinet and User Sessions" />
+    <MESSAGE value="release 1.2 Export Window Improvements" />
+    <option name="LAST_COMMIT_MESSAGE" value="release 1.2 Export Window Improvements" />
   </component>
 </project>

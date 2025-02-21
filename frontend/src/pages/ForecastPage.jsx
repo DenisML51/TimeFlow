@@ -236,7 +236,9 @@ export default function ForecastPage() {
 
   const stateModifiedData = location.state?.modifiedData || [];
   const stateSelectedColumns = location.state?.selectedColumns || [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialModifiedData = stateModifiedData.length ? stateModifiedData : [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialSelectedColumns = stateSelectedColumns.length ? stateSelectedColumns : [];
 
   useEffect(() => {
@@ -1034,13 +1036,13 @@ export default function ForecastPage() {
               >
                 <FormControlLabel
                   value="csv"
-                  control={<Radio sx={{ color: '#14c59a', '&.Mui-checked': { color: '#00ff88' } }} />}
+                  control={<Radio sx={{ color: '#14c59a', '&.Mui-checked': { color: '#40bd82' } }} />}
                   label="CSV"
                   sx={{ color: '#fff' }}
                 />
                 <FormControlLabel
                   value="xlsx"
-                  control={<Radio sx={{ color: '#14c59a', '&.Mui-checked': { color: '#00ff88' } }} />}
+                  control={<Radio sx={{ color: '#14c59a', '&.Mui-checked': { color: '#40bd82' } }} />}
                   label="Excel"
                   sx={{ color: '#fff' }}
                 />
@@ -1058,7 +1060,15 @@ export default function ForecastPage() {
                   borderRadius: '8px',
                   p: 2,
                   maxHeight: 200,
-                  overflowY: 'auto'
+                  overflowY: "auto",
+                  "&::-webkit-scrollbar": { width: "8px" },
+                  "&::-webkit-scrollbar-track": { background: "transparent" },
+                  "&::-webkit-scrollbar-thumb": {
+                    backgroundColor: "#14c59a33",
+                    borderRadius: "4px",
+                    border: "2px solid transparent",
+                    backgroundClip: "content-box"
+                  }
                 }}
               >
                 {allPossibleCols.map((col) => (
@@ -1075,7 +1085,7 @@ export default function ForecastPage() {
                               : prev.csvSelectedCols.filter(c => c !== col)
                           }));
                         }}
-                        sx={{ color: '#14c59a', '&.Mui-checked': { color: '#00ff88' } }}
+                        sx={{ color: '#14c59a', '&.Mui-checked': { color: '#40bd82' } }}
                       />
                     }
                     label={col}

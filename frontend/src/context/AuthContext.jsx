@@ -10,7 +10,8 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get("/auth/me");
+      const response = await axios.get("http://localhost:8000/auth/me");
+      console.log('Попытка auth/me/')
       setUser(response.data);
     } catch (error) {
       setUser(null);
@@ -25,7 +26,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await axios.post("/auth/logout");
+      await axios.post("http://localhost:8000/auth/logout");
     } catch (error) {
       console.error("Ошибка выхода:", error);
     }

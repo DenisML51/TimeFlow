@@ -114,7 +114,7 @@ const Demo = () => {
     };
     console.log(`Requesting forecast for ${modelName}:`, payload);
     try {
-      const resp = await axios.post("http://localhost:8000/api/forecast", payload, {
+      const resp = await axios.post("http://localhost:8000/api/forecast_demo", payload, {
         withCredentials: true,
       });
       console.log(`Response for ${modelName}:`, resp.data);
@@ -337,7 +337,7 @@ const Demo = () => {
                 <Slider
                   value={historySize}
                   onChange={(e, val) => setHistorySize(val)}
-                  min={1}
+                  min={0}
                   max={24}
                   step={1}
                   valueLabelDisplay="auto"

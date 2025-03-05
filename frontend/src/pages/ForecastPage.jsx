@@ -1,4 +1,3 @@
-// src/pages/ForecastPage.jsx
 import React, {
   useState,
   useContext,
@@ -52,6 +51,7 @@ import { TransformerBlock } from "../components/models/TransformerBlock";
 import { SarimaBlock } from "../components/models/SARIMABlock";
 import { ProphetBlock } from "../components/models/ProphetBlock";
 import { XGBoostBlock } from "../components/models/XGBoostBlock";
+import SettingsIcon from "@mui/icons-material/Settings";
 
 // =======================
 // Вспомогательные функции для графиков и метрик
@@ -217,9 +217,26 @@ const AnimatedMetricChip = memo(function AnimatedMetricChip({ label, value, type
   );
 });
 
-// =======================
-// Основной компонент ForecastPage
-// =======================
+// Вспомогательный компонент-оверлей для спиннера
+const SpinnerOverlay = () => (
+  <Box
+    sx={{
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 2,
+      backgroundColor: "rgba(0,0,0,0.25)",
+    }}
+  >
+    <CircularProgress size={48} sx={{ color: "#10A37F" }} />
+  </Box>
+);
+
 export default function ForecastPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -236,9 +253,7 @@ export default function ForecastPage() {
 
   const stateModifiedData = location.state?.modifiedData || [];
   const stateSelectedColumns = location.state?.selectedColumns || [];
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialModifiedData = stateModifiedData.length ? stateModifiedData : [];
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const initialSelectedColumns = stateSelectedColumns.length ? stateSelectedColumns : [];
 
   useEffect(() => {
@@ -256,10 +271,10 @@ export default function ForecastPage() {
     sarimaParams,
     lstmActive,
     lstmParams,
-    gruActive,    // добавлено
-    gruParams,    // добавлено
-    transformerActive,      // ← Добавляем сюда
-    transformerParams,      // ← Добавляем сюда
+    gruActive,
+    gruParams,
+    transformerActive,
+    transformerParams,
     commonTab,
     modelTab,
     modelSubTabs,
@@ -283,6 +298,12 @@ export default function ForecastPage() {
   const [allPossibleCols, setAllPossibleCols] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [csvCategoricalCols, setCsvCategoricalCols] = useState([]);
+
+  // Вычисляем, есть ли запущенные (PENDING) прогнозы
+  const forecastsRunning = useMemo(
+    () => forecastResults.some((res) => res.status === "PENDING"),
+    [forecastResults]
+  );
 
   useEffect(() => {
     const colSet = new Set(["ds", "y_fact"]);
@@ -310,7 +331,6 @@ export default function ForecastPage() {
     const candidates = [];
     const keys = Object.keys(filteredData[0]);
     keys.forEach((key) => {
-      // Если столбец не является столбцом прогнозных результатов
       if (!allPossibleCols.includes(key)) {
         const uniqueSet = new Set(filteredData.map((row) => row[key]));
         if (uniqueSet.size === 1) {
@@ -364,14 +384,13 @@ export default function ForecastPage() {
       XGBoost: "#ff6382",
       SARIMA: "#f8fd68",
       LSTM: "#a569bd",
-      Transformer: "#00FF00"
+      Transformer: "#00FF00",
     };
     return makeCombinedChartData(subset, modelColorMap);
   }, [forecastResults, commonTab]);
 
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
 
-  // Вычисляем previewData через useMemo для мгновенного обновления при изменениях состояний
   const computedPreviewData = useMemo(() => {
     const finalForecastCols = csvSelectedCols.length ? csvSelectedCols : allPossibleCols;
     return mergedRows.slice(0, 5).map((r) => {
@@ -380,7 +399,7 @@ export default function ForecastPage() {
         obj[col] = r[col] !== undefined ? r[col] : "";
       });
       csvCategoricalCols.forEach((col) => {
-        const candidate = categoricalCandidates.find(c => c.column === col);
+        const candidate = categoricalCandidates.find((c) => c.column === col);
         obj[col] = candidate ? candidate.value : "";
       });
       return obj;
@@ -388,7 +407,6 @@ export default function ForecastPage() {
   }, [mergedRows, csvSelectedCols, csvCategoricalCols, allPossibleCols, categoricalCandidates]);
 
   const handleOpenCsvDialog = useCallback(() => {
-    // Просто открываем диалог – previewData вычисляется автоматически
     setCsvDialogOpen(true);
   }, []);
 
@@ -397,19 +415,17 @@ export default function ForecastPage() {
   const handleDownloadSelectedCols = useCallback(() => {
     const finalForecastCols = csvSelectedCols.length ? csvSelectedCols : allPossibleCols;
     const finalCols = [...finalForecastCols, ...csvCategoricalCols];
-
     const finalData = mergedRows.map((r) => {
       const obj = {};
       finalForecastCols.forEach((col) => {
         obj[col] = r[col] !== undefined ? r[col] : "";
       });
       csvCategoricalCols.forEach((col) => {
-        const candidate = categoricalCandidates.find(c => c.column === col);
+        const candidate = categoricalCandidates.find((c) => c.column === col);
         obj[col] = candidate ? candidate.value : "";
       });
       return obj;
     });
-
     if (fileType === "csv") {
       const header = finalCols.join(",");
       const rows = finalData.map((row) =>
@@ -442,7 +458,9 @@ export default function ForecastPage() {
     }));
   }, [setForecastPageState]);
 
-  const handleBack = useCallback(() => navigate(-1), [navigate]);
+  const handleBack = useCallback(() => {
+    navigate(-1);
+  }, [navigate]);
 
   const toggleModels = useCallback(() => {
     setForecastPageState((prev) => {
@@ -477,6 +495,134 @@ export default function ForecastPage() {
     []
   );
 
+  // Функция для опроса статуса задачи
+  const pollTaskStatus = useCallback((taskId, modelName) => {
+    if (!taskId) return; // Если taskId отсутствует, выходим
+    const intervalId = setInterval(async () => {
+      try {
+        const statusResp = await axios.get(
+          `http://localhost:8000/api/forecast/status/${taskId}`
+        );
+        if (statusResp.data.status !== "PENDING") {
+          clearInterval(intervalId);
+          const {
+            forecast_all,
+            forecast_train,
+            forecast_test,
+            forecast_horizon,
+          } = statusResp.data.result;
+          setForecastResults((prevResults) =>
+            prevResults.map((res) =>
+              res.modelName === modelName
+                ? {
+                    ...res,
+                    forecastAll: forecast_all || [],
+                    forecastTrain: forecast_train || [],
+                    forecastTest: forecast_test || [],
+                    forecastHorizon: forecast_horizon || [],
+                    status: statusResp.data.status,
+                  }
+                : res
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Ошибка при опросе статуса задачи:", error);
+        clearInterval(intervalId);
+      }
+    }, 3000);
+  }, [setForecastResults]);
+
+  // Обработчик нажатия кнопки "Построить прогноз"
+  const handleForecast = useCallback(async () => {
+    if (!validFreqRegex.test(localCommonParams.freq)) {
+      setFreqError("Некорректная частота");
+      return;
+    }
+    // Дополнительно блокируем запуск нового прогноза, если есть невыполненные задачи
+    if (forecastsRunning) return;
+    setIsLoading(true);
+    setForecastPageState((prev) => ({
+      ...prev,
+      horizon: localCommonParams.horizon,
+      historySize: localCommonParams.historySize,
+      freq: localCommonParams.freq,
+      confidenceLevel: localCommonParams.confidenceLevel,
+    }));
+    try {
+      const activeModels = [];
+      if (prophetActive)
+        activeModels.push({ model: "Prophet", uniqueParams: prophetParams });
+      if (xgboostActive)
+        activeModels.push({ model: "XGBoost", uniqueParams: xgboostParams });
+      if (sarimaActive)
+        activeModels.push({ model: "SARIMA", uniqueParams: sarimaParams });
+      if (lstmActive)
+        activeModels.push({ model: "LSTM", uniqueParams: lstmParams });
+      if (gruActive)
+        activeModels.push({ model: "GRU", uniqueParams: gruParams });
+      if (transformerActive)
+        activeModels.push({ model: "Transformer", uniqueParams: transformerParams });
+
+      const newResults = [];
+      for (let m of activeModels) {
+        const payload = {
+          model: m.model,
+          uniqueParams: m.uniqueParams,
+          horizon: localCommonParams.horizon,
+          history: localCommonParams.historySize,
+          dt_name: initialSelectedColumns[0] || "ds",
+          y_name: initialSelectedColumns[1] || "y",
+          freq: localCommonParams.freq,
+          confidence_level: localCommonParams.confidenceLevel,
+          data: initialModifiedData,
+        };
+        const resp = await axios.post("http://localhost:8000/api/forecast", payload);
+        // Если task_id отсутствует, выводим ошибку и пропускаем этот метод
+        if (!resp.data.task_id) {
+          console.error("Task ID отсутствует для модели", m.model);
+          continue;
+        }
+        newResults.push({
+          modelName: m.model,
+          taskId: resp.data.task_id,
+          status: "PENDING",
+          forecastAll: [],
+          forecastTrain: [],
+          forecastTest: [],
+          forecastHorizon: [],
+        });
+        pollTaskStatus(resp.data.task_id, m.model);
+      }
+      setForecastResults(newResults);
+    } catch (err) {
+      console.error("Ошибка прогноза:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    localCommonParams,
+    initialModifiedData,
+    initialSelectedColumns,
+    prophetActive,
+    prophetParams,
+    xgboostActive,
+    xgboostParams,
+    sarimaActive,
+    sarimaParams,
+    lstmActive,
+    lstmParams,
+    gruActive,
+    gruParams,
+    transformerActive,
+    transformerParams,
+    pollTaskStatus,
+    setForecastPageState,
+    setForecastResults,
+    validFreqRegex,
+    forecastsRunning,
+  ]);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
@@ -492,7 +638,7 @@ export default function ForecastPage() {
         <Box sx={{ display: "flex", justifyContent: "space-between", m: 2, pt: 2 }}>
           <Button
             variant="contained"
-            onClick={handleBack}
+            onClick={() => navigate(-1)}
             startIcon={<ArrowBackIcon />}
             sx={{
               background: "rgba(16,163,127,0.15)",
@@ -515,20 +661,8 @@ export default function ForecastPage() {
           >
             Прогнозирование
           </Typography>
-          <Button
-            variant="contained"
-            onClick={toggleModels}
-            endIcon={<ArrowForwardIcon />}
-            sx={{
-              background: "rgba(16,163,127,0.15)",
-              color: "#10A37F",
-              borderRadius: "12px",
-              px: 3,
-              "&:hover": { background: "rgba(16,163,127,0.3)" },
-            }}
-          >
-            Модели
-          </Button>
+          <Button></Button>
+
         </Box>
         <Box sx={{ pt: 2 }}>
           <CategoricalDataBlock filteredData={filteredData} selectedColumns={selectedColumns} filters={filters} />
@@ -552,11 +686,29 @@ export default function ForecastPage() {
                 backdropFilter: "blur(12px)",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
                 p: 3,
+                position: "relative",
               }}
             >
+        <Box sx={{ display: "flex", gap: 2, alignItems: "left", mb: 3, justifyContent: "space-between" }}>
+
               <Typography variant="h6" sx={{ mb: 2 }}>
                 Общие параметры прогноза
               </Typography>
+                        <Button
+                          variant="contained"
+                          onClick={toggleModels}
+                          endIcon={<SettingsIcon />}
+                          sx={{
+                            background: "rgba(16,163,127,0.15)",
+                            color: "#10A37F",
+                            borderRadius: "12px",
+                            px: 3,
+                            "&:hover": { background: "rgba(16,163,127,0.3)" },
+                          }}
+                        >
+                          Модели
+                        </Button>
+        </Box>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
                   <Typography gutterBottom>Горизонт: {localCommonParams.horizon}</Typography>
@@ -635,86 +787,17 @@ export default function ForecastPage() {
               <Box sx={{ mt: 3, textAlign: "center" }}>
                 <Button
                   variant="contained"
-                  onClick={async () => {
-                    if (!validFreqRegex.test(localCommonParams.freq)) {
-                      setFreqError("Некорректная частота");
-                      return;
-                    }
-                    setIsLoading(true);
-                    setForecastPageState((prev) => ({
-                      ...prev,
-                      horizon: localCommonParams.horizon,
-                      historySize: localCommonParams.historySize,
-                      freq: localCommonParams.freq,
-                      confidenceLevel: localCommonParams.confidenceLevel,
-                    }));
-                    try {
-                      const activeModels = [];
-                      if (prophetActive)
-                        activeModels.push({
-                          model: "Prophet",
-                          uniqueParams: prophetParams,
-                        });
-                      if (xgboostActive)
-                        activeModels.push({
-                          model: "XGBoost",
-                          uniqueParams: xgboostParams,
-                        });
-                      if (sarimaActive)
-                        activeModels.push({
-                          model: "SARIMA",
-                          uniqueParams: sarimaParams,
-                        });
-                      if (lstmActive)
-                        activeModels.push({
-                          model: "LSTM",
-                          uniqueParams: lstmParams,
-                        });
-                      if (gruActive)
-                        activeModels.push({
-                          model: "GRU",
-                          uniqueParams: gruParams,
-                        });
-                      if (transformerActive)
-                        activeModels.push({
-                          model: "Transformer",
-                          uniqueParams: transformerParams,
-                        });
-
-                      const newResults = [];
-                      for (let m of activeModels) {
-                        const payload = {
-                          model: m.model,
-                          uniqueParams: m.uniqueParams,
-                          horizon: localCommonParams.horizon,
-                          history: localCommonParams.historySize,
-                          dt_name: initialSelectedColumns[0] || "ds",
-                          y_name: initialSelectedColumns[1] || "y",
-                          freq: localCommonParams.freq,
-                          confidence_level: localCommonParams.confidenceLevel,
-                          data: initialModifiedData,
-                        };
-                        const resp = await axios.post("http://localhost:8000/api/forecast", payload);
-                        const { forecast_all, forecast_train, forecast_test, forecast_horizon } = resp.data;
-                        newResults.push({
-                          modelName: m.model,
-                          forecastAll: forecast_all || [],
-                          forecastTrain: forecast_train || [],
-                          forecastTest: forecast_test || [],
-                          forecastHorizon: forecast_horizon || [],
-                        });
-                      }
-                      setForecastResults(newResults);
-                    } catch (err) {
-                      console.error("Ошибка прогноза:", err);
-                    } finally {
-                      setIsLoading(false);
-                    }
+                  onClick={handleForecast}
+                  disabled={isLoading || forecastsRunning}
+                  sx={{
+                    borderRadius: "12px",
+                    background: "linear-gradient(45deg, #10A37F, #00ff88)",
+                    color: "#121212",
+                    px: 3,
+                    "&:hover": { background: "linear-gradient(45deg, #00ff88, #10A37F)" },
                   }}
-                  disabled={isLoading}
-                  sx={{ borderRadius: "16px", backgroundColor: "#10A37F" }}
                 >
-                  {isLoading ? <CircularProgress size={24} /> : "Построить прогноз"}
+                  {(isLoading || forecastsRunning) ? <CircularProgress size={24} sx={{ color: "#121212" }} /> : "Построить прогноз"}
                 </Button>
               </Box>
             </Paper>
@@ -728,6 +811,7 @@ export default function ForecastPage() {
                   backdropFilter: "blur(12px)",
                   boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
                   p: 3,
+                  position: "relative",
                 }}
               >
                 <Typography variant="h6" sx={{ mb: 1 }}>
@@ -746,14 +830,21 @@ export default function ForecastPage() {
                   <Tab label="Horizon" />
                   <Tab label="All+Horizon" />
                 </Tabs>
-                <Box sx={{ height: 500 }}>
+                <Box sx={{ height: 500, position: "relative" }}>
                   <Line data={combinedChartData} options={chartOptions} />
+                  {forecastResults.some((m) => m.status === "PENDING") && <SpinnerOverlay />}
                 </Box>
                 <Box sx={{ textAlign: "center", mt: 2 }}>
                   <Button
                     variant="contained"
                     onClick={handleOpenCsvDialog}
-                    sx={{ borderRadius: "12px", backgroundColor: "#10A37F" }}
+                    sx={{
+                      borderRadius: "12px",
+                      background: "linear-gradient(45deg, #10A37F, #00ff88)",
+                      color: "#121212",
+                      px: 3,
+                      "&:hover": { background: "linear-gradient(45deg, #00ff88, #10A37F)" },
+                    }}
                   >
                     Скачать (All Models)
                   </Button>
@@ -770,6 +861,7 @@ export default function ForecastPage() {
                   backdropFilter: "blur(12px)",
                   boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
                   p: 3,
+                  position: "relative",
                 }}
               >
                 <Typography variant="h6" sx={{ mb: 2 }}>
@@ -824,8 +916,9 @@ export default function ForecastPage() {
                           <Tab label="Horizon" disabled={curModel.forecastHorizon.length === 0} />
                         </Tabs>
                         {subTab === 0 && (
-                          <Box sx={{ height: 400 }}>
+                          <Box sx={{ height: 400, position: "relative" }}>
                             <Line data={chartAll} options={chartOptions} />
+                            {curModel.status === "PENDING" && <SpinnerOverlay />}
                             {metricsAll && (
                               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2, pt: 3, pb: 10 }}>
                                 <AnimatedMetricChip label="MAE" value={metricsAll.mae} type="mae" icon={<TrendingDownIcon />} />
@@ -838,13 +931,14 @@ export default function ForecastPage() {
                           </Box>
                         )}
                         {subTab === 1 && (
-                          <Box sx={{ height: 400 }}>
+                          <Box sx={{ height: 400, position: "relative" }}>
                             <Line data={chartTrain} options={chartOptions} />
-                            {metricsAll && (
+                            {curModel.status === "PENDING" && <SpinnerOverlay />}
+                            {metricsTrain && (
                               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2, pt: 3, pb: 10 }}>
                                 <AnimatedMetricChip label="MAE" value={metricsTrain.mae} type="mae" icon={<TrendingDownIcon />} />
                                 <AnimatedMetricChip label="RMSE" value={metricsTrain.rmse} type="rmse" icon={<ShowChartIcon />} />
-                                {metricsAll.mape !== null && (
+                                {metricsTrain.mape !== null && (
                                   <AnimatedMetricChip label="MAPE" value={metricsTrain.mape} type="mape" icon={<PercentIcon />} />
                                 )}
                               </Box>
@@ -852,13 +946,14 @@ export default function ForecastPage() {
                           </Box>
                         )}
                         {subTab === 2 && (
-                          <Box sx={{ height: 400 }}>
+                          <Box sx={{ height: 400, position: "relative" }}>
                             <Line data={chartTest} options={chartOptions} />
-                            {metricsAll && (
+                            {curModel.status === "PENDING" && <SpinnerOverlay />}
+                            {metricsTest && (
                               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2, pt: 3, pb: 10 }}>
                                 <AnimatedMetricChip label="MAE" value={metricsTest.mae} type="mae" icon={<TrendingDownIcon />} />
                                 <AnimatedMetricChip label="RMSE" value={metricsTest.rmse} type="rmse" icon={<ShowChartIcon />} />
-                                {metricsAll.mape !== null && (
+                                {metricsTest.mape !== null && (
                                   <AnimatedMetricChip label="MAPE" value={metricsTest.mape} type="mape" icon={<PercentIcon />} />
                                 )}
                               </Box>
@@ -866,9 +961,14 @@ export default function ForecastPage() {
                           </Box>
                         )}
                         {subTab === 3 && (
-                          <Box sx={{ height: 400 }}>
+                          <Box sx={{ height: 400, position: "relative", pt: 5 }}>
                             <Line data={chartHorizon} options={chartOptions} />
-                            <Typography sx={{ mt: 2 }}>Прогноз будущего (факт отсутствует).</Typography>
+                            {curModel.status === "PENDING" && <SpinnerOverlay />}
+                              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2, pt: 3, pb: 10 }}>
+                                <Typography sx={{ mt: 2 }}>
+                                  Прогноз будущего (факт отсутствует).
+                                </Typography>
+                              </Box>
                           </Box>
                         )}
                       </Box>
@@ -942,9 +1042,13 @@ export default function ForecastPage() {
               />
               <GRUBlock
                 active={gruActive}
-                setActive={(val) => setForecastPageState((prev) => ({ ...prev, gruActive: val }))}
+                setActive={(val) =>
+                  setForecastPageState((prev) => ({ ...prev, gruActive: val }))
+                }
                 gruParams={gruParams}
-                setGruParams={(params) => setForecastPageState((prev) => ({ ...prev, gruParams: params }))}
+                setGruParams={(params) =>
+                  setForecastPageState((prev) => ({ ...prev, gruParams: params }))
+                }
               />
               <TransformerBlock
                 active={transformerActive}
@@ -966,98 +1070,104 @@ export default function ForecastPage() {
           maxWidth="md"
           PaperProps={{
             sx: {
-              background: 'rgba(32, 32, 32, 0.9)',
-              backdropFilter: 'blur(12px)',
-              borderRadius: '16px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-              '& .MuiDialogTitle-root': {
-                color: '#fff',
-                fontWeight: 700,
-                background: 'linear-gradient(45deg, #10A37F 30%, #00ff88 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }
-            }
+              background: "rgba(32, 32, 32, 0.9)",
+              backdropFilter: "blur(12px)",
+              borderRadius: "16px",
+              border: "1px solid rgba(255,255,255,0.1)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+            },
           }}
         >
-          <DialogTitle>Сохранить результаты</DialogTitle>
-          <DialogContent dividers sx={{ color: '#fff' }}>
+          <DialogTitle
+            sx={{
+              color: "#fff",
+              fontWeight: 700,
+              background: "linear-gradient(45deg, #10A37F 30%, #00ff88 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            Сохранить результаты
+          </DialogTitle>
+          <DialogContent dividers sx={{ color: "#fff" }}>
             {/* Секция выбора категориальных переменных */}
             <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 1, color: '#14c59a' }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, color: "#14c59a" }}>
                 Категориальные переменные
               </Typography>
               {categoricalCandidates.length > 0 ? (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                   {categoricalCandidates.map((candidate) => (
                     <Chip
                       key={candidate.column}
-                      // Отображаем только название столбца, без значения
                       label={candidate.column}
-                      variant={csvCategoricalCols.includes(candidate.column) ? 'filled' : 'outlined'}
+                      variant={
+                        csvCategoricalCols.includes(candidate.column)
+                          ? "filled"
+                          : "outlined"
+                      }
                       onClick={() => {
-                        setCsvCategoricalCols(prev =>
+                        setCsvCategoricalCols((prev) =>
                           prev.includes(candidate.column)
-                            ? prev.filter(c => c !== candidate.column)
+                            ? prev.filter((c) => c !== candidate.column)
                             : [...prev, candidate.column]
                         );
                       }}
                       sx={{
-                        borderColor: '#14c59a',
-                        color: csvCategoricalCols.includes(candidate.column) ? '#121212' : '#14c59a',
-                        bgcolor: csvCategoricalCols.includes(candidate.column) ? '#14c59a' : 'transparent',
-                        '&:hover': {
-                          bgcolor: '#14c59a33'
-                        }
+                        borderColor: "#14c59a",
+                        color: csvCategoricalCols.includes(candidate.column)
+                          ? "#121212"
+                          : "#14c59a",
+                        bgcolor: csvCategoricalCols.includes(candidate.column)
+                          ? "#14c59a"
+                          : "transparent",
+                        "&:hover": { bgcolor: "#14c59a33" },
                       }}
                     />
                   ))}
                 </Box>
               ) : (
-                <Typography variant="body2" sx={{ color: '#aaa' }}>
+                <Typography variant="body2" sx={{ color: "#aaa" }}>
                   Нет доступных категориальных переменных
                 </Typography>
               )}
             </Box>
-
             {/* Выбор формата файла */}
             <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 1, color: '#14c59a' }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, color: "#14c59a" }}>
                 Формат файла
               </Typography>
               <RadioGroup
                 row
                 value={fileType}
                 onChange={(e) =>
-                  setForecastPageState(prev => ({ ...prev, fileType: e.target.value }))
+                  setForecastPageState((prev) => ({ ...prev, fileType: e.target.value }))
                 }
                 sx={{ gap: 2 }}
               >
                 <FormControlLabel
                   value="csv"
-                  control={<Radio sx={{ color: '#14c59a', '&.Mui-checked': { color: '#40bd82' } }} />}
+                  control={<Radio sx={{ color: "#14c59a", "&.Mui-checked": { color: "#40bd82" } }} />}
                   label="CSV"
-                  sx={{ color: '#fff' }}
+                  sx={{ color: "#fff" }}
                 />
                 <FormControlLabel
                   value="xlsx"
-                  control={<Radio sx={{ color: '#14c59a', '&.Mui-checked': { color: '#40bd82' } }} />}
+                  control={<Radio sx={{ color: "#14c59a", "&.Mui-checked": { color: "#40bd82" } }} />}
                   label="Excel"
-                  sx={{ color: '#fff' }}
+                  sx={{ color: "#fff" }}
                 />
               </RadioGroup>
             </Box>
-
             {/* Выбор столбцов */}
             <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 1, color: '#14c59a' }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, color: "#14c59a" }}>
                 Выберите столбцы
               </Typography>
               <Box
                 sx={{
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "8px",
                   p: 2,
                   maxHeight: 200,
                   overflowY: "auto",
@@ -1067,8 +1177,8 @@ export default function ForecastPage() {
                     backgroundColor: "#14c59a33",
                     borderRadius: "4px",
                     border: "2px solid transparent",
-                    backgroundClip: "content-box"
-                  }
+                    backgroundClip: "content-box",
+                  },
                 }}
               >
                 {allPossibleCols.map((col) => (
@@ -1077,42 +1187,40 @@ export default function ForecastPage() {
                     control={
                       <Checkbox
                         checked={csvSelectedCols.includes(col)}
-                        onChange={(e) => {
-                          setForecastPageState(prev => ({
+                        onChange={(e) =>
+                          setForecastPageState((prev) => ({
                             ...prev,
                             csvSelectedCols: e.target.checked
                               ? [...prev.csvSelectedCols, col]
-                              : prev.csvSelectedCols.filter(c => c !== col)
-                          }));
-                        }}
-                        sx={{ color: '#14c59a', '&.Mui-checked': { color: '#40bd82' } }}
+                              : prev.csvSelectedCols.filter((c) => c !== col),
+                          }))
+                        }
+                        sx={{ color: "#14c59a", "&.Mui-checked": { color: "#40bd82" } }}
                       />
                     }
                     label={col}
-                    sx={{ color: '#fff', width: '100%', m: 0 }}
+                    sx={{ color: "#fff", width: "100%", m: 0 }}
                   />
                 ))}
               </Box>
             </Box>
-
-            {/* Превью данных */}
             {computedPreviewData.length > 0 && (
               <Box>
-                <Typography variant="subtitle1" sx={{ mb: 1, color: '#14c59a' }}>
+                <Typography variant="subtitle1" sx={{ mb: 1, color: "#14c59a" }}>
                   Предпросмотр данных
                 </Typography>
-                <Paper sx={{ background: 'rgba(255,255,255,0.05)', p: 1 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <Paper sx={{ background: "rgba(255,255,255,0.05)", p: 1 }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                        {[...csvSelectedCols, ...csvCategoricalCols].map(col => (
+                      <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                        {[...csvSelectedCols, ...csvCategoricalCols].map((col) => (
                           <th
                             key={col}
                             style={{
-                              padding: '8px',
-                              textAlign: 'left',
-                              color: '#14c59a',
-                              fontSize: '0.8rem'
+                              padding: "8px",
+                              textAlign: "left",
+                              color: "#14c59a",
+                              fontSize: "0.8rem",
                             }}
                           >
                             {col}
@@ -1122,17 +1230,17 @@ export default function ForecastPage() {
                     </thead>
                     <tbody>
                       {computedPreviewData.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                          {[...csvSelectedCols, ...csvCategoricalCols].map(col => (
+                        <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                          {[...csvSelectedCols, ...csvCategoricalCols].map((col) => (
                             <td
                               key={col}
                               style={{
-                                padding: '8px',
-                                color: '#fff',
-                                fontSize: '0.8rem'
+                                padding: "8px",
+                                color: "#fff",
+                                fontSize: "0.8rem",
                               }}
                             >
-                              {row[col] ?? ''}
+                              {row[col] ?? ""}
                             </td>
                           ))}
                         </tr>
@@ -1143,18 +1251,15 @@ export default function ForecastPage() {
               </Box>
             )}
           </DialogContent>
-
-          <DialogActions sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <DialogActions sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
             <Button
               onClick={handleCloseCsvDialog}
               sx={{
-                color: '#14c59a',
-                border: '1px solid #14c59a',
-                borderRadius: '8px',
+                color: "#14c59a",
+                border: "1px solid #14c59a",
+                borderRadius: "8px",
                 px: 3,
-                '&:hover': {
-                  bgcolor: '#14c59a22'
-                }
+                "&:hover": { bgcolor: "#14c59a22" },
               }}
             >
               Отмена
@@ -1162,22 +1267,18 @@ export default function ForecastPage() {
             <Button
               onClick={handleDownloadSelectedCols}
               sx={{
-                bgcolor: '#14c59a',
-                color: '#121212',
-                borderRadius: '8px',
+                background: "linear-gradient(45deg, #10A37F, #00ff88)",
+                color: "#121212",
+                borderRadius: "8px",
                 px: 3,
                 ml: 2,
-                '&:hover': {
-                  bgcolor: '#00ff88',
-                  boxShadow: '0 0 8px rgba(16, 163, 127, 0.5)'
-                }
+                "&:hover": { background: "linear-gradient(45deg, #00ff88, #10A37F)", boxShadow: "0 0 8px rgba(16, 163, 127, 0.5)" },
               }}
             >
               Скачать
             </Button>
           </DialogActions>
         </Dialog>
-
       </Box>
     </motion.div>
   );

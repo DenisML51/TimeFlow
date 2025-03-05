@@ -5,17 +5,50 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2e1a8637-1a7f-4b70-a5e1-9d7aa5d3a7d1" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/../.env" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/celery_worker.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tasks.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../docker-compose.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../frontend/.env" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../frontend/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/backend.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/backend.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.db" beforeDir="false" afterPath="$PROJECT_DIR$/app.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/routes/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/routes/auth.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/routes/forecast.py" beforeDir="false" afterPath="$PROJECT_DIR$/routes/forecast.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/auth.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../frontend/src/components/FileUpload.jsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/components/HistoryModal.jsx" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/src/components/axios.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/components/axios.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/components/home/ParticleBackground.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/components/home/ParticleBackground.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/context/AuthContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/context/AuthContext.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/context/DashboardContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/context/DashboardContext.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/context/HistoryContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/context/HistoryContext.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Dashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Dashboard.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/DemoPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/DemoPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/ForecastPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/ForecastPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Login.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Login.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../frontend/src/pages/PersonalCabinetDrawer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/PersonalCabinetDrawer.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/src/pages/Register.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/src/pages/Register.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Dockerfile" />
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
@@ -47,14 +80,15 @@
   &quot;keyToString&quot;: {
     &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/Rusinov.DS/PycharmProjects/project/Forecast_ML_Project&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Rusinov.DS/PycharmProjects/project/TimeFlow/backend&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;http.proxy&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -79,7 +113,14 @@
       <workItem from="1739447457063" duration="991000" />
       <workItem from="1739448471376" duration="3157000" />
       <workItem from="1739529826251" duration="6211000" />
-      <workItem from="1740093291683" duration="4165000" />
+      <workItem from="1740093291683" duration="10182000" />
+      <workItem from="1740526767968" duration="1327000" />
+      <workItem from="1740529059259" duration="697000" />
+      <workItem from="1740536425768" duration="1163000" />
+      <workItem from="1740540355577" duration="4017000" />
+      <workItem from="1740611037685" duration="31000" />
+      <workItem from="1740611089180" duration="58000" />
+      <workItem from="1740698768571" duration="19000" />
     </task>
     <servers />
   </component>

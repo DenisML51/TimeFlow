@@ -28,7 +28,6 @@ const Login = () => {
   const navigate = useNavigate();
   const { fetchUser } = useContext(AuthContext);
 
-  // Автоматически закрываем диалог через 3 секунды, если он открыт
   useEffect(() => {
     if (dialogOpen) {
       const timer = setTimeout(() => {
@@ -90,7 +89,6 @@ const Login = () => {
         <ParticleBackground />
       </Canvas>
 
-      {/* Добавляем позиционирование и zIndex, чтобы форма была выше анимированного фона */}
       <Container maxWidth="sm" sx={{ position: "relative", zIndex: 1 }}>
         <motion.div
           initial={{ opacity: 0, y: 40 }}

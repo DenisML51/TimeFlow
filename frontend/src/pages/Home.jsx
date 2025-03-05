@@ -11,6 +11,7 @@ import {ParticleBackground} from "../components/home/ParticleBackground";
 import { TbChartLine, TbCloudUpload, TbCpu, TbShieldLock, TbRocket } from "react-icons/tb";
 import { GradientText } from "../components/home/GradientText";
 
+
 const AnimatedButton = motion(Button);
 
 const LiveDemoPreview = () => {
@@ -139,6 +140,7 @@ const FeatureGridSection = () => {
 const CTASection = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const theme = useTheme()
 
   return (
     <Box sx={{ py: 15, position: 'relative' }}>
@@ -174,7 +176,7 @@ const CTASection = () => {
               borderRadius: 3,
               fontSize: '1.1rem',
               fontWeight: 600,
-              background: 'linear-gradient(135deg, #10A37F 0%, #00FF88 100%)',
+              background: `linear-gradient(135deg, ${theme.palette.primary.secondary} 0%, ${theme.palette.primary.main} 100%)`,
               boxShadow: '0 8px 32px rgba(16,163,127,0.3)'
             }}
           >

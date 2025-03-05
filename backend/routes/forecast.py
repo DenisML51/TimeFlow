@@ -1,12 +1,12 @@
+# routes/forecast.py
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-import pandas as pd
+from celery.result import AsyncResult
+from forecast.arima_forecast import sarima_forecast
 from forecast.prophet_forecast import prophet_forecast
 from forecast.xgboost_forecast import xgboost_forecast
-from forecast.arima_forecast import sarima_forecast
-from forecast.lstm_forecast import lstm_forecast 
-from forecast.gru_forecast import gru_forecast
-from forecast.transformers_forecast import transformer_forecast
+from tasks import run_forecast, celery_app
+import pandas as pd
 
 forecast_router = APIRouter()
 
@@ -22,6 +22,50 @@ class ForecastRequest(BaseModel):
     data: list
 
 @forecast_router.post("/forecast")
+async def forecast_endpoint(request_data: ForecastRequest):
+    """
+    Принимает запрос на прогнозирование, отправляет задачу в очередь и возвращает task_id.
+    """
+    try:
+        task = run_forecast.delay(
+            request_data.model,
+            request_data.uniqueParams,
+            request_data.horizon,
+            request_data.history,
+            request_data.dt_name,
+            request_data.y_name,
+            request_data.freq,
+            request_data.confidence_level,
+            request_data.data
+        )
+        return {"message": "Forecast task submitted", "task_id": task.id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@forecast_router.get("/forecast/status/{task_id}")
+async def get_forecast_status(task_id: str):
+    """
+    Эндпоинт для получения статуса задачи прогнозирования.
+    Если задача завершена, возвращается результат.
+    """
+    task_result = AsyncResult(task_id, app=celery_app)
+    if task_result.state == "PENDING":
+        return {"task_id": task_id, "status": task_result.state}
+    elif task_result.state != "FAILURE":
+        return {
+            "task_id": task_id,
+            "status": task_result.state,
+            "result": task_result.result
+        }
+    else:
+        return {
+            "task_id": task_id,
+            "status": task_result.state,
+            "result": str(task_result.info)
+        }
+
+
+@forecast_router.post("/forecast_demo")
 async def forecast_endpoint(request: ForecastRequest):
     try:
         df = pd.DataFrame(request.data)
@@ -54,7 +98,7 @@ async def forecast_endpoint(request: ForecastRequest):
                 request.uniqueParams.get("P", 1),
                 request.uniqueParams.get("D", 1),
                 request.uniqueParams.get("Q", 1),
-                request.uniqueParams.get("s", 12)
+                request.uniqueParams.get("s", 2)
             )
             forecast_all, forecast_train, forecast_test, forecast_horizon = sarima_forecast(
                 df,
@@ -66,49 +110,6 @@ async def forecast_endpoint(request: ForecastRequest):
                 confidence_level=request.confidence_level,
                 order=order,
                 seasonal_order=seasonal_order
-            )
-        elif request.model == "LSTM":
-            forecast_all, forecast_train, forecast_test, forecast_horizon = lstm_forecast(
-                df,
-                horizon=request.horizon,
-                test_size=request.history,
-                dt_name=request.dt_name,
-                y_name=request.y_name,
-                freq=request.freq,
-                confidence_level=request.confidence_level,
-                model_params=request.uniqueParams,
-                seasonality=request.uniqueParams.get("seasonality", "MS"),
-                criterion=request.uniqueParams.get("criterion", "Huber"),
-                optimizer_type=request.uniqueParams.get("optimizer_type", "AdamW")
-            )
-        elif request.model == "GRU": 
-            forecast_all, forecast_train, forecast_test, forecast_horizon = gru_forecast(
-                df,
-                horizon=request.horizon,
-                test_size=request.history,
-                dt_name=request.dt_name,
-                y_name=request.y_name,
-                freq=request.freq,
-                confidence_level=request.confidence_level,
-                model_params=request.uniqueParams,
-                seasonality=request.uniqueParams.get("seasonality", "MS"),
-                criterion=request.uniqueParams.get("criterion", "Huber"),
-                optimizer_type=request.uniqueParams.get("optimizer_type", "AdamW")
-            )
-        elif request.model == "Transformer":
-            print(request.model)
-            forecast_all, forecast_train, forecast_test, forecast_horizon = transformer_forecast(
-                df,
-                horizon=request.horizon,
-                test_size=request.history,
-                dt_name=request.dt_name,
-                y_name=request.y_name,
-                freq=request.freq,
-                confidence_level=request.confidence_level,
-                model_params=request.uniqueParams,
-                seasonality=request.uniqueParams.get("seasonality", "MS"),
-                criterion=request.uniqueParams.get("criterion", "MSE"),
-                optimizer_type=request.uniqueParams.get("optimizer_type", "AdamW")
             )
         else:
             raise HTTPException(status_code=400, detail="Unsupported model")

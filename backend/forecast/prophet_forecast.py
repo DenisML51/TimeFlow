@@ -4,12 +4,13 @@ from prophet import Prophet
 def apply_confidence_intervals(forecast_df, confidence_level):
     """
     Если в прогнозе отсутствуют столбцы yhat_lower и yhat_upper,
-    вычисляем их на основе среднего прогноза (yhat) и заданного уровня доверия.
+    устанавливаем их в None (так как Prophet при корректном параметре interval_width
+    должен их генерировать).
     """
-    if 'yhat_lower' not in forecast_df.columns or 'yhat_upper' not in forecast_df.columns:
-        margin = (100 - confidence_level) / 100.0
-        forecast_df['yhat_lower'] = forecast_df['yhat'] * (1 - margin)
-        forecast_df['yhat_upper'] = forecast_df['yhat'] * (1 + margin)
+    if 'yhat_lower' in forecast_df.columns and 'yhat_upper' in forecast_df.columns:
+        return forecast_df
+    forecast_df['yhat_lower'] = None
+    forecast_df['yhat_upper'] = None
     return forecast_df
 
 def prophet_forecast(df,
@@ -20,22 +21,22 @@ def prophet_forecast(df,
                      freq,
                      confidence_level=95):
     """
-    Если test_size > 0, делим на train/test:
-      - train = все, кроме последних test_size точек
-      - test = последние test_size точек
-    Возвращаем 4 набора:
-      - forecast_all: прогноз/факт на всех исторических точках (если нужно)
-      - forecast_train: прогноз/факт только на train-части
-      - forecast_test: прогноз/факт только на test-части
-      - forecast_horizon: прогноз на горизонте, начинающийся с последней даты всей истории
+    Если test_size > 0, делим данные на train и test.
+    Возвращаем:
+      - forecast_all: прогноз и фактические значения для всей истории,
+      - forecast_train: для тренировочной части,
+      - forecast_test: для тестовой части,
+      - forecast_horizon: прогноз на будущий горизонт.
     """
     try:
         data = df.copy()
         data[dt_name] = pd.to_datetime(data[dt_name])
+        data.sort_values(dt_name, inplace=True)
         data.set_index(dt_name, inplace=True)
-        data = data.sort_index()
+        # Применяем forward fill, чтобы заполнить пропущенные значения (без вставки нулей)
+        data = data.ffill()
+        # Приводим временной ряд к регулярной частоте
         data = data.asfreq(freq=freq)
-        data = data.fillna(0)
         data[y_name] = data[y_name].astype(float)
 
         df_prophet = pd.DataFrame({
@@ -51,20 +52,23 @@ def prophet_forecast(df,
             train_df = df_prophet.copy()
             test_df = pd.DataFrame(columns=['ds', 'y'])
 
+        # Инициализируем Prophet с заданным уровнем доверия
         m = Prophet(interval_width=confidence_level / 100.0)
         m.fit(train_df)
 
+        # Прогноз для всей истории
         forecast_all = m.predict(df_prophet[['ds']])
         forecast_all = apply_confidence_intervals(forecast_all, confidence_level)
+        # Сливаем фактические значения (y) с прогнозом
         forecast_all = forecast_all.merge(df_prophet, on='ds', how='left')
         forecast_all.rename(columns={'y': 'y_fact', 'yhat': 'y_forecast'}, inplace=True)
         forecast_all['model_name'] = 'Prophet'
         forecast_all = forecast_all[['ds', 'y_fact', 'y_forecast', 'yhat_lower', 'yhat_upper', 'model_name']]
 
         train_forecast = forecast_all[forecast_all['ds'].isin(train_df['ds'])].copy()
-
         test_forecast = forecast_all[forecast_all['ds'].isin(test_df['ds'])].copy()
 
+        # Прогноз для будущего горизонта
         last_date = df_prophet['ds'].max()
         future = m.make_future_dataframe(periods=horizon, freq=freq, include_history=True)
         future = future[future['ds'] > last_date]
@@ -76,4 +80,5 @@ def prophet_forecast(df,
 
         return forecast_all, train_forecast, test_forecast, forecast_horizon
     except Exception as e:
-        print(e)
+        print("Ошибка при прогнозировании:", e)
+        raise e

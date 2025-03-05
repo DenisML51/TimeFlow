@@ -2,7 +2,7 @@
 import { Typography, styled } from "@mui/material";
 
 export const GradientText = styled(Typography)(({ theme }) => ({
-  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, #00FF88 100%)`,
+  background: `linear-gradient(135deg, ${theme.palette.primary.secondary} 0%, ${theme.palette.primary.main} 100%)`,
   WebkitBackgroundClip: 'text',
   WebkitTextFillColor: 'transparent',
   display: 'inline-block',

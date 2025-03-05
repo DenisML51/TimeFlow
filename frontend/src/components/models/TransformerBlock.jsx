@@ -1,26 +1,35 @@
-import React, {memo, useCallback, useContext, useState} from "react";
-import {DashboardContext} from "../../context/DashboardContext";
+import React, { memo, useCallback, useContext, useState } from "react";
+import { DashboardContext } from "../../context/DashboardContext";
 import {
-    Box,
-    Button,
-    Collapse,
-    FormControl,
-    InputLabel, MenuItem,
-    Paper,
-    Select,
-    Slider,
-    TextField,
-    Typography
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Box,
+  Button,
+  Collapse,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Slider,
+  TextField,
+  Tooltip,
+  Typography
 } from "@mui/material";
-import {Check as CheckIcon, Close as CloseIcon} from "@mui/icons-material";
+import {
+  Check as CheckIcon,
+  Close as CloseIcon,
+  ExpandMore as ExpandMoreIcon,
+  HelpOutline as HelpOutlineIcon
+} from "@mui/icons-material";
 
 export const TransformerBlock = memo(function TransformerBlock({
   active,
   setActive,
   transformerParams,
-  setTransformerParams,
+  setTransformerParams
 }) {
-  // Значения по умолчанию для Transformer, включая уникальные параметры
   const defaultTransformerParams = {
     seq_length: 24,
     lag_periods: 12,
@@ -43,16 +52,17 @@ export const TransformerBlock = memo(function TransformerBlock({
     mc_samples: 100,
     use_encoder: true,
     use_decoder: false,
-    activation: "gelu",
+    activation: "gelu"
   };
 
-  // Если transformerParams не определён, используем значения по умолчанию
   const currentTransformerParams = transformerParams || defaultTransformerParams;
-
-  // Инициализация локальных состояний
   const [localSeqLength, setLocalSeqLength] = useState(currentTransformerParams.seq_length);
   const [localLagPeriods, setLocalLagPeriods] = useState(currentTransformerParams.lag_periods);
-  const [localWindowSizes, setLocalWindowSizes] = useState(currentTransformerParams.window_sizes);
+  const [localWindowSizes, setLocalWindowSizes] = useState(
+    typeof currentTransformerParams.window_sizes === "string"
+      ? currentTransformerParams.window_sizes
+      : currentTransformerParams.window_sizes.join(",")
+  );
   const [localDModel, setLocalDModel] = useState(currentTransformerParams.d_model);
   const [localNHead, setLocalNHead] = useState(currentTransformerParams.nhead);
   const [localNumEncoderLayers, setLocalNumEncoderLayers] = useState(currentTransformerParams.num_encoder_layers);
@@ -64,7 +74,6 @@ export const TransformerBlock = memo(function TransformerBlock({
   const [localLearningRate, setLocalLearningRate] = useState(currentTransformerParams.learning_rate);
   const [localOptimizer, setLocalOptimizer] = useState(currentTransformerParams.optimizer_type);
   const [localCriterion, setLocalCriterion] = useState(currentTransformerParams.criterion);
-
   const [paramsOpen, setParamsOpen] = useState(false);
   const { setIsDirty } = useContext(DashboardContext);
 
@@ -72,7 +81,10 @@ export const TransformerBlock = memo(function TransformerBlock({
     setTransformerParams({
       seq_length: localSeqLength,
       lag_periods: localLagPeriods,
-      window_sizes: localWindowSizes,
+      window_sizes: localWindowSizes
+        .split(",")
+        .map((val) => parseInt(val.trim()))
+        .filter((val) => !isNaN(val)),
       d_model: localDModel,
       nhead: localNHead,
       num_encoder_layers: localNumEncoderLayers,
@@ -84,7 +96,6 @@ export const TransformerBlock = memo(function TransformerBlock({
       learning_rate: localLearningRate,
       optimizer_type: localOptimizer,
       criterion: localCriterion,
-      // Подставляем либо существующие, либо дефолтные значения для остальных параметров:
       patience: transformerParams?.patience ?? defaultTransformerParams.patience,
       delta: transformerParams?.delta ?? defaultTransformerParams.delta,
       n_splits: transformerParams?.n_splits ?? defaultTransformerParams.n_splits,
@@ -115,7 +126,7 @@ export const TransformerBlock = memo(function TransformerBlock({
     setTransformerParams,
     setActive,
     setIsDirty,
-    transformerParams,
+    transformerParams
   ]);
 
   const handleCancel = useCallback(() => {
@@ -133,6 +144,26 @@ export const TransformerBlock = memo(function TransformerBlock({
 
   const borderColor = active ? "#10A37F" : "#FF4444";
 
+  const circleStyle = {
+    minWidth: 28,
+    height: 28,
+    borderRadius: "50%",
+    backgroundColor: "#2c2c2c",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#fff",
+    fontSize: "0.8rem",
+    px: 1,
+    ml: 1
+  };
+
+  const helpIcon = (title) => (
+    <Tooltip title={title} arrow>
+      <HelpOutlineIcon sx={{ color: "#10A37F", cursor: "pointer", fontSize: "1rem" }} />
+    </Tooltip>
+  );
+
   return (
     <Paper sx={{ p: 2, mb: 2, border: `2px solid ${borderColor}`, borderRadius: 2 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -144,193 +175,310 @@ export const TransformerBlock = memo(function TransformerBlock({
         </Button>
       </Box>
       <Collapse in={paramsOpen}>
-        <Box
-          sx={{
-            mt: 1,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: 2,
-          }}
-        >
+        <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 2 }}>
           {/* Параметры последовательности */}
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Длина последовательности (seq_length)</Typography>
-            <Slider
-              value={localSeqLength}
-              onChange={(e, val) => setLocalSeqLength(val)}
-              min={1}
-              max={50}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Периоды задержки (lag_periods)</Typography>
-            <Slider
-              value={localLagPeriods}
-              onChange={(e, val) => setLocalLagPeriods(val)}
-              min={1}
-              max={50}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Размеры окон (window_sizes)</Typography>
-            <TextField
-              value={localWindowSizes}
-              onChange={(e) => setLocalWindowSizes(e.target.value)}
-              variant="outlined"
-              fullWidth
-              sx={{ backgroundColor: "#2c2c2c", input: { color: "#fff" } }}
-            />
-          </Box>
-          {/* Параметры архитектуры Transformer */}
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>d_model</Typography>
-            <Slider
-              value={localDModel}
-              onChange={(e, val) => setLocalDModel(val)}
-              min={128}
-              max={512}
-              step={16}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>nhead</Typography>
-            <Slider
-              value={localNHead}
-              onChange={(e, val) => setLocalNHead(val)}
-              min={1}
-              max={16}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Encoder Layers</Typography>
-            <Slider
-              value={localNumEncoderLayers}
-              onChange={(e, val) => setLocalNumEncoderLayers(val)}
-              min={1}
-              max={6}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Decoder Layers</Typography>
-            <Slider
-              value={localNumDecoderLayers}
-              onChange={(e, val) => setLocalNumDecoderLayers(val)}
-              min={0}
-              max={4}
-              step={1}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>dim_feedforward</Typography>
-            <Slider
-              value={localDimFeedforward}
-              onChange={(e, val) => setLocalDimFeedforward(val)}
-              min={256}
-              max={1024}
-              step={32}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Dropout</Typography>
-            <Slider
-              value={localDropout}
-              onChange={(e, val) => setLocalDropout(val)}
-              min={0}
-              max={1}
-              step={0.05}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+              <Typography>Параметры последовательности</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">Длина последовательности (seq_length)</Typography>
+                      {helpIcon("Определяет длину входной последовательности для Transformer.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localSeqLength}</Box>
+                  </Box>
+                  <Slider
+                    value={localSeqLength}
+                    onChange={(e, val) => setLocalSeqLength(val)}
+                    min={1}
+                    max={50}
+                    step={1}
+                    valueLabelDisplay="auto"
+                    sx={{ color: "#10A37F" }}
+                  />
+                </Box>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">Периоды задержки (lag_periods)</Typography>
+                      {helpIcon("Число предыдущих периодов для формирования входа модели.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localLagPeriods}</Box>
+                  </Box>
+                  <Slider
+                    value={localLagPeriods}
+                    onChange={(e, val) => setLocalLagPeriods(val)}
+                    min={1}
+                    max={50}
+                    step={1}
+                    valueLabelDisplay="auto"
+                    sx={{ color: "#10A37F" }}
+                  />
+                </Box>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">Размеры окон (window_sizes)</Typography>
+                      {helpIcon("Список размеров скользящего окна для формирования признаков.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localWindowSizes}</Box>
+                  </Box>
+                  <TextField
+                    value={localWindowSizes}
+                    onChange={(e) => setLocalWindowSizes(e.target.value)}
+                    variant="outlined"
+                    fullWidth
+                    sx={{ backgroundColor: "#2c2c2c", input: { color: "#fff" }, mt: 1 }}
+                  />
+                </Box>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+
+          {/* Архитектура Transformer */}
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+              <Typography>Архитектура Transformer</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">d_model</Typography>
+                      {helpIcon("Размерность представления входных данных.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localDModel}</Box>
+                  </Box>
+                  <Slider
+                    value={localDModel}
+                    onChange={(e, val) => setLocalDModel(val)}
+                    min={128}
+                    max={512}
+                    step={16}
+                    valueLabelDisplay="auto"
+                    sx={{ color: "#10A37F" }}
+                  />
+                </Box>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">nhead</Typography>
+                      {helpIcon("Количество голов в механизме внимания.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localNHead}</Box>
+                  </Box>
+                  <Slider
+                    value={localNHead}
+                    onChange={(e, val) => setLocalNHead(val)}
+                    min={1}
+                    max={16}
+                    step={1}
+                    valueLabelDisplay="auto"
+                    sx={{ color: "#10A37F" }}
+                  />
+                </Box>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">Encoder Layers</Typography>
+                      {helpIcon("Количество слоёв энкодера в Transformer.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localNumEncoderLayers}</Box>
+                  </Box>
+                  <Slider
+                    value={localNumEncoderLayers}
+                    onChange={(e, val) => setLocalNumEncoderLayers(val)}
+                    min={1}
+                    max={6}
+                    step={1}
+                    valueLabelDisplay="auto"
+                    sx={{ color: "#10A37F" }}
+                  />
+                </Box>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">Decoder Layers</Typography>
+                      {helpIcon("Количество слоёв декодера в Transformer.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localNumDecoderLayers}</Box>
+                  </Box>
+                  <Slider
+                    value={localNumDecoderLayers}
+                    onChange={(e, val) => setLocalNumDecoderLayers(val)}
+                    min={0}
+                    max={4}
+                    step={1}
+                    valueLabelDisplay="auto"
+                    sx={{ color: "#10A37F" }}
+                  />
+                </Box>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">dim_feedforward</Typography>
+                      {helpIcon("Размер скрытого слоя в блоке feedforward.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localDimFeedforward}</Box>
+                  </Box>
+                  <Slider
+                    value={localDimFeedforward}
+                    onChange={(e, val) => setLocalDimFeedforward(val)}
+                    min={256}
+                    max={1024}
+                    step={32}
+                    valueLabelDisplay="auto"
+                    sx={{ color: "#10A37F" }}
+                  />
+                </Box>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">Dropout</Typography>
+                      {helpIcon("Доля нейронов, отключаемых для предотвращения переобучения.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localDropout}</Box>
+                  </Box>
+                  <Slider
+                    value={localDropout}
+                    onChange={(e, val) => setLocalDropout(val)}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    valueLabelDisplay="auto"
+                    sx={{ color: "#10A37F" }}
+                  />
+                </Box>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+
           {/* Параметры обучения */}
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Batch Size</Typography>
-            <Slider
-              value={localBatchSize}
-              onChange={(e, val) => setLocalBatchSize(val)}
-              min={8}
-              max={256}
-              step={8}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Эпохи (epochs)</Typography>
-            <Slider
-              value={localEpochs}
-              onChange={(e, val) => setLocalEpochs(val)}
-              min={10}
-              max={500}
-              step={10}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          <Box>
-            <Typography variant="body2" sx={{ color: "#fff" }}>Learning Rate</Typography>
-            <Slider
-              value={localLearningRate}
-              onChange={(e, val) => setLocalLearningRate(val)}
-              min={0.0001}
-              max={0.01}
-              step={0.0001}
-              valueLabelDisplay="auto"
-              sx={{ color: "#10A37F" }}
-            />
-          </Box>
-          {/* Выбор оптимайзера */}
-          <Box>
-            <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px" }}>
-              <InputLabel sx={{ color: "#fff" }}>Optimizer</InputLabel>
-              <Select
-                value={localOptimizer}
-                label="Optimizer"
-                onChange={(e) => setLocalOptimizer(e.target.value)}
-                sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
-              >
-                <MenuItem value="AdamW">AdamW</MenuItem>
-                <MenuItem value="Adam">Adam</MenuItem>
-                <MenuItem value="SGD">SGD</MenuItem>
-                <MenuItem value="RMSprop">RMSprop</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-          {/* Выбор критерия */}
-          <Box>
-            <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px" }}>
-              <InputLabel sx={{ color: "#fff" }}>Criterion</InputLabel>
-              <Select
-                value={localCriterion}
-                label="Criterion"
-                onChange={(e) => setLocalCriterion(e.target.value)}
-                sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
-              >
-                <MenuItem value="MSE">MSE</MenuItem>
-                <MenuItem value="MAE">MAE</MenuItem>
-                <MenuItem value="Huber">Huber</MenuItem>
-                <MenuItem value="Huber">SmoothL1</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+              <Typography>Параметры обучения</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">Batch Size</Typography>
+                      {helpIcon("Число образцов, обрабатываемых за один шаг обучения.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localBatchSize}</Box>
+                  </Box>
+                  <Slider
+                    value={localBatchSize}
+                    onChange={(e, val) => setLocalBatchSize(val)}
+                    min={8}
+                    max={256}
+                    step={8}
+                    valueLabelDisplay="auto"
+                    sx={{ color: "#10A37F" }}
+                  />
+                </Box>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">Эпохи (epochs)</Typography>
+                      {helpIcon("Количество проходов по всему набору данных.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localEpochs}</Box>
+                  </Box>
+                  <Slider
+                    value={localEpochs}
+                    onChange={(e, val) => setLocalEpochs(val)}
+                    min={10}
+                    max={500}
+                    step={10}
+                    valueLabelDisplay="auto"
+                    sx={{ color: "#10A37F" }}
+                  />
+                </Box>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">Learning Rate</Typography>
+                      {helpIcon("Размер шага при обновлении весов.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localLearningRate}</Box>
+                  </Box>
+                  <Slider
+                    value={localLearningRate}
+                    onChange={(e, val) => setLocalLearningRate(val)}
+                    min={0.0001}
+                    max={0.01}
+                    step={0.0001}
+                    valueLabelDisplay="auto"
+                    sx={{ color: "#10A37F" }}
+                  />
+                </Box>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+
+          {/* Оптимизатор и критерий */}
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+              <Typography>Оптимизатор и критерий</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">Optimizer</Typography>
+                      {helpIcon("Оптимизатор, используемый при обучении модели.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localOptimizer}</Box>
+                  </Box>
+                  <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px", mt: 1 }}>
+                    <InputLabel sx={{ color: "#fff" }}>Optimizer</InputLabel>
+                    <Select
+                      value={localOptimizer}
+                      label="Optimizer"
+                      onChange={(e) => setLocalOptimizer(e.target.value)}
+                      sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
+                    >
+                      <MenuItem value="AdamW">AdamW</MenuItem>
+                      <MenuItem value="Adam">Adam</MenuItem>
+                      <MenuItem value="SGD">SGD</MenuItem>
+                      <MenuItem value="RMSprop">RMSprop</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography variant="body2">Criterion</Typography>
+                      {helpIcon("Функция потерь, используемая при обучении.")}
+                    </Box>
+                    <Box sx={circleStyle}>{localCriterion}</Box>
+                  </Box>
+                  <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px", mt: 1 }}>
+                    <InputLabel sx={{ color: "#fff" }}>Criterion</InputLabel>
+                    <Select
+                      value={localCriterion}
+                      label="Criterion"
+                      onChange={(e) => setLocalCriterion(e.target.value)}
+                      sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
+                    >
+                      <MenuItem value="MSE">MSE</MenuItem>
+                      <MenuItem value="MAE">MAE</MenuItem>
+                      <MenuItem value="Huber">Huber</MenuItem>
+                      <MenuItem value="SmoothL1">SmoothL1</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
         </Box>
       </Collapse>
       <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
@@ -354,7 +502,6 @@ export const TransformerBlock = memo(function TransformerBlock({
           </Button>
         )}
       </Box>
-
     </Paper>
   );
 });

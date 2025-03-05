@@ -25,6 +25,7 @@ import { HistoryContext } from "../context/HistoryContext";
 import axios from "axios";
 import {Canvas} from "@react-three/fiber";
 import {ParticleBackground} from "../components/home/ParticleBackground";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 
 const Dashboard = () => {
   const theme = useTheme();
@@ -212,6 +213,36 @@ const Dashboard = () => {
         {/* File Upload Section */}
         <Grid item xs={12}>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+
+              <Box sx={{ display: "flex", gap: 2, alignItems: "left", mb: 3, justifyContent: "space-between" }}>
+
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 700,
+                    background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, #00ff88 100%)`,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  Загркзка и обработка данных
+                </Typography>
+                <Button
+                  variant="contained"
+                  onClick={handleConfirmSelection}
+                  endIcon={<ArrowForwardIcon />}
+                  sx={{
+                    background: "rgba(16,163,127,0.15)",
+                    color: "#10A37F",
+                    borderRadius: "12px",
+                    px: 3,
+                    alignItems: 'right',
+                    "&:hover": { background: "rgba(16,163,127,0.3)" },
+                  }}
+                >
+                Обработка
+                  </Button>
+              </Box>
             <Box
               sx={{
                 background: "rgba(255,255,255,0.05)",
@@ -222,20 +253,6 @@ const Dashboard = () => {
                 boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
               }}
             >
-              <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 3 }}>
-                <TbUpload size={32} color={theme.palette.primary.main} />
-                <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 600,
-                    background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, #00ff88 100%)`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  Загркзка и обработка данных
-                </Typography>
-              </Box>
               <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
                 <input type="file" accept=".csv, .xlsx" onChange={handleFileChange} id="upload-file" hidden />
                 <Button

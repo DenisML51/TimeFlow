@@ -42,7 +42,7 @@ export const ParticleBackground = (props) => {
 };
 
 
-export const ParticleBackground2 = (props) => {
+export const ParticleBackground1 = (props) => {
   const ref = useRef();
   const initialPositions = useRef();
 

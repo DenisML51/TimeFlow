@@ -189,7 +189,7 @@ export const SarimaBlock = memo(function SarimaBlock({
               size="small"
               color="primary"
             >
-              {[1, 2, 3, 4, 6, 12, 24].map((val) => (
+              {[1, 2, 3, 4, 6, 12, 24, 52, 365].map((val) => (
                 <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
                   {val}
                 </ToggleButton>

@@ -58,3 +58,4 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
         raise HTTPException(status_code=401, detail="Пользователь не найден")
     logger.debug(f"Пользователь {username} успешно найден")
     return user
+

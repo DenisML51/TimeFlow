@@ -69,14 +69,16 @@ async def login(
         value=access_token,
         httponly=True,
         samesite="lax",
-        path="/"
+        path="/",
+        domain="localhost"  # или укажите нужный домен
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
         samesite="lax",
-        path="/"
+        path="/",
+        domain="localhost"  # или укажите нужный домен
     )
 
     background_tasks.add_task(record_history_bg, user.id, "Пользователь вошел в систему")
@@ -109,14 +111,16 @@ async def refresh_token(request: Request, response: Response, db: AsyncSession =
         value=new_access_token,
         httponly=True,
         samesite="lax",
-        path="/"
-    )
+        path="/",
+        domain="localhost"  # или укажите нужный домен
+)
     response.set_cookie(
         key="refresh_token",
         value=new_refresh_token,
         httponly=True,
         samesite="lax",
-        path="/"
+        path="/",
+        domain="localhost"  # или укажите нужный домен
     )
 
     return {"message": "Токены обновлены", "access_token": new_access_token}

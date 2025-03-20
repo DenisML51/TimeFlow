@@ -7,25 +7,20 @@ import {
   CircularProgress,
   Chip,
   useTheme,
+  alpha,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  TbUpload,
-  TbX,
-  TbChartLine,
-  TbFilter,
-  TbArrowRight,
-  TbInfoCircle,
-} from "react-icons/tb";
 import FilterPanel from "../components/FilterPanel";
 import TableDisplay from "../components/TableDisplay";
 import { DashboardContext } from "../context/DashboardContext";
 import { HistoryContext } from "../context/HistoryContext";
 import axios from "axios";
-import {Canvas} from "@react-three/fiber";
-import {ParticleBackground} from "../components/home/ParticleBackground";
+import { Canvas } from "@react-three/fiber";
+import { ParticleBackground } from "../components/home/ParticleBackground";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import { TbUpload, TbX, TbFilter, TbArrowRight, TbChartLine } from "react-icons/tb";
+import GlassPaper from "../components/GlassPaper";
 
 const Dashboard = () => {
   const theme = useTheme();
@@ -58,6 +53,8 @@ const Dashboard = () => {
     forecastResults,
     tablePage,
     tableRowsPerPage,
+    saveSessionNow,
+    saveSessionOnUnload,
   } = useContext(DashboardContext);
   const { addHistoryItem } = useContext(HistoryContext);
 
@@ -73,7 +70,6 @@ const Dashboard = () => {
       setUploadedFile(selectedFile);
       setUploadedFileName(selectedFile.name);
       setMessage("");
-      // При загрузке нового файла новая сессия активна
     }
   };
 
@@ -98,7 +94,6 @@ const Dashboard = () => {
       addHistoryItem(file.name);
       analyzeData(receivedData);
 
-      // Формируем объект состояния для новой сессии, включая все необходимые поля
       const sessionState = {
         originalData: receivedData,
         columns: columnNames,
@@ -155,8 +150,10 @@ const Dashboard = () => {
     if (fileInput) fileInput.value = "";
   };
 
+  // При программном переходе (например, по кнопке) сначала сохраняем сессию, затем переходим
   const handleConfirmSelection = () => {
     if (Array.isArray(selectedColumns) && selectedColumns.length === 2) {
+      saveSessionNow(); // сохраняем состояние текущей сессии
       navigate("/preprocessing", {
         state: { selectedColumns, filteredData, filters },
       });
@@ -196,6 +193,16 @@ const Dashboard = () => {
     setTableData(data);
   }, [originalData, filters, sortColumn, sortDirection]);
 
+  // Регистрируем обработчик beforeunload для сохранения сессии при обновлении/закрытии страницы
+  useEffect(() => {
+    window.addEventListener("beforeunload", saveSessionOnUnload);
+    return () => {
+      window.removeEventListener("beforeunload", saveSessionOnUnload);
+      // Если происходит клиентский переход (unmount компонента), также сохраняем состояние
+      saveSessionNow();
+    };
+  }, [saveSessionOnUnload, saveSessionNow]);
+
   return (
     <Box
       sx={{
@@ -206,53 +213,52 @@ const Dashboard = () => {
         background: theme.palette.background.default,
       }}
     >
-            <Canvas camera={{ position: [0, 0, 1] }} style={{ position: 'fixed', top: 0, left: 0 }}>
+      <Canvas
+        camera={{ position: [0, 0, 1] }}
+        style={{ position: "fixed", top: 0, left: 0 }}
+      >
         <ParticleBackground />
       </Canvas>
       <Grid container spacing={4} sx={{ position: "relative", zIndex: 1 }}>
         {/* File Upload Section */}
         <Grid item xs={12}>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-
-              <Box sx={{ display: "flex", gap: 2, alignItems: "left", mb: 3, justifyContent: "space-between" }}>
-
-                <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 700,
-                    background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, #00ff88 100%)`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  Загркзка и обработка данных
-                </Typography>
-                <Button
-                  variant="contained"
-                  onClick={handleConfirmSelection}
-                  endIcon={<ArrowForwardIcon />}
-                  sx={{
-                    background: "rgba(16,163,127,0.15)",
-                    color: "#10A37F",
-                    borderRadius: "12px",
-                    px: 3,
-                    alignItems: 'right',
-                    "&:hover": { background: "rgba(16,163,127,0.3)" },
-                  }}
-                >
-                Обработка
-                  </Button>
-              </Box>
             <Box
               sx={{
-                background: "rgba(255,255,255,0.05)",
-                borderRadius: "20px",
-                p: 4,
-                border: "1px solid rgba(255,255,255,0.1)",
-                backdropFilter: "blur(12px)",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+                display: "flex",
+                gap: 2,
+                alignItems: "flex-start",
+                mb: 3,
+                justifyContent: "space-between",
               }}
             >
+              <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 700,
+                  background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.secondary} 100%)`,
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
+                Загрузка и обработка данных
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={handleConfirmSelection}
+                endIcon={<ArrowForwardIcon />}
+                sx={{
+                  background: alpha(theme.palette.primary.main, 0.15),
+                  color: theme.palette.primary.main,
+                  borderRadius: "12px",
+                  px: 3,
+                  "&:hover": { background: alpha(theme.palette.primary.main, 0.3) },
+                }}
+              >
+                Обработка
+              </Button>
+            </Box>
+            <GlassPaper sx={{ borderRadius: "20px", p: 4 }}>
               <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
                 <input type="file" accept=".csv, .xlsx" onChange={handleFileChange} id="upload-file" hidden />
                 <Button
@@ -278,7 +284,7 @@ const Dashboard = () => {
                         onDelete={handleReset}
                         deleteIcon={<TbX />}
                         sx={{
-                          bgcolor: "rgba(16,163,127,0.15)",
+                          bgcolor: alpha(theme.palette.primary.main, 0.15),
                           color: theme.palette.primary.main,
                           fontWeight: 500,
                         }}
@@ -295,17 +301,29 @@ const Dashboard = () => {
                     py: 1.5,
                     borderRadius: "12px",
                     bgcolor: theme.palette.primary.main,
-                    "&:disabled": { bgcolor: "rgba(255,255,255,0.1)" },
+                    "&:disabled": { bgcolor: alpha(theme.palette.common.white, 0.1) },
                   }}
                 >
-                  {loading ? <CircularProgress size={24} sx={{ color: "#fff" }} /> : "Статистика данных"}
+                  {loading ? (
+                    <CircularProgress size={24} sx={{ color: theme.palette.common.white }} />
+                  ) : (
+                    "Статистика данных"
+                  )}
                 </Button>
               </Box>
               {stats && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
                   <Box sx={{ mt: 4, display: "flex", gap: 2, flexWrap: "wrap" }}>
                     {Object.entries(stats).map(([col, values]) => (
-                      <Box key={col} sx={{ bgcolor: "rgba(16,163,127,0.1)", p: 2, borderRadius: "12px", minWidth: "200px" }}>
+                      <Box
+                        key={col}
+                        sx={{
+                          bgcolor: alpha(theme.palette.primary.main, 0.1),
+                          p: 2,
+                          borderRadius: "12px",
+                          minWidth: "200px",
+                        }}
+                      >
                         <Typography variant="subtitle1" sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
                           {col}
                         </Typography>
@@ -319,26 +337,28 @@ const Dashboard = () => {
                   </Box>
                 </motion.div>
               )}
-            </Box>
+            </GlassPaper>
           </motion.div>
         </Grid>
-  
+
         {/* Filters & Table Section */}
         <Grid item xs={12} md={3}>
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
-            <Box sx={{ p: 3, bgcolor: "rgba(255,255,255,0.05)", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)" }}>
+            <GlassPaper>
               <Box sx={{ display: "flex", alignItems: "center", mb: 3, gap: 1 }}>
                 <TbFilter size={24} color={theme.palette.primary.main} />
-                <Typography variant="h6" sx={{ fontWeight: 500 }}>Фильтры</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                  Фильтры
+                </Typography>
               </Box>
               <FilterPanel originalData={originalData} columns={columns} filters={filters} updateFilters={setFilters} />
-            </Box>
+            </GlassPaper>
           </motion.div>
         </Grid>
-  
+
         <Grid item xs={12} md={9}>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <Box sx={{ bgcolor: "rgba(255,255,255,0.05)", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(12px)", p: 3 }}>
+            <GlassPaper>
               <TableDisplay
                 data={tableData}
                 sortColumn={sortColumn}
@@ -356,8 +376,24 @@ const Dashboard = () => {
               />
               {Array.isArray(selectedColumns) && selectedColumns.length > 0 && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-                  <Box sx={{ mt: 4, p: 3, bgcolor: "rgba(16,163,127,0.1)", borderRadius: "12px", border: "1px solid rgba(16,163,127,0.3)" }}>
-                    <Typography variant="h6" sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1, color: theme.palette.primary.main }}>
+                  <GlassPaper
+                    sx={{
+                      mt: 4,
+                      p: 3,
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        color: theme.palette.primary.main,
+                      }}
+                    >
                       <TbChartLine size={24} />
                       Выбранные признаки
                     </Typography>
@@ -370,7 +406,7 @@ const Dashboard = () => {
                             setSelectedColumns((prev) => prev.filter((c) => c !== col));
                           }}
                           sx={{
-                            bgcolor: "rgba(16,163,127,0.2)",
+                            bgcolor: alpha(theme.palette.primary.main, 0.2),
                             color: "#fff",
                             fontSize: "0.9rem",
                             py: 1.5,
@@ -391,21 +427,29 @@ const Dashboard = () => {
                         borderRadius: "12px",
                         fontSize: "1rem",
                         bgcolor: theme.palette.primary.main,
-                        "&:disabled": { bgcolor: "rgba(255,255,255,0.1)" },
+                        "&:disabled": { bgcolor: alpha(theme.palette.common.white, 0.1) },
                       }}
                     >
                       Продолжить анализ
                     </Button>
                     {selectedColumns.length !== 2 && (
-                      <Typography variant="body2" sx={{ mt: 1, display: "flex", alignItems: "center", gap: 1, color: "text.secondary" }}>
-                        <TbInfoCircle />
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          mt: 1,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          color: theme.palette.text.secondary,
+                        }}
+                      >
                         Выберите временную и таргетную переменную
                       </Typography>
                     )}
-                  </Box>
+                  </GlassPaper>
                 </motion.div>
               )}
-            </Box>
+            </GlassPaper>
           </motion.div>
         </Grid>
       </Grid>

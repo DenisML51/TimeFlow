@@ -1,22 +1,24 @@
-import React from "react";
+import React, { useContext } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider, CssBaseline, Box } from "@mui/material";
-import theme from "./theme/theme";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import SelectedColumnsPage from "./pages/Preprocessing";
 import ForecastPage from "./pages/ForecastPage";
-import Demo from "./pages/DemoPage"; 
+import Demo from "./pages/DemoPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Header from "./components/Header";
 import { DashboardProvider } from "./context/DashboardContext";
 import { HistoryProvider } from "./context/HistoryContext";
 import { AuthProvider } from "./context/AuthContext";
+import { ColorModeProvider, ColorModeContext } from "./context/ThemeContext";
 import "./chartConfig";
 
-const App = () => {
+const AppContent = () => {
+  const { theme } = useContext(ColorModeContext);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -60,7 +62,7 @@ const App = () => {
                       </ProtectedRoute>
                     }
                   />
-                  {/* Маршрут для демо-страницы: она не защищена, сессии не сохраняются */}
+                  {/* Демо-страница без защиты */}
                   <Route path="/demo" element={<Demo />} />
                 </Routes>
               </Box>
@@ -69,6 +71,14 @@ const App = () => {
         </DashboardProvider>
       </AuthProvider>
     </ThemeProvider>
+  );
+};
+
+const App = () => {
+  return (
+    <ColorModeProvider>
+      <AppContent />
+    </ColorModeProvider>
   );
 };
 

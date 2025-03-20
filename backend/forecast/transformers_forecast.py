@@ -10,10 +10,16 @@ from typing import Dict, Union, Optional, List
 import random
 import math
 import matplotlib.pyplot as plt
+from torch.cuda.amp import autocast, GradScaler
 
-# =============================================================================
-# Dataset для временных рядов
-# =============================================================================
+# Функция для включения MC-Dropout: перевод dropout-слоёв в режим train
+def enable_mc_dropout(model: nn.Module):
+    model.eval()
+    for m in model.modules():
+        if isinstance(m, nn.Dropout):
+            m.train()
+
+# Набор данных для временных рядов
 class TimeSeriesDataset(Dataset):
     def __init__(self, data: np.ndarray, seq_length: int, horizon: int):
         self.data = data
@@ -25,13 +31,11 @@ class TimeSeriesDataset(Dataset):
         return max(0, length)
 
     def __getitem__(self, idx):
-        x = self.data[idx:idx + self.seq_length]
+        x = self.data[idx: idx + self.seq_length]
         y = self.data[idx + self.seq_length: idx + self.seq_length + self.horizon, 0]
         return torch.FloatTensor(x), torch.FloatTensor(y)
 
-# =============================================================================
-# Модуль внимания (не используется в Transformer, но оставлен для примера)
-# =============================================================================
+# Модуль внимания
 class Attention(nn.Module):
     def __init__(self, hidden_size: int):
         super().__init__()
@@ -45,9 +49,7 @@ class Attention(nn.Module):
         attn_weights = torch.softmax(self.attention(lstm_output).squeeze(2), dim=1)
         return torch.sum(lstm_output * attn_weights.unsqueeze(-1), dim=1)
 
-# =============================================================================
-# Positional Encoding
-# =============================================================================
+# Positional Encoding для Transformer
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
         super().__init__()
@@ -63,9 +65,7 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(1)]
         return self.dropout(x)
 
-# =============================================================================
-# Transformer-модель для прогнозирования
-# =============================================================================
+# Модель Transformer для прогнозирования
 class TransformerModel(nn.Module):
     def __init__(self, input_size: int, d_model: int, nhead: int,
                  num_encoder_layers: int, num_decoder_layers: int,
@@ -102,24 +102,19 @@ class TransformerModel(nn.Module):
         # src: [batch, seq_length, features]
         src = self.input_proj(src) * math.sqrt(self.d_model)
         src = self.pos_encoder(src)
-
         if self.use_encoder:
             memory = self.encoder(src)
         else:
             memory = src
-
         if self.use_decoder:
-            # Для decoder создаём нулевой вход той же размерности, что и src
+            # Создаём нулевой decoder input той же размерности, что и src
             output = self.decoder(torch.zeros_like(src), memory)
         else:
             output = memory
-
         # Используем последний временной шаг для прогноза
         return self.output_layer(output[:, -1, :])
 
-# =============================================================================
-# Класс ранней остановки (Early Stopping)
-# =============================================================================
+# Механизм ранней остановки
 class EarlyStopping:
     def __init__(self, patience=5, delta=0):
         self.patience = patience
@@ -139,9 +134,7 @@ class EarlyStopping:
             self.best_score = val_loss
             self.counter = 0
 
-# =============================================================================
-# Функция создания признаков: лаги, скользящие статистики и сезонные признаки
-# =============================================================================
+# Функция создания признаков из временного ряда
 def create_features(df: pd.DataFrame, dt_col: str, target_col: str,
                     lag_periods: int, seasonality: str, window_sizes: List[int] = None) -> pd.DataFrame:
     df = df.copy()
@@ -156,25 +149,181 @@ def create_features(df: pd.DataFrame, dt_col: str, target_col: str,
         df['diff_1'] = df[target_col].diff()
     if 'M' in seasonality:
         df['month'] = df.index.month
+        df['month_sin'] = np.sin(2 * np.pi * df['month'] / 12)
+        df['month_cos'] = np.cos(2 * np.pi * df['month'] / 12)
     elif 'W' in seasonality:
         df['week'] = df.index.isocalendar().week
+        df['month'] = df.index.month
+        df['month_sin'] = np.sin(2 * np.pi * df['month'] / 12)
+        df['month_cos'] = np.cos(2 * np.pi * df['month'] / 12)
     elif 'D' in seasonality:
         df['day'] = df.index.day
         df['weekday'] = df.index.weekday
     df.dropna(inplace=True)
     return df
 
-# =============================================================================
-# Функция обратного масштабирования для целевой переменной
-# =============================================================================
+# Функция обратного преобразования нормализованных данных
 def inverse_transform_target(scaler: MinMaxScaler, y_norm: np.ndarray, target_index: int = 0) -> np.ndarray:
     data_min = scaler.data_min_[target_index]
     data_max = scaler.data_max_[target_index]
     return y_norm * (data_max - data_min) + data_min
 
-# =============================================================================
-# Основная функция прогнозирования с использованием Transformer и MC-Dropout
-# =============================================================================
+# Функция обучения модели с кросс-валидацией
+def train_model(model, train_data, params, horizon, device, loss_fn, optimizer, scheduler, amp_scaler, early_stopping, splits):
+    best_val_loss = np.inf
+    best_model_state = None
+    trained = False
+    for fold, (train_idx, val_idx) in enumerate(splits):
+        train_fold = train_data[train_idx]
+        val_fold = train_data[val_idx]
+        if len(train_fold) - params['seq_length'] - horizon + 1 <= 0:
+            continue
+        if len(val_fold) - params['seq_length'] - horizon + 1 <= 0:
+            continue
+
+        train_loader = DataLoader(
+            TimeSeriesDataset(train_fold, params['seq_length'], horizon),
+            batch_size=params['batch_size'],
+            shuffle=False
+        )
+        val_loader = DataLoader(
+            TimeSeriesDataset(val_fold, params['seq_length'], horizon),
+            batch_size=params['batch_size'],
+            shuffle=False
+        )
+        trained = True
+        for epoch in range(params['epochs']):
+            model.train()
+            epoch_train_loss = 0.0
+            for x, y in train_loader:
+                x, y = x.to(device), y.to(device)
+                optimizer.zero_grad()
+                with autocast(enabled=(amp_scaler is not None)):
+                    output = model(x)
+                    loss = loss_fn(output, y)
+                if amp_scaler:
+                    amp_scaler.scale(loss).backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    amp_scaler.step(optimizer)
+                    amp_scaler.update()
+                else:
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    optimizer.step()
+                epoch_train_loss += loss.item()
+            model.eval()
+            epoch_val_loss = 0.0
+            with torch.no_grad():
+                for x, y in val_loader:
+                    x, y = x.to(device), y.to(device)
+                    with autocast(enabled=(amp_scaler is not None)):
+                        output = model(x)
+                        loss = loss_fn(output, y)
+                    epoch_val_loss += loss.item()
+            avg_val_loss = epoch_val_loss / len(val_loader)
+            if avg_val_loss < best_val_loss:
+                best_val_loss = avg_val_loss
+                best_model_state = model.state_dict()
+            scheduler.step()
+            early_stopping(avg_val_loss)
+            if early_stopping.early_stop:
+                break
+        if early_stopping.early_stop:
+            break
+    return trained, best_model_state
+
+# Функция fallback‑обучения модели на полном наборе данных
+def train_full_model(model, train_data, params, horizon, device, loss_fn, optimizer, scheduler, amp_scaler, early_stopping):
+    best_train_loss = np.inf
+    best_model_state = None
+    train_loader = DataLoader(
+        TimeSeriesDataset(train_data, params['seq_length'], horizon),
+        batch_size=params['batch_size'],
+        shuffle=True
+    )
+    for epoch in range(params['epochs']):
+        model.train()
+        epoch_train_loss = 0.0
+        for x, y in train_loader:
+            x, y = x.to(device), y.to(device)
+            optimizer.zero_grad()
+            with autocast(enabled=(amp_scaler is not None)):
+                output = model(x)
+                loss = loss_fn(output, y)
+            if amp_scaler:
+                amp_scaler.scale(loss).backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                amp_scaler.step(optimizer)
+                amp_scaler.update()
+            else:
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                optimizer.step()
+            epoch_train_loss += loss.item()
+        avg_train_loss = epoch_train_loss / len(train_loader)
+        if avg_train_loss < best_train_loss:
+            best_train_loss = avg_train_loss
+            best_model_state = model.state_dict()
+        scheduler.step()
+        early_stopping(avg_train_loss)
+        if early_stopping.early_stop:
+            break
+    return best_model_state
+
+# Функция прогнозирования батчами с использованием MC-Dropout
+def make_forecast(model: nn.Module, data_loader: DataLoader, params, device, amp_scaler) -> np.ndarray:
+    if params['mc_dropout']:
+        enable_mc_dropout(model)
+    else:
+        model.eval()
+    forecasts = []
+    with torch.no_grad():
+        for x, _ in data_loader:
+            x = x.to(device)
+            if params['mc_dropout']:
+                preds = [model(x).cpu().numpy() for _ in range(params['mc_samples'])]
+                forecasts.append(np.mean(preds, axis=0))
+            else:
+                forecasts.append(model(x).cpu().numpy())
+    return np.concatenate(forecasts, axis=0) if forecasts else np.array([])
+
+# Функция генерации исторического прогноза по батчевым прогнозам
+def generate_historical_forecast(feature_df: pd.DataFrame, all_forecasts: np.ndarray,
+                                 scaler: MinMaxScaler, params, horizon: int) -> pd.DataFrame:
+    forecast_steps = [
+        (feature_df.index[params['seq_length'] + i + h],
+         all_forecasts[i, h] * (scaler.data_max_[0] - scaler.data_min_[0]) + scaler.data_min_[0])
+        for i in range(all_forecasts.shape[0])
+        for h in range(horizon)
+        if params['seq_length'] + i + h < len(feature_df)
+    ]
+    forecast_df = pd.DataFrame(forecast_steps, columns=['ds', 'y_forecast'])
+    forecast_df = forecast_df.groupby('ds')['y_forecast'].mean().reset_index()
+    return forecast_df
+
+# Функция итеративного прогнозирования будущих значений
+def iterative_forecast(model: nn.Module, scaled_data: np.ndarray, params, scaler: MinMaxScaler,
+                         horizon: int, device: str, amp_scaler) -> List[float]:
+    last_seq = scaled_data[-params['seq_length']:]
+    current_seq = last_seq.copy()
+    future_forecasts = []
+    for i in range(horizon):
+        try:
+            x = torch.FloatTensor(current_seq[-params['seq_length']:]).unsqueeze(0).to(device)
+            with torch.no_grad(), autocast(enabled=(amp_scaler is not None)):
+                pred = model(x).cpu().numpy()[0]
+            future_value = pred[0] * (scaler.data_max_[0] - scaler.data_min_[0]) + scaler.data_min_[0]
+            future_forecasts.append(future_value)
+            new_row = np.zeros_like(scaled_data[0])
+            new_row[0] = (pred[0] - scaler.data_min_[0]) / (scaler.data_max_[0] - scaler.data_min_[0])
+            current_seq = np.vstack([current_seq, new_row])
+        except Exception as e:
+            print(f"Ошибка при прогнозировании шага {i}: {e}")
+            future_forecasts.extend([future_forecasts[-1]] * (horizon - i))
+            break
+    return future_forecasts
+
+# Основная функция прогнозирования с использованием Transformer
 def transformer_forecast(
         df: pd.DataFrame,
         horizon: int,
@@ -189,7 +338,7 @@ def transformer_forecast(
         optimizer_type: str = 'AdamW',
         device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
 ) -> Union[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    # Задаём параметры по умолчанию и обновляем их из model_params
+    # Параметры по умолчанию
     default_params = {
         'seq_length': 24,
         'lag_periods': 12,
@@ -212,17 +361,16 @@ def transformer_forecast(
         'use_decoder': False,
         'activation': 'gelu'
     }
-
     if model_params:
         default_params.update(model_params)
     params = default_params
 
-    print(df.shape)
+    print("Размер входного DataFrame:", df.shape)
 
-    # Если window_sizes передан как строка, преобразуем его в список чисел
     if isinstance(params.get('window_sizes'), str):
         try:
-            params['window_sizes'] = [int(x.strip()) for x in params['window_sizes'].split(',') if x.strip().isdigit()]
+            params['window_sizes'] = [int(x.strip()) for x in params['window_sizes'].split(',')
+                                      if x.strip().isdigit()]
         except Exception as e:
             raise ValueError("Ошибка преобразования window_sizes: " + str(e))
 
@@ -252,9 +400,8 @@ def transformer_forecast(
 
     train_size = len(scaled_data) - test_size
     train_data = scaled_data[:train_size]
-    # test_data используется для формирования DataLoader, если потребуется
     test_data = scaled_data[train_size - params['seq_length']:]
-
+    
     tscv = TimeSeriesSplit(n_splits=params['n_splits'])
     splits = list(tscv.split(train_data))
 
@@ -272,17 +419,17 @@ def transformer_forecast(
         use_decoder=params['use_decoder']
     ).to(device)
 
-    # Выбор функции потерь (MSE или SmoothL1)
+    # Выбор функции потерь
     if criterion == 'MSE':
         loss_fn = nn.MSELoss()
     elif criterion == 'SmoothL1':
         loss_fn = nn.SmoothL1Loss()
     elif criterion == 'MAE':
-        loss_fn = nn.MSELoss()
+        loss_fn = nn.MSELoss()  # или можно заменить на L1Loss
     elif criterion == 'Huber':
         loss_fn = nn.HuberLoss()
     else:
-        raise ValueError("Unsupported loss function for Transformer. Use 'MSE' or 'SmoothL1'.")
+        raise ValueError("Unsupported loss function для Transformer. Используйте 'MSE' или 'SmoothL1'.")
 
     # Выбор оптимизатора
     if optimizer_type == 'AdamW':
@@ -295,138 +442,40 @@ def transformer_forecast(
     elif optimizer_type == 'RMSprop':
         optimizer = optim.RMSprop(model.parameters(), lr=params['learning_rate'])
     else:
-        raise ValueError("Unsupported optimizer type for Transformer. Use 'AdamW', 'Adam', 'SGD' or 'RMSprop'.")
+        raise ValueError("Unsupported optimizer type для Transformer. Используйте 'AdamW', 'Adam', 'SGD' или 'RMSprop'.")
 
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode='min',
-        patience=3,
-        factor=0.5
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
+    early_stopping = EarlyStopping(patience=params['patience'], delta=params['delta'])
+    amp_scaler = GradScaler() if device == 'cuda' else None
+
+    best_model_state = None
+    trained, best_model_state = train_model(
+        model, train_data, params, horizon, device, loss_fn, optimizer, scheduler, amp_scaler, early_stopping, splits
     )
-
-    early_stopping = EarlyStopping(
-        patience=params['patience'],
-        delta=params['delta']
-    )
-
-    trained = False
-    try:
-        for fold, (train_idx, val_idx) in enumerate(splits):
-            train_fold = train_data[train_idx]
-            val_fold = train_data[val_idx]
-            if len(train_fold) - params['seq_length'] - horizon + 1 <= 0:
-                continue
-            if len(val_fold) - params['seq_length'] - horizon + 1 <= 0:
-                continue
-
-            train_loader = DataLoader(
-                TimeSeriesDataset(train_fold, params['seq_length'], horizon),
-                batch_size=params['batch_size'],
-                shuffle=False
-            )
-            val_loader = DataLoader(
-                TimeSeriesDataset(val_fold, params['seq_length'], horizon),
-                batch_size=params['batch_size'],
-                shuffle=False
-            )
-
-            trained = True
-            for epoch in range(params['epochs']):
-                model.train()
-                train_loss = 0.0
-                for x, y in train_loader:
-                    x, y = x.to(device), y.to(device)
-                    optimizer.zero_grad()
-                    output = model(x)
-                    loss = loss_fn(output, y)
-                    loss.backward()
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                    optimizer.step()
-                    train_loss += loss.item()
-
-                model.eval()
-                val_loss = 0.0
-                with torch.no_grad():
-                    for x, y in val_loader:
-                        x, y = x.to(device), y.to(device)
-                        output = model(x)
-                        val_loss += loss_fn(output, y).item()
-
-                avg_val_loss = val_loss / len(val_loader)
-                scheduler.step(avg_val_loss)
-                early_stopping(avg_val_loss)
-                if early_stopping.early_stop:
-                    break
-            if early_stopping.early_stop:
-                break
-    except Exception as foldError:
-        raise foldError
-
-    # Если ни один fold не был использован, обучаем модель на полном наборе train_data
     if not trained:
-        train_loader = DataLoader(
-            TimeSeriesDataset(train_data, params['seq_length'], horizon),
-            batch_size=params['batch_size'],
-            shuffle=True
+        best_model_state = train_full_model(
+            model, train_data, params, horizon, device, loss_fn, optimizer, scheduler, amp_scaler, early_stopping
         )
-        for epoch in range(params['epochs']):
-            model.train()
-            train_loss = 0.0
-            for x, y in train_loader:
-                x, y = x.to(device), y.to(device)
-                optimizer.zero_grad()
-                output = model(x)
-                loss = loss_fn(output, y)
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                optimizer.step()
-                train_loss += loss.item()
-            scheduler.step(train_loss / len(train_loader))
-            early_stopping(train_loss / len(train_loader))
-            if early_stopping.early_stop:
-                break
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
 
-    # Функция для прогноза с использованием MC-Dropout
-    def make_forecast(data_loader: DataLoader) -> np.ndarray:
-        # Чтобы dropout оставался активным, переводим модель в режим train
-        model.train()
-        forecasts = []
-        with torch.no_grad():
-            for x, _ in data_loader:
-                x = x.to(device)
-                if params['mc_dropout']:
-                    preds = [model(x).cpu().numpy() for _ in range(params['mc_samples'])]
-                    forecasts.append(np.mean(preds, axis=0))
-                else:
-                    forecasts.append(model(x).cpu().numpy())
-        return np.concatenate(forecasts, axis=0)
-
+    # Прогнозирование батчами с MC-Dropout
     full_dataset = TimeSeriesDataset(scaled_data, params['seq_length'], horizon)
     full_loader = DataLoader(full_dataset, batch_size=params['batch_size'], shuffle=False)
-    all_forecasts = make_forecast(full_loader)
+    all_forecasts = make_forecast(model, full_loader, params, device, amp_scaler)
     print("Размер all_forecasts:", all_forecasts.shape)
 
-    # Формирование DataFrame с прогнозами (обратное масштабирование)
-    forecast_steps = []
-    for i in range(all_forecasts.shape[0]):
-        for h in range(horizon):
-            idx = params['seq_length'] + i + h
-            if idx < len(feature_df):
-                forecast_value = all_forecasts[i, h] * (scaler.data_max_[0] - scaler.data_min_[0]) + scaler.data_min_[0]
-                forecast_steps.append((feature_df.index[idx], forecast_value))
-    forecast_df = pd.DataFrame(forecast_steps, columns=['ds', 'y_forecast'])
-    forecast_df = forecast_df.groupby('ds')['y_forecast'].mean().reset_index()
-
+    # Генерация исторического прогноза
+    forecast_df = generate_historical_forecast(feature_df, all_forecasts, scaler, params, horizon)
     forecast_all = pd.merge(
-        feature_df[[y_name]].reset_index().rename(columns={y_name: 'y_fact', feature_df.index.name: 'ds'}),
+        feature_df[[y_name]].reset_index().rename(columns={y_name: 'y_fact'}),
         forecast_df,
         on='ds',
         how='left'
     )
 
-    # Расчёт доверительных интервалов
     residuals = forecast_all['y_fact'] - forecast_all['y_forecast']
-    std_val = residuals.std()
+    std_val = residuals.std() if residuals.std() > 0 else 1e-5
     z_score = 1.96
     forecast_all['yhat_lower'] = forecast_all['y_forecast'] - z_score * std_val
     forecast_all['yhat_upper'] = forecast_all['y_forecast'] + z_score * std_val
@@ -435,20 +484,8 @@ def transformer_forecast(
     forecast_train = forecast_all.iloc[:split_idx]
     forecast_test = forecast_all.iloc[split_idx:]
 
-    # Прогноз на будущее
-    last_seq = scaled_data[-params['seq_length']:]
-    current_seq = last_seq.copy()
-    future_forecasts = []
-    for _ in range(horizon):
-        x = torch.FloatTensor(current_seq[-params['seq_length']:]).unsqueeze(0).to(device)
-        with torch.no_grad():
-            pred = model(x).cpu().numpy()[0]
-        future_value = pred[0] * (scaler.data_max_[0] - scaler.data_min_[0]) + scaler.data_min_[0]
-        future_forecasts.append(future_value)
-        new_row = np.zeros_like(scaled_data[0])
-        new_row[0] = (pred[0] - scaler.data_min_[0]) / (scaler.data_max_[0] - scaler.data_min_[0])
-        current_seq = np.vstack([current_seq, new_row])
-
+    # Итеративное прогнозирование будущих значений
+    future_forecasts = iterative_forecast(model, scaled_data, params, scaler, horizon, device, amp_scaler)
     future_dates = pd.date_range(
         start=forecast_all['ds'].max(),
         periods=horizon + 1,
@@ -461,12 +498,9 @@ def transformer_forecast(
         'yhat_upper': np.array(future_forecasts) + z_score * std_val
     })
 
-    forecast_all = forecast_all.replace([np.inf, -np.inf], np.nan).fillna(0)
-    forecast_train = forecast_train.replace([np.inf, -np.inf], np.nan).fillna(0)
-    forecast_test = forecast_test.replace([np.inf, -np.inf], np.nan).fillna(0)
-    forecast_horizon = forecast_horizon.replace([np.inf, -np.inf], np.nan).fillna(0)
+    # Замена бесконечностей и NaN
+    for df_ in [forecast_all, forecast_train, forecast_test, forecast_horizon]:
+        df_.replace([np.inf, -np.inf], np.nan, inplace=True)
+        df_.fillna(0, inplace=True)
 
     return forecast_all, forecast_train, forecast_test, forecast_horizon
-
-
-

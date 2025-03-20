@@ -1,10 +1,11 @@
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import axios from 'axios';
 import debounce from 'lodash/debounce';
 
 export const DashboardContext = createContext();
 
 export const DashboardProvider = ({ children }) => {
+  // Основные состояния
   const [originalData, setOriginalData] = useState([]);
   const [filters, setFilters] = useState({});
   const [sortColumn, setSortColumn] = useState(null);
@@ -48,7 +49,7 @@ export const DashboardProvider = ({ children }) => {
   });
   const [forecastResults, setForecastResults] = useState([]);
 
-  // Состояние для ForecastPage (настройки для всех моделей, включая LSTM)
+  // Состояние для ForecastPage
   const [forecastPageState, setForecastPageState] = useState({
     horizon: 10,
     historySize: 5,
@@ -64,7 +65,7 @@ export const DashboardProvider = ({ children }) => {
     lstmParams: {
       seq_length: 12,
       lag_periods: 6,
-      window_sizes: "3,6,12", // задаётся как строка, которую потом можно преобразовать в список чисел
+      window_sizes: "3,6,12",
       num_layers: 2,
       hidden_dim: 128,
       dropout: 0.3,
@@ -103,12 +104,11 @@ export const DashboardProvider = ({ children }) => {
       use_decoder: false,
       activation: "gelu",
     },
-
     gruActive: false,
     gruParams: {
       seq_length: 24,
       lag_periods: 12,
-      window_sizes: "6,12,24", // как строка, чтобы потом преобразовать в список
+      window_sizes: "6,12,24",
       num_layers: 3,
       hidden_dim: 256,
       dropout: 0.4,
@@ -132,12 +132,11 @@ export const DashboardProvider = ({ children }) => {
     fileType: "csv",
   });
 
-
-
-  // Флаги для отслеживания изменений и блокировки автосохранения
+  // Флаг "изменённости" сессии
   const [isDirty, setIsDirty] = useState(false);
   const [sessionLocked, setSessionLocked] = useState(false);
 
+  // Функция сброса состояния
   const resetDashboardState = () => {
     setOriginalData([]);
     setFilters({});
@@ -203,30 +202,10 @@ export const DashboardProvider = ({ children }) => {
     setSessionLocked(false);
   };
 
-  // Отмечаем сессию как изменённую при изменении ключевых состояний
+  // Обновление флага isDirty происходит в компонентах, когда выполняются значимые действия
   useEffect(() => {
     setIsDirty(true);
   }, [filters, selectedColumns, secondPageState, tablePage, tableRowsPerPage, forecastPageState, forecastResults]);
-
-  // Дебаунс-сохранение сессии
-  const saveSessionState = useCallback(
-    debounce((sessionState) => {
-      if (currentSessionId && !sessionLocked) {
-        axios
-          .put(
-            `http://localhost:8000/session/${currentSessionId}`,
-            { state: sessionState },
-            { withCredentials: true }
-          )
-          .then(() => {
-            console.log("Session updated:", sessionState);
-            setIsDirty(false);
-          })
-          .catch((err) => console.error("Error updating session:", err));
-      }
-    }, 1000),
-    [currentSessionId, sessionLocked]
-  );
 
   // Мемоизация состояния сессии
   const sessionState = useMemo(() => ({
@@ -259,16 +238,62 @@ export const DashboardProvider = ({ children }) => {
     forecastPageState,
   ]);
 
-  // Автосохранение сессии при изменениях
+  // Используем useRef для хранения актуального состояния сессии
+  const sessionStateRef = useRef(sessionState);
   useEffect(() => {
+    sessionStateRef.current = sessionState;
+  }, [sessionState]);
+
+  // Функция сохранения сессии (PUT-запрос), которая вызывается только при уходе со страницы или при явном переходе
+  const internalSaveSession = useCallback(() => {
     if (currentSessionId && !sessionLocked && isDirty) {
-      console.log("Auto-saving session state:", sessionState);
-      saveSessionState(sessionState);
+      return axios
+        .put(
+          `http://localhost:8000/session/${currentSessionId}`,
+          { state: sessionStateRef.current },
+          { withCredentials: true }
+        )
+        .then(() => {
+          console.log("Session updated:", sessionStateRef.current);
+          setIsDirty(false);
+        })
+        .catch((err) =>
+          console.error("Error updating session:", err)
+        );
     }
-    return () => {
-      saveSessionState.flush && saveSessionState.flush();
+    return Promise.resolve();
+  }, [currentSessionId, sessionLocked, isDirty]);
+
+  // Обёртка с debounce, чтобы избежать частых вызовов
+  const debouncedSaveSession = useMemo(() => debounce(internalSaveSession, 1000), [internalSaveSession]);
+
+  // Функция для явного сохранения сессии
+  const saveSessionNow = useCallback(() => {
+    debouncedSaveSession();
+  }, [debouncedSaveSession]);
+
+  // Сохранение сессии при уходе со страницы через navigator.sendBeacon
+  const saveSessionOnUnload = useCallback(() => {
+    if (currentSessionId && isDirty && !sessionLocked) {
+      const url = `http://localhost:8000/session/${currentSessionId}`;
+      const payload = JSON.stringify({ state: sessionStateRef.current });
+      const blob = new Blob([payload], { type: "application/json" });
+      navigator.sendBeacon(url, blob);
+      console.log("Session updated on unload:", sessionStateRef.current);
+      setIsDirty(false);
+    }
+  }, [currentSessionId, isDirty, sessionLocked]);
+
+  // Регистрируем обработчик beforeunload
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      saveSessionOnUnload();
     };
-  }, [sessionState, currentSessionId, sessionLocked, isDirty, saveSessionState]);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [saveSessionOnUnload]);
 
   return (
     <DashboardContext.Provider
@@ -312,6 +337,8 @@ export const DashboardProvider = ({ children }) => {
         setIsDirty,
         sessionLocked,
         setSessionLocked,
+        saveSessionNow,
+        saveSessionOnUnload,
       }}
     >
       {children}

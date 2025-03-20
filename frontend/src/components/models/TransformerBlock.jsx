@@ -23,6 +23,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   HelpOutline as HelpOutlineIcon
 } from "@mui/icons-material";
+import { useTheme, alpha } from "@mui/material/styles";
 
 export const TransformerBlock = memo(function TransformerBlock({
   active,
@@ -30,6 +31,7 @@ export const TransformerBlock = memo(function TransformerBlock({
   transformerParams,
   setTransformerParams
 }) {
+  const theme = useTheme();
   const defaultTransformerParams = {
     seq_length: 24,
     lag_periods: 12,
@@ -96,6 +98,7 @@ export const TransformerBlock = memo(function TransformerBlock({
       learning_rate: localLearningRate,
       optimizer_type: localOptimizer,
       criterion: localCriterion,
+      // Остальные параметры оставляем без изменений
       patience: transformerParams?.patience ?? defaultTransformerParams.patience,
       delta: transformerParams?.delta ?? defaultTransformerParams.delta,
       n_splits: transformerParams?.n_splits ?? defaultTransformerParams.n_splits,
@@ -142,17 +145,17 @@ export const TransformerBlock = memo(function TransformerBlock({
     setParamsOpen((prev) => !prev);
   }, [paramsOpen, active, setActive, setIsDirty]);
 
-  const borderColor = active ? "#10A37F" : "#FF4444";
+  // Используем цвета из темы
+  const borderColor = active ? theme.palette.primary.main : theme.palette.error.main;
 
   const circleStyle = {
     minWidth: 28,
     height: 28,
     borderRadius: "50%",
-    backgroundColor: "#2c2c2c",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
+    color: theme.palette.common.white,
     fontSize: "0.8rem",
     px: 1,
     ml: 1
@@ -160,25 +163,25 @@ export const TransformerBlock = memo(function TransformerBlock({
 
   const helpIcon = (title) => (
     <Tooltip title={title} arrow>
-      <HelpOutlineIcon sx={{ color: "#10A37F", cursor: "pointer", fontSize: "1rem" }} />
+      <HelpOutlineIcon sx={{ color: theme.palette.primary.main, cursor: "pointer", fontSize: "1rem" }} />
     </Tooltip>
   );
 
   return (
-    <Paper sx={{ p: 2, mb: 2, border: `2px solid ${borderColor}`, borderRadius: 2 }}>
+    <Paper sx={{ p: 2, mb: 2, border: `2px solid ${borderColor}`, borderRadius: 2 , background: theme.custom.headerBackground}}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: theme.palette.common.white }}>
           Transformer
         </Typography>
-        <Button onClick={toggleParams} variant="text" sx={{ color: "#10A37F" }}>
+        <Button onClick={toggleParams} variant="text" sx={{ color: theme.palette.primary.main }}>
           {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
         </Button>
       </Box>
       <Collapse in={paramsOpen}>
         <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 2 }}>
           {/* Параметры последовательности */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Параметры последовательности</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -198,7 +201,7 @@ export const TransformerBlock = memo(function TransformerBlock({
                     max={50}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -216,7 +219,7 @@ export const TransformerBlock = memo(function TransformerBlock({
                     max={50}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -232,7 +235,11 @@ export const TransformerBlock = memo(function TransformerBlock({
                     onChange={(e) => setLocalWindowSizes(e.target.value)}
                     variant="outlined"
                     fullWidth
-                    sx={{ backgroundColor: "#2c2c2c", input: { color: "#fff" }, mt: 1 }}
+                    sx={{
+                      input: { color: theme.palette.common.white},
+                      mt: 1,
+                      borderRadius: "12px",
+                    }}
                   />
                 </Box>
               </Box>
@@ -240,8 +247,8 @@ export const TransformerBlock = memo(function TransformerBlock({
           </Accordion>
 
           {/* Архитектура Transformer */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Архитектура Transformer</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -261,7 +268,7 @@ export const TransformerBlock = memo(function TransformerBlock({
                     max={512}
                     step={16}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -279,7 +286,7 @@ export const TransformerBlock = memo(function TransformerBlock({
                     max={16}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -297,7 +304,7 @@ export const TransformerBlock = memo(function TransformerBlock({
                     max={6}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -315,7 +322,7 @@ export const TransformerBlock = memo(function TransformerBlock({
                     max={4}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -333,7 +340,7 @@ export const TransformerBlock = memo(function TransformerBlock({
                     max={1024}
                     step={32}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -351,7 +358,7 @@ export const TransformerBlock = memo(function TransformerBlock({
                     max={1}
                     step={0.05}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
               </Box>
@@ -359,8 +366,8 @@ export const TransformerBlock = memo(function TransformerBlock({
           </Accordion>
 
           {/* Параметры обучения */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Параметры обучения</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -380,7 +387,7 @@ export const TransformerBlock = memo(function TransformerBlock({
                     max={256}
                     step={8}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -398,7 +405,7 @@ export const TransformerBlock = memo(function TransformerBlock({
                     max={500}
                     step={10}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -416,7 +423,7 @@ export const TransformerBlock = memo(function TransformerBlock({
                     max={0.01}
                     step={0.0001}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
               </Box>
@@ -424,8 +431,8 @@ export const TransformerBlock = memo(function TransformerBlock({
           </Accordion>
 
           {/* Оптимизатор и критерий */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Оптимизатор и критерий</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -438,13 +445,13 @@ export const TransformerBlock = memo(function TransformerBlock({
                     </Box>
                     <Box sx={circleStyle}>{localOptimizer}</Box>
                   </Box>
-                  <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px", mt: 1 }}>
-                    <InputLabel sx={{ color: "#fff" }}>Optimizer</InputLabel>
+                  <FormControl fullWidth size="small" sx={{borderRadius: "4px", mt: 1 }}>
+                    <InputLabel sx={{ color: theme.palette.common.white }}>Optimizer</InputLabel>
                     <Select
                       value={localOptimizer}
                       label="Optimizer"
                       onChange={(e) => setLocalOptimizer(e.target.value)}
-                      sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
+                      sx={{ color: theme.palette.common.white, ".MuiOutlinedInput-notchedOutline": { borderColor: theme.palette.common.white } }}
                     >
                       <MenuItem value="AdamW">AdamW</MenuItem>
                       <MenuItem value="Adam">Adam</MenuItem>
@@ -461,13 +468,13 @@ export const TransformerBlock = memo(function TransformerBlock({
                     </Box>
                     <Box sx={circleStyle}>{localCriterion}</Box>
                   </Box>
-                  <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px", mt: 1 }}>
-                    <InputLabel sx={{ color: "#fff" }}>Criterion</InputLabel>
+                  <FormControl fullWidth size="small" sx={{borderRadius: "4px", mt: 1 }}>
+                    <InputLabel sx={{ color: theme.palette.common.white }}>Criterion</InputLabel>
                     <Select
                       value={localCriterion}
                       label="Criterion"
                       onChange={(e) => setLocalCriterion(e.target.value)}
-                      sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
+                      sx={{ color: theme.palette.common.white, ".MuiOutlinedInput-notchedOutline": { borderColor: theme.palette.common.white } }}
                     >
                       <MenuItem value="MSE">MSE</MenuItem>
                       <MenuItem value="MAE">MAE</MenuItem>
@@ -487,7 +494,10 @@ export const TransformerBlock = memo(function TransformerBlock({
             variant="outlined"
             startIcon={<CloseIcon />}
             onClick={handleCancel}
-            sx={{ borderColor: "#FF4444", color: "#FF4444" }}
+            sx={{
+              borderColor: theme.palette.error.main,
+              color: theme.palette.error.main
+            }}
           >
             Отключить
           </Button>
@@ -496,7 +506,10 @@ export const TransformerBlock = memo(function TransformerBlock({
             variant="outlined"
             startIcon={<CheckIcon />}
             onClick={handleApply}
-            sx={{ borderColor: "#10A37F", color: "#10A37F" }}
+            sx={{
+              borderColor: theme.palette.primary.main,
+              color: theme.palette.primary.main
+            }}
           >
             Активировать
           </Button>

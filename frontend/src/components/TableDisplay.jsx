@@ -19,7 +19,6 @@ import { useTheme, alpha } from "@mui/material/styles";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { DashboardContext } from "../context/DashboardContext";
 
 const fadeIn = {
@@ -33,7 +32,7 @@ const scaleTap = { scale: 0.98 };
 
 const TableDisplay = ({
   data,
-  sortColumn,     // колонка, по которой идет сортировка
+  sortColumn,     // колонка, по которой идёт сортировка
   sortDirection,  // направление сортировки ("asc" или "desc")
   onSortAsc,
   onSortDesc,
@@ -168,14 +167,7 @@ const TableDisplay = ({
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
                                 exit={{ scale: 0 }}
-                              >
-                                <CheckCircleOutlineIcon
-                                  sx={{
-                                    color: theme.palette.success.main,
-                                    flexShrink: 0,
-                                  }}
-                                />
-                              </motion.div>
+                              />
                             )}
                           </AnimatePresence>
                           <Typography
@@ -321,9 +313,9 @@ const TableDisplay = ({
             onRowsPerPageChange={handleChangeRowsPerPage}
             labelRowsPerPage="Строк на странице"
             sx={{
-              color: "#fff",
-              "& .MuiSelect-icon": { color: "#fff" },
-              "& .MuiTablePagination-displayedRows": { color: "#fff" },
+              color: theme.palette.common.white,
+              "& .MuiSelect-icon": { color: theme.palette.common.white },
+              "& .MuiTablePagination-displayedRows": { color: theme.palette.common.white },
             }}
           />
 
@@ -335,7 +327,7 @@ const TableDisplay = ({
               color: theme.palette.primary.main,
               borderColor: theme.palette.primary.main,
               "&:hover": {
-                color: "#fff",
+                color: theme.palette.common.white,
                 borderColor: theme.palette.primary.dark,
                 backgroundColor: "rgba(16,163,127,0.2)",
               },

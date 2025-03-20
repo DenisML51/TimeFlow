@@ -25,8 +25,10 @@ import {
   ExpandMore as ExpandMoreIcon,
   HelpOutline as HelpOutlineIcon
 } from "@mui/icons-material";
+import { useTheme, alpha } from "@mui/material/styles";
 
 export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, setGruParams }) {
+  const theme = useTheme();
   const defaultParams = {
     seq_length: 24,
     lag_periods: 12,
@@ -145,17 +147,17 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
     setParamsOpen((prev) => !prev);
   }, [paramsOpen, active, setActive, setIsDirty]);
 
-  const borderColor = active ? "#10A37F" : "#FF4444";
+  // Используем цвета из темы
+  const borderColor = active ? theme.palette.primary.main : theme.palette.error.main;
 
   const circleStyle = {
     minWidth: 28,
     height: 28,
     borderRadius: "50%",
-    backgroundColor: "#2c2c2c",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
+    color: theme.palette.common.white,
     fontSize: "0.8rem",
     px: 1,
     ml: 1
@@ -163,25 +165,25 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
 
   const helpIcon = (title) => (
     <Tooltip title={title} arrow>
-      <HelpOutlineIcon sx={{ color: "#10A37F", cursor: "pointer", fontSize: "1rem" }} />
+      <HelpOutlineIcon sx={{ color: theme.palette.primary.main, cursor: "pointer", fontSize: "1rem" }} />
     </Tooltip>
   );
 
   return (
-    <Paper sx={{ p: 2, mb: 2, border: `2px solid ${borderColor}`, borderRadius: 2 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
+    <Paper sx={{ p: 2, mb: 2, border: `2px solid ${borderColor}`, borderRadius: 2, background: theme.custom.headerBackground }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center"}}>
+        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: theme.palette.common.white }}>
           GRU
         </Typography>
-        <Button onClick={toggleParams} variant="text" sx={{ color: "#10A37F" }}>
+        <Button onClick={toggleParams} variant="text" sx={{ color: theme.palette.primary.main }}>
           {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
         </Button>
       </Box>
       <Collapse in={paramsOpen}>
         <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 2 }}>
           {/* Параметры последовательности */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Параметры последовательности</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -201,7 +203,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={50}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -219,7 +221,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={50}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -237,7 +239,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     onChange={(e) => setLocalWindowSizes(e.target.value)}
                     variant="outlined"
                     fullWidth
-                    sx={{ backgroundColor: "#2c2c2c", input: { color: "#fff" }, mt: 1 }}
+                    sx={{ input: { color: theme.palette.common.white }, mt: 1 }}
                   />
                 </Box>
               </Box>
@@ -245,8 +247,8 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
           </Accordion>
 
           {/* Архитектура GRU */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Архитектура GRU</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -266,7 +268,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={10}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -284,7 +286,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={512}
                     step={16}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -302,13 +304,19 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={1}
                     step={0.05}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <FormControlLabel
-                      control={<Checkbox checked={localBidirectional} onChange={(e) => setLocalBidirectional(e.target.checked)} sx={{ color: "#10A37F" }} />}
+                      control={
+                        <Checkbox
+                          checked={localBidirectional}
+                          onChange={(e) => setLocalBidirectional(e.target.checked)}
+                          sx={{ color: theme.palette.primary.main }}
+                        />
+                      }
                       label="Bidirectional"
                     />
                     {helpIcon("Двусторонняя обработка последовательности.")}
@@ -317,7 +325,13 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <FormControlLabel
-                      control={<Checkbox checked={localResidualConnections} onChange={(e) => setLocalResidualConnections(e.target.checked)} sx={{ color: "#10A37F" }} />}
+                      control={
+                        <Checkbox
+                          checked={localResidualConnections}
+                          onChange={(e) => setLocalResidualConnections(e.target.checked)}
+                          sx={{ color: theme.palette.primary.main }}
+                        />
+                      }
                       label="Residual Connections"
                     />
                     {helpIcon("Использование остаточных связей между слоями.")}
@@ -326,7 +340,13 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <FormControlLabel
-                      control={<Checkbox checked={localUseLayerNorm} onChange={(e) => setLocalUseLayerNorm(e.target.checked)} sx={{ color: "#10A37F" }} />}
+                      control={
+                        <Checkbox
+                          checked={localUseLayerNorm}
+                          onChange={(e) => setLocalUseLayerNorm(e.target.checked)}
+                          sx={{ color: theme.palette.primary.main }}
+                        />
+                      }
                       label="Layer Normalization"
                     />
                     {helpIcon("Применение нормализации слоев для стабилизации обучения.")}
@@ -337,8 +357,8 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
           </Accordion>
 
           {/* Параметры обучения */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Параметры обучения</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -358,7 +378,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={256}
                     step={8}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -376,7 +396,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={500}
                     step={10}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -394,7 +414,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={0.01}
                     step={0.0001}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -412,7 +432,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={50}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -430,7 +450,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={0.01}
                     step={0.0001}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -448,7 +468,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={10}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
               </Box>
@@ -456,8 +476,8 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
           </Accordion>
 
           {/* Дополнительные настройки */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Дополнительные настройки</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -469,7 +489,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                         <Checkbox
                           checked={localMCDropout}
                           onChange={(e) => setLocalMCDropout(e.target.checked)}
-                          sx={{ color: "#10A37F" }}
+                          sx={{ color: theme.palette.primary.main }}
                         />
                       }
                       label="MC-Dropout"
@@ -492,7 +512,7 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     max={200}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
                 <Box>
@@ -503,13 +523,13 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     </Box>
                     <Box sx={circleStyle}>{localOptimizer}</Box>
                   </Box>
-                  <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px", mt: 1 }}>
-                    <InputLabel sx={{ color: "#fff" }}>Optimizer</InputLabel>
+                  <FormControl fullWidth size="small" sx={{  borderRadius: "4px", mt: 1 }}>
+                    <InputLabel sx={{ color: theme.palette.common.white }}>Optimizer</InputLabel>
                     <Select
                       value={localOptimizer}
                       label="Optimizer"
                       onChange={(e) => setLocalOptimizer(e.target.value)}
-                      sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
+                      sx={{ color: theme.palette.common.white, ".MuiOutlinedInput-notchedOutline": { borderColor: theme.palette.common.white }, borderRadius: "12px" }}
                     >
                       <MenuItem value="AdamW">AdamW</MenuItem>
                       <MenuItem value="Adam">Adam</MenuItem>
@@ -526,13 +546,13 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
                     </Box>
                     <Box sx={circleStyle}>{localCriterion}</Box>
                   </Box>
-                  <FormControl fullWidth size="small" sx={{ backgroundColor: "#2c2c2c", borderRadius: "4px", mt: 1 }}>
-                    <InputLabel sx={{ color: "#fff" }}>Criterion</InputLabel>
+                  <FormControl fullWidth size="small" sx={{ borderRadius: "4px", mt: 1 }}>
+                    <InputLabel sx={{ color: theme.palette.common.white }}>Criterion</InputLabel>
                     <Select
                       value={localCriterion}
                       label="Criterion"
                       onChange={(e) => setLocalCriterion(e.target.value)}
-                      sx={{ color: "#fff", ".MuiOutlinedInput-notchedOutline": { borderColor: "#fff" } }}
+                      sx={{ color: theme.palette.common.white, ".MuiOutlinedInput-notchedOutline": { borderColor: theme.palette.common.white } }}
                     >
                       <MenuItem value="MSE">MSE</MenuItem>
                       <MenuItem value="MAE">MAE</MenuItem>
@@ -547,11 +567,11 @@ export const GRUBlock = memo(function GRUBlock({ active, setActive, gruParams, s
       </Collapse>
       <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
         {active ? (
-          <Button variant="outlined" startIcon={<CloseIcon />} onClick={handleCancel} sx={{ borderColor: "#FF4444", color: "#FF4444" }}>
+          <Button variant="outlined" startIcon={<CloseIcon />} onClick={handleCancel} sx={{ borderColor: theme.palette.error.main, color: theme.palette.error.main }}>
             Отключить
           </Button>
         ) : (
-          <Button variant="outlined" startIcon={<CheckIcon />} onClick={handleApply} sx={{ borderColor: "#10A37F", color: "#10A37F" }}>
+          <Button variant="outlined" startIcon={<CheckIcon />} onClick={handleApply} sx={{ borderColor: theme.palette.primary.main, color: theme.palette.primary.main }}>
             Активировать
           </Button>
         )}

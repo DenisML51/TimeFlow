@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import {
   Container,
   TextField,
@@ -9,14 +9,15 @@ import {
   Dialog,
   DialogContent,
   useTheme,
-  Grid
+  Grid,
+  alpha
 } from "@mui/material";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ParticleBackground } from "../components/home/ParticleBackground"
+import { ParticleBackground } from "../components/home/ParticleBackground";
 import { TbUserPlus, TbCheck, TbAlertCircle, TbLock } from "react-icons/tb";
-import {Canvas} from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 
 const passwordRequirements = [
   { regex: /.{8,}/, label: "Минимум 8 символов" },
@@ -72,7 +73,7 @@ const Register = () => {
         icon: <TbAlertCircle size={40} />,
         title: "Ошибка регистрации",
         message: error.response?.data?.message || "Пожалуйста, проверьте введенные данные",
-        color: "#ff4444"
+        color: theme.palette.error.main
       });
     } finally {
       setLoading(false);
@@ -89,18 +90,23 @@ const Register = () => {
   };
 
   const passwordStrength = passwordRequirements
-    .filter(req => req.regex.test(formData.password))
+    .filter((req) => req.regex.test(formData.password))
     .length;
 
   return (
-    <Box sx={{
-      position: "relative",
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      overflow: "hidden"
-    }}>
-      <Canvas camera={{ position: [0, 0, 1] }} style={{ position: 'fixed', top: 0, left: 0 }}>
+    <Box
+      sx={{
+        position: "relative",
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        overflow: "hidden"
+      }}
+    >
+      <Canvas
+        camera={{ position: [0, 0, 1] }}
+        style={{ position: "fixed", top: 0, left: 0 }}
+      >
         <ParticleBackground />
       </Canvas>
 
@@ -114,11 +120,11 @@ const Register = () => {
             component="form"
             onSubmit={handleRegister}
             sx={{
-              background: "rgba(30, 30, 30, 0.8)",
+              background: alpha(theme.palette.background.paper, 0.8),
               backdropFilter: "blur(12px)",
-              padding: { xs: 3, sm: 6 },
-              borderRadius: "32px",
-              border: "1px solid rgba(255,255,255,0.1)",
+              padding: { xs: "20px", sm: "40px" },
+              borderRadius: "24px",
+              border: `1px solid ${theme.custom?.paperBorder || alpha(theme.palette.text.primary, 0.1)}`,
               boxShadow: "0 24px 64px rgba(0,0,0,0.4)",
               position: "relative",
               overflow: "hidden",
@@ -129,18 +135,21 @@ const Register = () => {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: `linear-gradient(45deg, ${theme.palette.primary.main}20 0%, transparent 100%)`,
+                background: `linear-gradient(45deg, ${alpha(
+                  theme.palette.primary.main,
+                  0.2
+                )} 0%, transparent 100%)`,
                 pointerEvents: "none"
               }
             }}
           >
             <Typography
-              variant="h2"
+              variant="h3"
               sx={{
                 textAlign: "center",
                 mb: 4,
                 fontWeight: 700,
-                background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, #00ff88 100%)`,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.secondary} 100%)`,
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent"
               }}
@@ -156,7 +165,7 @@ const Register = () => {
                     name="username"
                     label="Имя пользователя"
                     margin="normal"
-                    variant="filled"
+
                     value={formData.username}
                     onChange={handleChange}
                     sx={textFieldStyles(theme)}
@@ -170,7 +179,7 @@ const Register = () => {
                     type="email"
                     label="Email"
                     margin="normal"
-                    variant="filled"
+
                     value={formData.email}
                     onChange={handleChange}
                     sx={textFieldStyles(theme)}
@@ -186,7 +195,7 @@ const Register = () => {
                     type="password"
                     label="Пароль"
                     margin="normal"
-                    variant="filled"
+
                     value={formData.password}
                     onChange={handleChange}
                     sx={textFieldStyles(theme)}
@@ -194,7 +203,10 @@ const Register = () => {
                 </motion.div>
 
                 <Box sx={{ mt: 3, px: 2 }}>
-                  <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: theme.palette.text.secondary, mb: 1 }}
+                  >
                     Надежность пароля:
                   </Typography>
                   <Box sx={{ display: "flex", gap: 1, height: 4 }}>
@@ -204,9 +216,10 @@ const Register = () => {
                         sx={{
                           flex: 1,
                           height: "100%",
-                          bgcolor: i < passwordStrength ?
-                            theme.palette.primary.main :
-                            "rgba(255,255,255,0.1)",
+                          bgcolor:
+                            i < passwordStrength
+                              ? theme.palette.primary.main
+                              : alpha(theme.palette.text.primary, 0.1),
                           borderRadius: 2,
                           transition: "all 0.3s"
                         }}
@@ -214,19 +227,40 @@ const Register = () => {
                     ))}
                   </Box>
 
-                  <Box sx={{ mt: 2, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+                  <Box
+                    sx={{
+                      mt: 2,
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 1
+                    }}
+                  >
                     {passwordRequirements.map((req, i) => (
-                      <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <TbLock size={16} color={
-                          req.regex.test(formData.password) ?
-                          theme.palette.primary.main :
-                          "rgba(255,255,255,0.3)"
-                        }/>
-                        <Typography variant="body2" sx={{
-                          color: req.regex.test(formData.password) ?
-                            "text.primary" : "text.secondary",
-                          transition: "color 0.3s"
-                        }}>
+                      <Box
+                        key={i}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1
+                        }}
+                      >
+                        <TbLock
+                          size={16}
+                          color={
+                            req.regex.test(formData.password)
+                              ? theme.palette.primary.main
+                              : alpha(theme.palette.text.primary, 0.3)
+                          }
+                        />
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: req.regex.test(formData.password)
+                              ? theme.palette.text.primary
+                              : theme.palette.text.secondary,
+                            transition: "color 0.3s"
+                          }}
+                        >
                           {req.label}
                         </Typography>
                       </Box>
@@ -245,13 +279,13 @@ const Register = () => {
                   mt: 4,
                   py: 2,
                   borderRadius: "16px",
-                  background: `linear-gradient(45deg, ${theme.palette.primary.main} 0%, #00ff88 100%)`,
+                  background: `linear-gradient(45deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.secondary} 100%)`,
                   fontSize: "1rem",
                   fontWeight: 600,
-                  color: "#fff",
+                  color: theme.palette.common.white,
                   "&:disabled": {
-                    background: "rgba(255,255,255,0.1)",
-                    color: "rgba(255,255,255,0.3)"
+                    background: alpha(theme.palette.text.primary, 0.1),
+                    color: alpha(theme.palette.text.primary, 0.3)
                   }
                 }}
               >
@@ -274,9 +308,9 @@ const Register = () => {
         PaperProps={{
           sx: {
             borderRadius: "24px",
-            background: "rgba(30,30,30,0.9)",
+            background: alpha(theme.palette.background.paper, 0.9),
             backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
             boxShadow: "0 16px 32px rgba(0,0,0,0.4)"
           }
         }}
@@ -289,7 +323,7 @@ const Register = () => {
             <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
               {dialogContent.title}
             </Typography>
-            <Typography variant="body1" sx={{ color: "#aaa" }}>
+            <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
               {dialogContent.message}
             </Typography>
           </motion.div>
@@ -302,16 +336,16 @@ const Register = () => {
 const textFieldStyles = (theme) => ({
   "& .MuiFilledInput-root": {
     borderRadius: "12px",
-    background: "rgba(255,255,255,0.05)",
+    background: alpha(theme.palette.background.paper, 0.05),
     transition: "all 0.3s",
-    "&:hover": { background: "rgba(255,255,255,0.08)" },
+    "&:hover": { background: alpha(theme.palette.background.paper, 0.08) },
     "&.Mui-focused": {
-      background: "rgba(255,255,255,0.1)",
+      background: alpha(theme.palette.background.paper, 0.1),
       boxShadow: `0 0 0 2px ${theme.palette.primary.main}`
     }
   },
   "& .MuiInputLabel-root": {
-    color: "#aaa",
+    color: theme.palette.text.secondary,
     "&.Mui-focused": { color: theme.palette.primary.main }
   }
 });

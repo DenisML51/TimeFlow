@@ -1,17 +1,19 @@
 import React from "react";
-import { Box, Typography, TextField, Button, Divider } from "@mui/material";
+import { Box, Typography, TextField, Button, Divider, GlobalStyles } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import RotateLeftIcon from "@mui/icons-material/RotateLeft";
-import GlobalStyles from "@mui/material/GlobalStyles";
+import { useTheme, alpha } from "@mui/material/styles";
 
 const FilterPanel = ({ originalData, columns, filters, updateFilters }) => {
-  // Отбираем столбцы, где встречаются строковые значения
+  // Отбираем столбцы с категориальными (строковыми) данными
   const categoricalColumns = columns.filter((col) =>
     originalData.some((row) => typeof row[col] === "string")
   );
 
   const handleFilterChange = (column, value) => {
+    // Обновляем фильтр без непосредственного сохранения сессии:
+    // изменение состояния фильтров приведёт к установке dirty-флага в контексте,
+    // а сохранение произойдёт только при переходе или обновлении страницы.
     const newFilters = { ...filters, [column]: value.trim() === "" ? null : value };
     updateFilters(newFilters);
   };
@@ -20,15 +22,17 @@ const FilterPanel = ({ originalData, columns, filters, updateFilters }) => {
     updateFilters({});
   };
 
+  const theme = useTheme();
+
   return (
     <Box
       sx={{
         p: 2,
         borderRadius: "16px",
-        bgcolor: "rgba(255,255,255,0.05)",
+        bgcolor: alpha(theme.palette.common.white, 0.05),
         backdropFilter: "blur(12px)",
         boxShadow: 3,
-        border: "1px solid rgba(255,255,255,0.1)",
+        border: `1px solid ${alpha(theme.palette.common.white, 0.1)}`,
         display: "flex",
         flexDirection: "column",
         gap: 3,
@@ -42,21 +46,21 @@ const FilterPanel = ({ originalData, columns, filters, updateFilters }) => {
               width: "6px",
             },
             "&::-webkit-scrollbar-track": {
-              backgroundColor: "#1E1E1E",
+              backgroundColor: theme.palette.background.default,
               borderRadius: "3px",
             },
             "&::-webkit-scrollbar-thumb": {
-              backgroundColor: "#10A37F",
+              backgroundColor: theme.palette.primary.main,
               borderRadius: "3px",
             },
             "&::-webkit-scrollbar-thumb:hover": {
-              backgroundColor: "#0D8F70",
+              backgroundColor: alpha(theme.palette.primary.main, 0.8),
             },
           },
         }}
       />
 
-      <Box sx={{ display: "flex", alignItems: "center", color: "#10A37F" }}>
+      <Box sx={{ display: "flex", alignItems: "center", color: theme.palette.primary.main }}>
         <FilterListIcon sx={{ mr: 1.5, fontSize: 28 }} />
         <Typography variant="h6">Фильтрация данных</Typography>
       </Box>
@@ -79,13 +83,13 @@ const FilterPanel = ({ originalData, columns, filters, updateFilters }) => {
             PopperProps={{
               sx: {
                 "& .MuiPaper-root": {
-                  bgcolor: "#1E1E1E",
-                  color: "#fff",
+                  bgcolor: theme.palette.background.default,
+                  color: theme.palette.common.white,
                   mt: 1,
                   borderRadius: "8px",
                   "& .MuiAutocomplete-listbox": {
                     maxHeight: 200,
-                    bgcolor: "#1E1E1E",
+                    bgcolor: theme.palette.background.default,
                     overflowY: "auto",
                     fontSize: "0.9rem",
                     "& .MuiAutocomplete-option": {
@@ -107,13 +111,13 @@ const FilterPanel = ({ originalData, columns, filters, updateFilters }) => {
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: "8px",
-                    bgcolor: "rgba(255,255,255,0.05)",
-                    "& fieldset": { borderColor: "rgba(255,255,255,0.1)" },
-                    "&:hover fieldset": { borderColor: "rgba(16,163,127,0.5)" },
-                    "&.Mui-focused fieldset": { borderColor: "#10A37F" },
+                    bgcolor: alpha(theme.palette.common.white, 0.05),
+                    "& fieldset": { borderColor: alpha(theme.palette.common.white, 0.1) },
+                    "&:hover fieldset": { borderColor: alpha(theme.palette.primary.main, 0.5) },
+                    "&.Mui-focused fieldset": { borderColor: theme.palette.primary.main },
                   },
-                  input: { color: "#fff" },
-                  label: { color: "rgba(255,255,255,0.7)" },
+                  input: { color: theme.palette.common.white },
+                  label: { color: alpha(theme.palette.common.white, 0.7) },
                 }}
               />
             )}
@@ -121,20 +125,19 @@ const FilterPanel = ({ originalData, columns, filters, updateFilters }) => {
         );
       })}
 
-      <Divider sx={{ borderColor: "rgba(255,255,255,0.1)" }} />
+      <Divider sx={{ borderColor: alpha(theme.palette.common.white, 0.1) }} />
 
       <Button
         fullWidth
         variant="contained"
         color="success"
         onClick={resetFilters}
-        startIcon={<RotateLeftIcon />}
         sx={{
           borderRadius: "12px",
           py: 1.5,
           fontSize: "1rem",
-          bgcolor: "rgba(16,163,127,0.7)",
-          "&:hover": { bgcolor: "rgba(16,163,127,0.9)" },
+          bgcolor: alpha(theme.palette.primary.main, 0.7),
+          "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.9) },
         }}
       >
         Сбросить фильтры

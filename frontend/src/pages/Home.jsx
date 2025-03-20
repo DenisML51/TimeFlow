@@ -1,80 +1,95 @@
 // src/pages/Home.jsx
-import React, { useContext} from "react";
+import React, { useContext } from "react";
 import {
-  Box, Button, Container, Grid, Typography, Paper, useTheme, Stack
+  Box,
+  Button,
+  Container,
+  Grid,
+  Typography,
+  Paper,
+  useTheme,
+  Stack
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { motion } from "framer-motion";
-import { Canvas} from "@react-three/fiber";
-import {ParticleBackground} from "../components/home/ParticleBackground";
+import { Canvas } from "@react-three/fiber";
+import { ParticleBackground } from "../components/home/ParticleBackground";
 import { TbChartLine, TbCloudUpload, TbCpu, TbShieldLock, TbRocket } from "react-icons/tb";
 import { GradientText } from "../components/home/GradientText";
-
 
 const AnimatedButton = motion(Button);
 
 const LiveDemoPreview = () => {
-  // eslint-disable-next-line no-unused-vars
   const theme = useTheme();
+  const imageSrc =
+    theme.palette.mode === "dark"
+      ? "assets/dashboard-preview-dark.png"
+      : "assets/dashboard-preview-light.png";
 
   return (
     <motion.div
       style={{
-        position: 'relative',
+        position: "relative",
         perspective: 1000
       }}
       initial={{ rotateY: 30, opacity: 0 }}
       animate={{ rotateY: 0, opacity: 1 }}
       transition={{ duration: 1.2, delay: 0.3 }}
     >
-      <Box sx={{
-        background: 'linear-gradient(145deg, rgba(16,163,127,0.1) 0%, rgba(16,22,35,0.8) 100%)',
-        borderRadius: 6,
-        p: 2,
-        border: '1px solid rgba(255,255,255,0.1)',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
-        backdropFilter: 'blur(12px)',
-        transformStyle: 'preserve-3d'
-      }}>
-        <Box component="img" src="assets/dashboard-preview.png"
-          sx={{ width: '100%', borderRadius: 4 }} />
-
+      <Box
+        sx={{
+          background: theme.custom.livePreview,
+          borderRadius: 6,
+          p: 2,
+          border: `1px solid ${theme.custom.paperBorder}`,
+          boxShadow: "0 24px 24px rgba(0,0,0,0.4)",
+          backdropFilter: "blur(12px)",
+          transformStyle: "preserve-3d"
+        }}
+      >
+        <Box
+          component="img"
+          src={imageSrc}
+          sx={{ width: "100%", borderRadius: 4 }}
+        />
       </Box>
     </motion.div>
   );
 };
 
 const FeatureGridSection = () => {
+  const theme = useTheme();
+
   const features = [
     {
       icon: <TbCloudUpload size="2em" />,
       title: "Загрузка и фильтрация",
       text: "Загрузка, вычисление статистик и формирование выборки.",
-      gradient: "linear-gradient(135deg, #10A37F 0%, #00FF88 100%)"
+      key: "upload"
     },
     {
       icon: <TbCpu size="2em" />,
       title: "AI Прогноз",
       text: "Интерактивное взаимодействие с моделями прогнозирования.",
-      gradient: "linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%)"
+      key: "ai"
     },
     {
       icon: <TbChartLine size="2em" />,
       title: "Аналитика",
       text: "Удобный инструмент для визуализации, надстройки и предобработки данных.",
-      gradient: "linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%)"
+      key: "analytics"
     },
     {
       icon: <TbShieldLock size="2em" />,
       title: "Система сессий",
       text: "Сохранение сессий для зарегистрированных пользователей.",
-      gradient: "linear-gradient(135deg, #9F7AEA 0%, #FEE140 100%)"
+      key: "session"
     }
   ];
 
   return (
-    <Box sx={{ py: 15, position: 'relative' }}>
+    <Box sx={{ py: 15, position: "relative" }}>
       <Container maxWidth="xl">
         <Grid container spacing={6}>
           {features.map((feature, index) => (
@@ -85,46 +100,50 @@ const FeatureGridSection = () => {
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true, margin: "-100px" }}
               >
-                <Paper sx={{
-                  p: 4,
-                  height: '100%',
-                  background: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 4,
-                  backdropFilter: 'blur(12px)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-8px)',
-                    boxShadow: `0 16px 48px ${feature.gradient}30`
-                  }
-                }}>
-                  <Box sx={{
-                    width: 64,
-                    height: 64,
-                    mb: 3,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: `${feature.gradient}10)`,
-                    borderRadius: 3,
-                    position: 'relative',
-                    '&:before': {
-                      content: '""',
-                      position: 'absolute',
-                      inset: -1,
-                      background: feature.gradient,
-                      borderRadius: 'inherit',
-                      zIndex: -1,
-                      filter: 'blur(12px)',
-                      opacity: 0.3
+                <Paper
+                  sx={{
+                    p: 4,
+                    height: "100%",
+                    background: theme.custom.paperBackground,
+                    border: `1px solid ${theme.custom.paperBorder}`,
+                    borderRadius: 4,
+                    backdropFilter: "blur(12px)",
+                    transition: "all 0.3s ease",
+                    "&:hover": {
+                      transform: "translateY(-8px)",
+                      boxShadow: `0 16px 48px ${theme.custom.featureGradients[feature.key]}50`
                     }
-                  }}>
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 64,
+                      height: 64,
+                      mb: 3,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: `${theme.custom.featureGradients[feature.key]}10)`,
+                      borderRadius: 3,
+                      position: "relative",
+                      "&:before": {
+                        content: '""',
+                        position: "absolute",
+                        inset: -1,
+                        background: theme.custom.featureGradients[feature.key],
+                        borderRadius: "inherit",
+                        zIndex: -1,
+                        filter: "blur(12px)",
+                        opacity: 0.3
+                      }
+                    }}
+                  >
                     {feature.icon}
                   </Box>
                   <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
                     {feature.title}
                   </Typography>
-                  <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                  <Typography variant="body1" sx={{ color: "text.secondary" }}>
                     {feature.text}
                   </Typography>
                 </Paper>
@@ -140,28 +159,33 @@ const FeatureGridSection = () => {
 const CTASection = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-  const theme = useTheme()
+  const theme = useTheme();
 
   return (
-    <Box sx={{ py: 15, position: 'relative' }}>
+    <Box sx={{ py: 15, position: "relative" }}>
       <Container maxWidth="md">
-        <Box sx={{
-          textAlign: 'center',
-          p: 6,
-          borderRadius: 6,
-          background: 'linear-gradient(135deg, rgba(16,163,127,0.1) 0%, rgba(16,22,35,0.8) 100%)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          boxShadow: '0 24px 64px rgba(16,163,127,0.2)',
-          backdropFilter: 'blur(12px)'
-        }}>
+        <Box
+          sx={{
+            textAlign: "center",
+            p: 6,
+            borderRadius: 6,
+            background: theme.custom.livePreview,
+            border: `1px solid ${theme.custom.paperBorder}`,
+            boxShadow: `0 24px 64px ${theme.custom.mainColor}`,
+            backdropFilter: "blur(12px)"
+          }}
+        >
           <Typography variant="h3" sx={{ mb: 3, fontWeight: 700 }}>
             Начните анализировать уже сегодня
           </Typography>
-          <Typography variant="body1" sx={{
-            color: 'text.secondary',
-            fontSize: '1.25rem',
-            mb: 6
-          }}>
+          <Typography
+            variant="body1"
+            sx={{
+              color: "text.secondary",
+              fontSize: "1.25rem",
+              mb: 6
+            }}
+          >
             Изспользуйте современные методы анализа и прогнозирования временных рядов
           </Typography>
           <AnimatedButton
@@ -174,10 +198,10 @@ const CTASection = () => {
               px: 8,
               py: 2.5,
               borderRadius: 3,
-              fontSize: '1.1rem',
+              fontSize: "1.1rem",
               fontWeight: 600,
-              background: `linear-gradient(135deg, ${theme.palette.primary.secondary} 0%, ${theme.palette.primary.main} 100%)`,
-              boxShadow: '0 8px 32px rgba(16,163,127,0.3)'
+              background: theme.custom.primaryGradient,
+              boxShadow: `0 8px 32px ${theme.custom.mainColor}`
             }}
           >
             {user ? "Начать анализ" : "Зарегистрироваться"}
@@ -191,14 +215,18 @@ const CTASection = () => {
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const theme = useTheme();
 
   return (
-    <Box sx={{ position: 'relative', overflow: 'hidden' }}>
-      <Canvas camera={{ position: [0, 0, 1] }} style={{ position: 'fixed', top: 0, left: 0 }}>
+    <Box sx={{ position: "relative", overflow: "hidden", p: 4}}>
+      <Canvas
+        camera={{ position: [0, 0, 1] }}
+        style={{ position: "fixed", top: 0, left: 0 }}
+      >
         <ParticleBackground />
       </Canvas>
 
-      <Container sx={{ position: 'relative', zIndex: 1, pt: 20 }}>
+      <Container sx={{ position: "relative", zIndex: 1, pt: 20 }}>
         <Grid container spacing={6} alignItems="center">
           <Grid item xs={12} md={6}>
             <motion.div
@@ -208,23 +236,26 @@ const Home = () => {
             >
               <GradientText variant="h1">
                 TimeFlow
-                <Box component="span" sx={{ display: 'block' }}>
+                <Box component="span" sx={{ display: "block" }}>
                   Analytics
                 </Box>
               </GradientText>
 
-              <Typography variant="h6" sx={{
-                color: 'text.secondary',
-                my: 4,
-                fontSize: '1.25rem',
-                backdropFilter: 'blur(4px)',
-                background: 'rgba(255,255,255,0.05)',
-                p: 3,
-                borderRadius: 4,
-                border: '1px solid rgba(255,255,255,0.1)'
-              }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  color: "text.secondary",
+                  my: 4,
+                  fontSize: "1.25rem",
+                  backdropFilter: "blur(4px)",
+                  background: theme.custom.livePreview,
+                  p: 3,
+                  borderRadius: 4,
+                  border: `1px solid ${theme.custom.paperBorder}`
+                }}
+              >
                 Загружайте, преобразуйте сырые данные и используйте их для прогноза.
-                <Box component="span" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                <Box component="span" sx={{ color: "primary.main", fontWeight: 600 }}>
                   {" "}Начните анализ за 30 секунд.
                 </Box>
               </Typography>
@@ -240,12 +271,12 @@ const Home = () => {
                     px: 6,
                     py: 2.5,
                     borderRadius: 3,
-                    fontSize: '1.1rem',
+                    fontSize: "1.1rem",
                     fontWeight: 600,
-                    background: 'linear-gradient(135deg, #10A37F 0%, #00FF88 100%)',
-                    boxShadow: '0 8px 32px rgba(16,163,127,0.3)',
-                    '&:hover': {
-                      boxShadow: '0 12px 48px rgba(16,163,127,0.5)'
+                    background: theme.custom.primaryGradient,
+                    boxShadow: `0 8px 32px ${theme.custom.mainColor}`,
+                    "&:hover": {
+                      boxShadow: `0 12px 48px ${theme.custom.secColor}`
                     }
                   }}
                 >
@@ -262,7 +293,7 @@ const Home = () => {
                     py: 2,
                     borderRadius: 3,
                     borderWidth: 2,
-                    '&:hover': { borderWidth: 2 }
+                    "&:hover": { borderWidth: 2 }
                   }}
                 >
                   Демонстрация

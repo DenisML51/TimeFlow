@@ -18,3 +18,4 @@ torch
 scikit-learn
 celery
 redis
+pycryptodome

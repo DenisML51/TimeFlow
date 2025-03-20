@@ -1,7 +1,27 @@
-import React, {memo, useCallback, useContext, useState} from "react";
-import {DashboardContext} from "../../context/DashboardContext";
-import {Box, Button, Collapse, Paper, ToggleButton, ToggleButtonGroup, Typography} from "@mui/material";
-import {Check as CheckIcon, Close as CloseIcon} from "@mui/icons-material";
+import React, { memo, useCallback, useContext, useState } from "react";
+import { DashboardContext } from "../../context/DashboardContext";
+import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Box,
+  Button,
+  Collapse,
+  FormControlLabel,
+  Paper,
+  Slider,
+  Typography,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip
+} from "@mui/material";
+import {
+  Check as CheckIcon,
+  Close as CloseIcon,
+  ExpandMore as ExpandMoreIcon,
+  HelpOutline as HelpOutlineIcon
+} from "@mui/icons-material";
+import { useTheme, alpha } from "@mui/material/styles";
 
 export const SarimaBlock = memo(function SarimaBlock({
   active,
@@ -9,13 +29,14 @@ export const SarimaBlock = memo(function SarimaBlock({
   sarimaParams,
   setSarimaParams,
 }) {
-  const [localP, setLocalP] = useState(sarimaParams.p || 1);
-  const [localD, setLocalD] = useState(sarimaParams.d || 1);
-  const [localQ, setLocalQ] = useState(sarimaParams.q || 1);
-  const [localPSeasonal, setLocalPSeasonal] = useState(sarimaParams.P || 1);
-  const [localDSeasonal, setLocalDSeasonal] = useState(sarimaParams.D || 1);
-  const [localQSeasonal, setLocalQSeasonal] = useState(sarimaParams.Q || 1);
-  const [localS, setLocalS] = useState(sarimaParams.s || 12);
+  const theme = useTheme();
+  const [localP, setLocalP] = useState(sarimaParams?.p || 1);
+  const [localD, setLocalD] = useState(sarimaParams?.d || 1);
+  const [localQ, setLocalQ] = useState(sarimaParams?.q || 1);
+  const [localPSeasonal, setLocalPSeasonal] = useState(sarimaParams?.P || 1);
+  const [localDSeasonal, setLocalDSeasonal] = useState(sarimaParams?.D || 1);
+  const [localQSeasonal, setLocalQSeasonal] = useState(sarimaParams?.Q || 1);
+  const [localS, setLocalS] = useState(sarimaParams?.s || 12);
   const [paramsOpen, setParamsOpen] = useState(false);
   const { setIsDirty } = useContext(DashboardContext);
 
@@ -31,7 +52,7 @@ export const SarimaBlock = memo(function SarimaBlock({
     });
     setActive(true);
     setIsDirty(true);
-    setParamsOpen(false); // скрываем параметры при активации
+    setParamsOpen(false);
   }, [
     localP,
     localD,
@@ -58,24 +79,33 @@ export const SarimaBlock = memo(function SarimaBlock({
     setParamsOpen((prev) => !prev);
   }, [paramsOpen, active, setActive, setIsDirty]);
 
-  const borderColor = active ? "#10A37F" : "#FF4444";
+  // Используем цвета из темы
+  const borderColor = active
+    ? theme.palette.primary.main
+    : theme.palette.error.main;
 
   return (
     <Paper
       sx={{
         p: 2,
         mb: 2,
+        background: theme.custom.headerBackground,
         border: `2px solid ${borderColor}`,
         borderRadius: 2,
         transition: "border-color 0.2s",
       }}
     >
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: theme.palette.common.white }}>
           SARIMA
         </Typography>
         <Box>
-          <Button onClick={toggleParams} variant="text" size="small" sx={{ color: "#10A37F" }}>
+          <Button
+            onClick={toggleParams}
+            variant="text"
+            size="small"
+            sx={{ color: theme.palette.primary.main }}
+          >
             {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
           </Button>
         </Box>
@@ -83,7 +113,7 @@ export const SarimaBlock = memo(function SarimaBlock({
       <Collapse in={paramsOpen}>
         <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 2 }}>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>p</Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.common.white, mb: 0.5 }}>p</Typography>
             <ToggleButtonGroup
               value={localP}
               exclusive
@@ -92,14 +122,21 @@ export const SarimaBlock = memo(function SarimaBlock({
               color="primary"
             >
               {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
+                <ToggleButton
+                  key={val}
+                  value={val}
+                  sx={{
+                    color: theme.palette.common.white,
+                    borderColor: theme.palette.primary.main,
+                  }}
+                >
                   {val}
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>d</Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.common.white, mb: 0.5 }}>d</Typography>
             <ToggleButtonGroup
               value={localD}
               exclusive
@@ -108,14 +145,21 @@ export const SarimaBlock = memo(function SarimaBlock({
               color="primary"
             >
               {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
+                <ToggleButton
+                  key={val}
+                  value={val}
+                  sx={{
+                    color: theme.palette.common.white,
+                    borderColor: theme.palette.primary.main,
+                  }}
+                >
                   {val}
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>q</Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.common.white, mb: 0.5 }}>q</Typography>
             <ToggleButtonGroup
               value={localQ}
               exclusive
@@ -124,14 +168,21 @@ export const SarimaBlock = memo(function SarimaBlock({
               color="primary"
             >
               {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
+                <ToggleButton
+                  key={val}
+                  value={val}
+                  sx={{
+                    color: theme.palette.common.white,
+                    borderColor: theme.palette.primary.main,
+                  }}
+                >
                   {val}
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>P</Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.common.white, mb: 0.5 }}>P</Typography>
             <ToggleButtonGroup
               value={localPSeasonal}
               exclusive
@@ -140,14 +191,21 @@ export const SarimaBlock = memo(function SarimaBlock({
               color="primary"
             >
               {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
+                <ToggleButton
+                  key={val}
+                  value={val}
+                  sx={{
+                    color: theme.palette.common.white,
+                    borderColor: theme.palette.primary.main,
+                  }}
+                >
                   {val}
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>D</Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.common.white, mb: 0.5 }}>D</Typography>
             <ToggleButtonGroup
               value={localDSeasonal}
               exclusive
@@ -156,14 +214,21 @@ export const SarimaBlock = memo(function SarimaBlock({
               color="primary"
             >
               {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
+                <ToggleButton
+                  key={val}
+                  value={val}
+                  sx={{
+                    color: theme.palette.common.white,
+                    borderColor: theme.palette.primary.main,
+                  }}
+                >
                   {val}
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>Q</Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.common.white, mb: 0.5 }}>Q</Typography>
             <ToggleButtonGroup
               value={localQSeasonal}
               exclusive
@@ -172,14 +237,21 @@ export const SarimaBlock = memo(function SarimaBlock({
               color="primary"
             >
               {[0, 1, 2, 3, 4, 5].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
+                <ToggleButton
+                  key={val}
+                  value={val}
+                  sx={{
+                    color: theme.palette.common.white,
+                    borderColor: theme.palette.primary.main,
+                  }}
+                >
                   {val}
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ color: "#fff", mb: 0.5 }}>
+            <Typography variant="body2" sx={{ color: theme.palette.common.white, mb: 0.5 }}>
               Seasonal Period (s)
             </Typography>
             <ToggleButtonGroup
@@ -190,7 +262,14 @@ export const SarimaBlock = memo(function SarimaBlock({
               color="primary"
             >
               {[1, 2, 3, 4, 6, 12, 24, 52, 365].map((val) => (
-                <ToggleButton key={val} value={val} sx={{ color: "#fff", borderColor: "#10A37F" }}>
+                <ToggleButton
+                  key={val}
+                  value={val}
+                  sx={{
+                    color: theme.palette.common.white,
+                    borderColor: theme.palette.primary.main,
+                  }}
+                >
                   {val}
                 </ToggleButton>
               ))}
@@ -206,9 +285,12 @@ export const SarimaBlock = memo(function SarimaBlock({
             onClick={handleCancel}
             sx={{
               mr: 1,
-              borderColor: "#FF4444",
-              color: "#FF4444",
-              "&:hover": { borderColor: "#FF4444", backgroundColor: "#ff44441a" },
+              borderColor: theme.palette.error.main,
+              color: theme.palette.error.main,
+              "&:hover": {
+                borderColor: theme.palette.error.main,
+                backgroundColor: alpha(theme.palette.error.main, 0.1)
+              }
             }}
           >
             Отключить
@@ -220,9 +302,12 @@ export const SarimaBlock = memo(function SarimaBlock({
             onClick={handleApply}
             sx={{
               mr: 1,
-              borderColor: "#10A37F",
-              color: "#10A37F",
-              "&:hover": { borderColor: "#10A37F", backgroundColor: "#10A37F1a" },
+              borderColor: theme.palette.primary.main,
+              color: theme.palette.primary.main,
+              "&:hover": {
+                borderColor: theme.palette.primary.main,
+                backgroundColor: alpha(theme.palette.primary.main, 0.1)
+              }
             }}
           >
             Активировать

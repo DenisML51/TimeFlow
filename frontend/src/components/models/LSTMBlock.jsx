@@ -22,6 +22,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   HelpOutline as HelpOutlineIcon
 } from "@mui/icons-material";
+import { useTheme, alpha } from "@mui/material/styles";
 
 export const LSTMBlock = memo(function LSTMBlock({
   active,
@@ -29,6 +30,7 @@ export const LSTMBlock = memo(function LSTMBlock({
   lstmParams,
   setLstmParams
 }) {
+  const theme = useTheme();
   const defaultParams = {
     seq_length: 12,
     lag_periods: 6,
@@ -69,12 +71,8 @@ export const LSTMBlock = memo(function LSTMBlock({
   const [localUseAttention, setLocalUseAttention] = useState(init.use_attention);
   const [localMCDropout, setLocalMCDropout] = useState(init.mc_dropout);
   const [localMCSamples, setLocalMCSamples] = useState(init.mc_samples);
-  const [localOptimizer, setLocalOptimizer] = useState(
-    init.optimizer_type || "AdamW"
-  );
-  const [localCriterion, setLocalCriterion] = useState(
-    init.criterion || "Huber"
-  );
+  const [localOptimizer, setLocalOptimizer] = useState(init.optimizer_type || "AdamW");
+  const [localCriterion, setLocalCriterion] = useState(init.criterion || "Huber");
   const [paramsOpen, setParamsOpen] = useState(false);
   const { setIsDirty } = useContext(DashboardContext);
 
@@ -140,9 +138,9 @@ export const LSTMBlock = memo(function LSTMBlock({
     setParamsOpen((prev) => !prev);
   }, [paramsOpen, active, setActive, setIsDirty]);
 
-  const borderColor = active ? "#10A37F" : "#FF4444";
+  // Используем цвета из темы
+  const borderColor = active ? theme.palette.primary.main : theme.palette.error.main;
 
-  // Общая стилизация «кружка» для отображения текущего значения
   const circleStyle = {
     minWidth: 28,
     height: 28,
@@ -150,52 +148,37 @@ export const LSTMBlock = memo(function LSTMBlock({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
+    color: theme.palette.common.white,
     fontSize: "0.8rem",
     px: 1,
-    ml: 1 // небольшой отступ слева
+    ml: 1
   };
 
-  // Общая стилизация вопросика (иконки) с Tooltip
   const helpIcon = (title) => (
     <Tooltip title={title} arrow>
-      <HelpOutlineIcon
-        sx={{ color: "#10A37F", cursor: "pointer", fontSize: "1rem" }}
-      />
+      <HelpOutlineIcon sx={{ color: theme.palette.primary.main, cursor: "pointer", fontSize: "1rem" }} />
     </Tooltip>
   );
 
   return (
-    <Paper
-      sx={{ p: 2, mb: 2, border: `2px solid ${borderColor}`, borderRadius: 2 }}
-    >
-      <Box
-        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-      >
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
+    <Paper sx={{ p: 2, mb: 2, border: `2px solid ${borderColor}`, borderRadius: 2 , background: theme.custom.headerBackground}}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: theme.palette.common.white }}>
           LSTM
         </Typography>
-        <Button onClick={toggleParams} variant="text" sx={{ color: "#10A37F" }}>
+        <Button onClick={toggleParams} variant="text" sx={{ color: theme.palette.primary.main }}>
           {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
         </Button>
       </Box>
-
       <Collapse in={paramsOpen}>
         <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 2 }}>
           {/* Параметры последовательности */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Параметры последовательности</Typography>
             </AccordionSummary>
             <AccordionDetails>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                  gap: 2
-                }}
-              >
-                {/* seq_length */}
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -211,11 +194,9 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={50}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
-
-                {/* lag_periods */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -231,11 +212,9 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={50}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
-
-                {/* window_sizes */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -251,7 +230,11 @@ export const LSTMBlock = memo(function LSTMBlock({
                     onChange={(e) => setLocalWindowSizes(e.target.value)}
                     variant="outlined"
                     fullWidth
-                    sx={{ backgroundColor: "#2c2c2c", input: { color: "#fff" }, mt: 1 }}
+                    sx={{
+
+                      input: { color: theme.palette.common.white },
+                      mt: 1
+                    }}
                   />
                 </Box>
               </Box>
@@ -259,19 +242,12 @@ export const LSTMBlock = memo(function LSTMBlock({
           </Accordion>
 
           {/* Архитектура LSTM */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Архитектура LSTM</Typography>
             </AccordionSummary>
             <AccordionDetails>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                  gap: 2
-                }}
-              >
-                {/* num_layers */}
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -287,11 +263,10 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={4}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
 
-                {/* hidden_dim */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -307,11 +282,10 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={512}
                     step={16}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
 
-                {/* dropout */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -327,11 +301,10 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={1}
                     step={0.05}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
 
-                {/* use_attention */}
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <FormControlLabel
@@ -339,7 +312,7 @@ export const LSTMBlock = memo(function LSTMBlock({
                         <Checkbox
                           checked={localUseAttention}
                           onChange={(e) => setLocalUseAttention(e.target.checked)}
-                          sx={{ color: "#10A37F" }}
+                          sx={{ color: theme.palette.primary.main }}
                         />
                       }
                       label="Использовать внимание"
@@ -352,19 +325,12 @@ export const LSTMBlock = memo(function LSTMBlock({
           </Accordion>
 
           {/* Параметры обучения */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Параметры обучения</Typography>
             </AccordionSummary>
             <AccordionDetails>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                  gap: 2
-                }}
-              >
-                {/* batch_size */}
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2 }}>
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -380,11 +346,10 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={128}
                     step={8}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
 
-                {/* epochs */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -400,11 +365,10 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={500}
                     step={10}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
 
-                {/* learning_rate */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -420,16 +384,15 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={0.01}
                     step={0.0001}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
 
-                {/* patience */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <Typography variant="body2">Patience</Typography>
-                      {helpIcon("Число эпох без улучшения, после которых обучение может быть остановлено.")}
+                      {helpIcon("Количество эпох без улучшения, после которых обучение может быть остановлено.")}
                     </Box>
                     <Box sx={circleStyle}>{localPatience}</Box>
                   </Box>
@@ -440,11 +403,10 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={50}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
 
-                {/* delta */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -460,11 +422,10 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={0.01}
                     step={0.0001}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
 
-                {/* n_splits */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -480,7 +441,7 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={10}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
               </Box>
@@ -488,8 +449,8 @@ export const LSTMBlock = memo(function LSTMBlock({
           </Accordion>
 
           {/* Дополнительные настройки */}
-          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: "#1e1e1e", color: "#fff" }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#10A37F" }} />}>
+          <Accordion TransitionProps={{ unmountOnExit: true }} sx={{ backgroundColor: theme.palette.background.paper, color: theme.palette.common.white }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: theme.palette.primary.main }} />}>
               <Typography>Дополнительные настройки</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -508,7 +469,7 @@ export const LSTMBlock = memo(function LSTMBlock({
                         <Checkbox
                           checked={localMCDropout}
                           onChange={(e) => setLocalMCDropout(e.target.checked)}
-                          sx={{ color: "#10A37F" }}
+                          sx={{ color: theme.palette.primary.main }}
                         />
                       }
                       label="MC-Dropout"
@@ -517,7 +478,7 @@ export const LSTMBlock = memo(function LSTMBlock({
                   </Box>
                 </Box>
 
-                {/* mc_samples */}
+                {/* MC-Samples */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -533,11 +494,11 @@ export const LSTMBlock = memo(function LSTMBlock({
                     max={200}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Box>
 
-                {/* optimizer_type */}
+                {/* Тип оптимизатора */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -552,7 +513,10 @@ export const LSTMBlock = memo(function LSTMBlock({
                     variant="outlined"
                     value={localOptimizer}
                     onChange={(e) => setLocalOptimizer(e.target.value)}
-                    sx={{ backgroundColor: "#2c2c2c", input: { color: "#fff" }, mt: 1 }}
+                    sx={{
+                      input: { color: theme.palette.common.white },
+                      mt: 1
+                    }}
                   >
                     <MenuItem value="AdamW">AdamW</MenuItem>
                     <MenuItem value="Adam">Adam</MenuItem>
@@ -561,7 +525,7 @@ export const LSTMBlock = memo(function LSTMBlock({
                   </TextField>
                 </Box>
 
-                {/* criterion */}
+                {/* Критерий */}
                 <Box>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -576,7 +540,10 @@ export const LSTMBlock = memo(function LSTMBlock({
                     variant="outlined"
                     value={localCriterion}
                     onChange={(e) => setLocalCriterion(e.target.value)}
-                    sx={{ backgroundColor: "#2c2c2c", input: { color: "#fff" }, mt: 1 }}
+                    sx={{
+                      input: { color: theme.palette.common.white },
+                      mt: 1
+                    }}
                   >
                     <MenuItem value="MSE">MSE</MenuItem>
                     <MenuItem value="MAE">MAE</MenuItem>
@@ -589,14 +556,16 @@ export const LSTMBlock = memo(function LSTMBlock({
         </Box>
       </Collapse>
 
-      {/* Кнопки включения / отключения модели */}
       <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
         {active ? (
           <Button
             variant="outlined"
             startIcon={<CloseIcon />}
             onClick={handleCancel}
-            sx={{ borderColor: "#FF4444", color: "#FF4444" }}
+            sx={{
+              borderColor: theme.palette.error.main,
+              color: theme.palette.error.main
+            }}
           >
             Отключить
           </Button>
@@ -605,7 +574,10 @@ export const LSTMBlock = memo(function LSTMBlock({
             variant="outlined"
             startIcon={<CheckIcon />}
             onClick={handleApply}
-            sx={{ borderColor: "#10A37F", color: "#10A37F" }}
+            sx={{
+              borderColor: theme.palette.primary.main,
+              color: theme.palette.primary.main
+            }}
           >
             Активировать
           </Button>

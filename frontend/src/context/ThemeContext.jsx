@@ -1,38 +1,33 @@
-import React, { createContext, useMemo, useState } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import React, { createContext, useState, useMemo, useEffect } from "react";
+import { darkTheme, lightTheme } from "../theme/theme";
 
-export const ColorModeContext = createContext({ toggleColorMode: () => {} });
+export const ColorModeContext = createContext({
+  toggleColorMode: () => {},
+  mode: "dark",
+  theme: darkTheme,
+});
 
-export const CustomThemeProvider = ({ children }) => {
-  const [mode, setMode] = useState('dark'); // по умолчанию темная тема
+export const ColorModeProvider = ({ children }) => {
+  const [mode, setMode] = useState(() => {
+    // Инициализация из localStorage, если значение есть
+    const savedMode = localStorage.getItem("themeMode");
+    return savedMode ? savedMode : "dark";
+  });
 
-  const colorMode = useMemo(() => ({
-    toggleColorMode: () => {
-      setMode((prevMode) => (prevMode === 'dark' ? 'light' : 'dark'));
-    },
-  }), []);
+  const toggleColorMode = () => {
+    setMode((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
-  const theme = useMemo(() => createTheme({
-    palette: {
-      mode,
-      primary: { main: "#10A37F" },
-      background: mode === 'dark'
-        ? { default: "#121212", paper: "#1e1e1e" }
-        : { default: "#fff", paper: "#f5f5f5" },
-    },
-  }), [mode]);
+  useEffect(() => {
+    // Обновляем значение в localStorage при изменении темы
+    localStorage.setItem("themeMode", mode);
+  }, [mode]);
+
+  const theme = useMemo(() => (mode === "dark" ? darkTheme : lightTheme), [mode]);
 
   return (
-    <ColorModeContext.Provider value={colorMode}>
-      <ThemeProvider theme={theme}>
-        <div style={{
-          transition: 'background-color 0.5s ease',
-          backgroundColor: theme.palette.background.default,
-          minHeight: '100vh',
-        }}>
-          {children}
-        </div>
-      </ThemeProvider>
+    <ColorModeContext.Provider value={{ toggleColorMode, mode, theme }}>
+      {children}
     </ColorModeContext.Provider>
   );
 };

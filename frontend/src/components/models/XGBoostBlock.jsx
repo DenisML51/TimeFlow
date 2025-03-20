@@ -1,7 +1,8 @@
-import React, {memo, useCallback, useContext, useState} from "react";
-import {DashboardContext} from "../../context/DashboardContext";
-import {Box, Button, Collapse, Paper, Slider, Typography} from "@mui/material";
-import {Check as CheckIcon, Close as CloseIcon} from "@mui/icons-material";
+import React, { memo, useCallback, useContext, useState } from "react";
+import { DashboardContext } from "../../context/DashboardContext";
+import { Box, Button, Collapse, Paper, Slider, Typography, ToggleButton, ToggleButtonGroup, FormControlLabel, MenuItem, TextField, Tooltip } from "@mui/material";
+import { Check as CheckIcon, Close as CloseIcon } from "@mui/icons-material";
+import { useTheme, alpha } from "@mui/material/styles";
 
 export const XGBoostBlock = memo(function XGBoostBlock({
   active,
@@ -9,17 +10,12 @@ export const XGBoostBlock = memo(function XGBoostBlock({
   xgboostParams,
   setXgboostParams,
 }) {
-  const [localMaxDepth, setLocalMaxDepth] = useState(xgboostParams.max_depth || 6);
-  const [localLearningRate, setLocalLearningRate] = useState(
-    xgboostParams.learning_rate || 0.1
-  );
-  const [localNEstimators, setLocalNEstimators] = useState(
-    xgboostParams.n_estimators || 100
-  );
-  const [localSubsample, setLocalSubsample] = useState(xgboostParams.subsample || 1);
-  const [localColsampleBytree, setLocalColsampleBytree] = useState(
-    xgboostParams.colsample_bytree || 1
-  );
+  const theme = useTheme();
+  const [localMaxDepth, setLocalMaxDepth] = useState(xgboostParams?.max_depth || 6);
+  const [localLearningRate, setLocalLearningRate] = useState(xgboostParams?.learning_rate || 0.1);
+  const [localNEstimators, setLocalNEstimators] = useState(xgboostParams?.n_estimators || 100);
+  const [localSubsample, setLocalSubsample] = useState(xgboostParams?.subsample || 1);
+  const [localColsampleBytree, setLocalColsampleBytree] = useState(xgboostParams?.colsample_bytree || 1);
   const [paramsOpen, setParamsOpen] = useState(false);
   const { setIsDirty } = useContext(DashboardContext);
 
@@ -33,7 +29,7 @@ export const XGBoostBlock = memo(function XGBoostBlock({
     });
     setActive(true);
     setIsDirty(true);
-    setParamsOpen(false); // скрываем параметры при активации
+    setParamsOpen(false);
   }, [
     localMaxDepth,
     localLearningRate,
@@ -43,7 +39,6 @@ export const XGBoostBlock = memo(function XGBoostBlock({
     setXgboostParams,
     setActive,
     setIsDirty,
-    setParamsOpen,
   ]);
 
   const handleCancel = useCallback(() => {
@@ -59,7 +54,7 @@ export const XGBoostBlock = memo(function XGBoostBlock({
     setParamsOpen((prev) => !prev);
   }, [paramsOpen, active, setActive, setIsDirty]);
 
-  const borderColor = active ? "#10A37F" : "#FF4444";
+  const borderColor = active ? theme.palette.primary.main : theme.palette.error.main;
 
   return (
     <Paper
@@ -67,23 +62,22 @@ export const XGBoostBlock = memo(function XGBoostBlock({
         p: 2,
         mb: 2,
         border: `2px solid ${borderColor}`,
+        background: theme.custom.headerBackground,
         borderRadius: 2,
         transition: "border-color 0.2s",
       }}
     >
-      <Box
-        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-      >
-        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#fff" }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: theme.palette.common.white }}>
           XGBoost
         </Typography>
-        <Button onClick={toggleParams} variant="text" sx={{ color: "#10A37F" }}>
+        <Button onClick={toggleParams} variant="text" sx={{ color: theme.palette.primary.main }}>
           {paramsOpen ? "Скрыть параметры" : "Показать параметры"}
         </Button>
       </Box>
       <Collapse in={paramsOpen}>
         <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" sx={{ color: "#fff" }} gutterBottom>
+          <Typography variant="body2" sx={{ color: theme.palette.common.white }} gutterBottom>
             Max Depth: {localMaxDepth}
           </Typography>
           <Slider
@@ -93,9 +87,9 @@ export const XGBoostBlock = memo(function XGBoostBlock({
             max={15}
             step={1}
             valueLabelDisplay="auto"
-            sx={{ color: "#10A37F", mb: 2 }}
+            sx={{ color: theme.palette.primary.main, mb: 2 }}
           />
-          <Typography variant="body2" sx={{ color: "#fff" }} gutterBottom>
+          <Typography variant="body2" sx={{ color: theme.palette.common.white }} gutterBottom>
             Learning Rate: {localLearningRate}
           </Typography>
           <Slider
@@ -105,9 +99,9 @@ export const XGBoostBlock = memo(function XGBoostBlock({
             max={1}
             step={0.01}
             valueLabelDisplay="auto"
-            sx={{ color: "#10A37F", mb: 2 }}
+            sx={{ color: theme.palette.primary.main, mb: 2 }}
           />
-          <Typography variant="body2" sx={{ color: "#fff" }} gutterBottom>
+          <Typography variant="body2" sx={{ color: theme.palette.common.white }} gutterBottom>
             n_estimators: {localNEstimators}
           </Typography>
           <Slider
@@ -117,9 +111,9 @@ export const XGBoostBlock = memo(function XGBoostBlock({
             max={500}
             step={10}
             valueLabelDisplay="auto"
-            sx={{ color: "#10A37F", mb: 2 }}
+            sx={{ color: theme.palette.primary.main, mb: 2 }}
           />
-          <Typography variant="body2" sx={{ color: "#fff" }} gutterBottom>
+          <Typography variant="body2" sx={{ color: theme.palette.common.white }} gutterBottom>
             Subsample: {localSubsample}
           </Typography>
           <Slider
@@ -129,9 +123,9 @@ export const XGBoostBlock = memo(function XGBoostBlock({
             max={1}
             step={0.1}
             valueLabelDisplay="auto"
-            sx={{ color: "#10A37F", mb: 2 }}
+            sx={{ color: theme.palette.primary.main, mb: 2 }}
           />
-          <Typography variant="body2" sx={{ color: "#fff" }} gutterBottom>
+          <Typography variant="body2" sx={{ color: theme.palette.common.white }} gutterBottom>
             Colsample by tree: {localColsampleBytree}
           </Typography>
           <Slider
@@ -141,7 +135,7 @@ export const XGBoostBlock = memo(function XGBoostBlock({
             max={1}
             step={0.1}
             valueLabelDisplay="auto"
-            sx={{ color: "#10A37F", mb: 2 }}
+            sx={{ color: theme.palette.primary.main, mb: 2 }}
           />
         </Box>
       </Collapse>
@@ -152,9 +146,12 @@ export const XGBoostBlock = memo(function XGBoostBlock({
             startIcon={<CloseIcon />}
             onClick={handleCancel}
             sx={{
-              borderColor: "#FF4444",
-              color: "#FF4444",
-              "&:hover": { borderColor: "#FF4444", backgroundColor: "#ff44441a" },
+              borderColor: theme.palette.error.main,
+              color: theme.palette.error.main,
+              "&:hover": {
+                borderColor: theme.palette.error.main,
+                backgroundColor: alpha(theme.palette.error.main, 0.1)
+              }
             }}
           >
             Отключить
@@ -165,9 +162,12 @@ export const XGBoostBlock = memo(function XGBoostBlock({
             startIcon={<CheckIcon />}
             onClick={handleApply}
             sx={{
-              borderColor: "#10A37F",
-              color: "#10A37F",
-              "&:hover": { borderColor: "#10A37F", backgroundColor: "#10A37F1a" },
+              borderColor: theme.palette.primary.main,
+              color: theme.palette.primary.main,
+              "&:hover": {
+                borderColor: theme.palette.primary.main,
+                backgroundColor: alpha(theme.palette.primary.main, 0.1)
+              }
             }}
           >
             Активировать

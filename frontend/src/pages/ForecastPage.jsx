@@ -27,17 +27,29 @@ import {
   Radio,
   Slide,
   Chip,
+  useTheme,
+  alpha,
+  Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TableSortLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   TrendingDown as TrendingDownIcon,
   ShowChart as ShowChartIcon,
   Percent as PercentIcon,
+  Settings as SettingsIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
-import { Line } from "react-chartjs-2";
+import { Line, Bar } from "react-chartjs-2";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 import { DashboardContext } from "../context/DashboardContext";
@@ -51,11 +63,34 @@ import { TransformerBlock } from "../components/models/TransformerBlock";
 import { SarimaBlock } from "../components/models/SARIMABlock";
 import { ProphetBlock } from "../components/models/ProphetBlock";
 import { XGBoostBlock } from "../components/models/XGBoostBlock";
-import SettingsIcon from "@mui/icons-material/Settings";
+import GlassPaper from "../components/GlassPaper";
 
-// =======================
-// Вспомогательные функции для графиков и метрик
-// =======================
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+// ----------------------
+// Вспомогательные функции
+// ----------------------
 function computeMetricsOnStandardized(dataArray) {
   const rowsWithFact = dataArray.filter(
     (d) => d.y_fact !== null && d.y_fact !== undefined
@@ -217,7 +252,6 @@ const AnimatedMetricChip = memo(function AnimatedMetricChip({ label, value, type
   );
 });
 
-// Вспомогательный компонент-оверлей для спиннера
 const SpinnerOverlay = () => (
   <Box
     sx={{
@@ -230,10 +264,10 @@ const SpinnerOverlay = () => (
       alignItems: "center",
       justifyContent: "center",
       zIndex: 2,
-      backgroundColor: "rgba(0,0,0,0.25)",
+      backgroundColor: alpha("#000", 0.25),
     }}
   >
-    <CircularProgress size={48} sx={{ color: "#10A37F" }} />
+    <CircularProgress size={48} sx={{ color: (theme) => theme.palette.primary.main }} />
   </Box>
 );
 
@@ -249,8 +283,12 @@ export default function ForecastPage() {
     filteredData,
     setIsDirty,
     filters,
+    saveSessionNow,
   } = useContext(DashboardContext);
 
+  const theme = useTheme();
+
+  // Получаем данные, переданные через location.state
   const stateModifiedData = location.state?.modifiedData || [];
   const stateSelectedColumns = location.state?.selectedColumns || [];
   const initialModifiedData = stateModifiedData.length ? stateModifiedData : [];
@@ -261,6 +299,13 @@ export default function ForecastPage() {
       navigate(-1);
     }
   }, [initialModifiedData, initialSelectedColumns, navigate]);
+
+  // Сохраняем сессию при размонтировании страницы
+  useEffect(() => {
+    return () => {
+      saveSessionNow();
+    };
+  }, [saveSessionNow]);
 
   const {
     prophetActive,
@@ -299,7 +344,6 @@ export default function ForecastPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [csvCategoricalCols, setCsvCategoricalCols] = useState([]);
 
-  // Вычисляем, есть ли запущенные (PENDING) прогнозы
   const forecastsRunning = useMemo(
     () => forecastResults.some((res) => res.status === "PENDING"),
     [forecastResults]
@@ -368,6 +412,18 @@ export default function ForecastPage() {
     return allDs.map((ds) => bigMap.get(ds));
   }, [forecastResults]);
 
+  const modelColorMap = useMemo(() => {
+    return {
+      Prophet: theme.palette.info.main,
+      XGBoost: theme.palette.error.main,
+      SARIMA: theme.palette.primary.secondary,
+      LSTM: theme.palette.primary.main,
+      Transformer: theme.palette.success.main,
+      GRU: theme.palette.primary.main,
+      factColor: theme.palette.primary.main,
+    };
+  }, [theme]);
+
   const combinedChartData = useMemo(() => {
     const subset = forecastResults.map((mRes) => {
       let segment = [];
@@ -379,15 +435,8 @@ export default function ForecastPage() {
         segment = [...mRes.forecastAll, ...mRes.forecastHorizon];
       return { modelName: mRes.modelName, segment };
     });
-    const modelColorMap = {
-      Prophet: "#36A2EB",
-      XGBoost: "#ff6382",
-      SARIMA: "#f8fd68",
-      LSTM: "#a569bd",
-      Transformer: "#00FF00",
-    };
     return makeCombinedChartData(subset, modelColorMap);
-  }, [forecastResults, commonTab]);
+  }, [forecastResults, commonTab, modelColorMap]);
 
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
 
@@ -459,8 +508,10 @@ export default function ForecastPage() {
   }, [setForecastPageState]);
 
   const handleBack = useCallback(() => {
+    // Перед переходом назад сохраняем сессию
+    saveSessionNow();
     navigate(-1);
-  }, [navigate]);
+  }, [navigate, saveSessionNow]);
 
   const toggleModels = useCallback(() => {
     setForecastPageState((prev) => {
@@ -474,30 +525,30 @@ export default function ForecastPage() {
     () => ({
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: "#fff" } } },
+      plugins: { legend: { labels: { color: theme.palette.common.white } } },
       scales: {
         x: {
           ticks: {
-            color: "#fff",
+            color: theme.palette.common.white,
             callback: function (value) {
               const label = this.getLabelForValue(value);
               return label ? label.slice(0, 10) : "";
             },
           },
-          grid: { color: "rgba(255,255,255,0.1)" },
+          grid: { color: alpha(theme.palette.common.white, 0.1) },
         },
         y: {
-          ticks: { color: "#fff" },
-          grid: { color: "rgba(255,255,255,0.1)" },
+          ticks: { color: theme.palette.common.white },
+          grid: { color: alpha(theme.palette.common.white, 0.1) },
         },
       },
     }),
-    []
+    [theme]
   );
 
-  // Функция для опроса статуса задачи
+  // Функция опроса статуса задачи
   const pollTaskStatus = useCallback((taskId, modelName) => {
-    if (!taskId) return; // Если taskId отсутствует, выходим
+    if (!taskId) return;
     const intervalId = setInterval(async () => {
       try {
         const statusResp = await axios.get(
@@ -505,12 +556,8 @@ export default function ForecastPage() {
         );
         if (statusResp.data.status !== "PENDING") {
           clearInterval(intervalId);
-          const {
-            forecast_all,
-            forecast_train,
-            forecast_test,
-            forecast_horizon,
-          } = statusResp.data.result;
+          const { forecast_all, forecast_train, forecast_test, forecast_horizon } =
+            statusResp.data.result;
           setForecastResults((prevResults) =>
             prevResults.map((res) =>
               res.modelName === modelName
@@ -533,15 +580,16 @@ export default function ForecastPage() {
     }, 3000);
   }, [setForecastResults]);
 
-  // Обработчик нажатия кнопки "Построить прогноз"
+  const [localIsLoading, setLocalIsLoading] = useState(false);
+
+  // Обработчик кнопки "Построить прогноз"
   const handleForecast = useCallback(async () => {
     if (!validFreqRegex.test(localCommonParams.freq)) {
       setFreqError("Некорректная частота");
       return;
     }
-    // Дополнительно блокируем запуск нового прогноза, если есть невыполненные задачи
     if (forecastsRunning) return;
-    setIsLoading(true);
+    setLocalIsLoading(true);
     setForecastPageState((prev) => ({
       ...prev,
       horizon: localCommonParams.horizon,
@@ -578,7 +626,6 @@ export default function ForecastPage() {
           data: initialModifiedData,
         };
         const resp = await axios.post("http://localhost:8000/api/forecast", payload);
-        // Если task_id отсутствует, выводим ошибку и пропускаем этот метод
         if (!resp.data.task_id) {
           console.error("Task ID отсутствует для модели", m.model);
           continue;
@@ -598,7 +645,7 @@ export default function ForecastPage() {
     } catch (err) {
       console.error("Ошибка прогноза:", err);
     } finally {
-      setIsLoading(false);
+      setLocalIsLoading(false);
     }
   }, [
     localCommonParams,
@@ -635,17 +682,18 @@ export default function ForecastPage() {
         <ParticleBackground />
       </Canvas>
       <Box sx={{ position: "relative", minHeight: "100vh" }}>
+        {/* Header Section */}
         <Box sx={{ display: "flex", justifyContent: "space-between", m: 2, pt: 2 }}>
           <Button
             variant="contained"
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
             startIcon={<ArrowBackIcon />}
             sx={{
-              background: "rgba(16,163,127,0.15)",
-              color: "#10A37F",
+              background: alpha(theme.palette.primary.main, 0.15),
+              color: theme.palette.primary.main,
               borderRadius: "12px",
               px: 3,
-              "&:hover": { background: "rgba(16,163,127,0.3)" },
+              "&:hover": { background: alpha(theme.palette.primary.main, 0.3) },
             }}
           >
             Назад
@@ -654,7 +702,7 @@ export default function ForecastPage() {
             variant="h4"
             sx={{
               fontWeight: 700,
-              background: "linear-gradient(45deg, #10A37F 30%, #00ff88 100%)",
+              background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.secondary} 100%)`,
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
             }}
@@ -662,7 +710,6 @@ export default function ForecastPage() {
             Прогнозирование
           </Typography>
           <Button></Button>
-
         </Box>
         <Box sx={{ pt: 2 }}>
           <CategoricalDataBlock filteredData={filteredData} selectedColumns={selectedColumns} filters={filters} />
@@ -671,44 +718,39 @@ export default function ForecastPage() {
           <Box
             sx={{
               flexGrow: 1,
+              pr: 2,
+              pl: 2,
+              pt: 2,
               transition: "margin-right 0.3s",
               marginRight: modelsOpen ? "336px" : 0,
               overflowY: "auto",
               "&::-webkit-scrollbar": { display: "none" },
             }}
           >
-            <Paper
-              sx={{
-                background: "rgba(255, 255, 255, 0.05)",
-                m: 2,
-                borderRadius: "16px",
-                border: "1px solid rgba(255,255,255,0.1)",
-                backdropFilter: "blur(12px)",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
-                p: 3,
-                position: "relative",
-              }}
-            >
-        <Box sx={{ display: "flex", gap: 2, alignItems: "left", mb: 3, justifyContent: "space-between" }}>
-
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Общие параметры прогноза
-              </Typography>
-                        <Button
-                          variant="contained"
-                          onClick={toggleModels}
-                          endIcon={<SettingsIcon />}
-                          sx={{
-                            background: "rgba(16,163,127,0.15)",
-                            color: "#10A37F",
-                            borderRadius: "12px",
-                            px: 3,
-                            "&:hover": { background: "rgba(16,163,127,0.3)" },
-                          }}
-                        >
-                          Модели
-                        </Button>
-        </Box>
+            <GlassPaper>
+              <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start", mb: 3, justifyContent: "space-between" }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Общие параметры прогноза
+                </Typography>
+                <Button
+                  variant="contained"
+                  onClick={() =>
+                    setForecastPageState((prev) => {
+                      const newState = { ...prev, modelsOpen: !prev.modelsOpen };
+                      setIsDirty(true);
+                      return newState;
+                    })
+                  }
+                  startIcon={<SettingsIcon />}
+                  sx={{
+                    background: alpha(theme.palette.primary.main, 0.15),
+                    color: theme.palette.primary.main,
+                    borderRadius: "12px",
+                  }}
+                >
+                  Модели
+                </Button>
+              </Box>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
                   <Typography gutterBottom>Горизонт: {localCommonParams.horizon}</Typography>
@@ -721,7 +763,7 @@ export default function ForecastPage() {
                     max={50}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
@@ -737,7 +779,7 @@ export default function ForecastPage() {
                     max={50}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
@@ -753,12 +795,12 @@ export default function ForecastPage() {
                     variant="outlined"
                     fullWidth
                     sx={{
-                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      background: theme.custom.headerBackground,
                       borderRadius: "10px",
-                      input: { color: "#fff" },
+                      input: { color: theme.palette.common.white },
                       "& .MuiOutlinedInput-root": {
                         "& fieldset": {
-                          borderColor: freqError ? "red" : "#fff",
+                          borderColor: freqError ? "red" : theme.palette.common.white,
                         },
                       },
                     }}
@@ -771,16 +813,13 @@ export default function ForecastPage() {
                   <Slider
                     value={localCommonParams.confidenceLevel}
                     onChange={(e, val) =>
-                      setLocalCommonParams((prev) => ({
-                        ...prev,
-                        confidenceLevel: val,
-                      }))
+                      setLocalCommonParams((prev) => ({ ...prev, confidenceLevel: val }))
                     }
                     min={80}
                     max={99}
                     step={1}
                     valueLabelDisplay="auto"
-                    sx={{ color: "#10A37F" }}
+                    sx={{ color: theme.palette.primary.main }}
                   />
                 </Grid>
               </Grid>
@@ -788,26 +827,31 @@ export default function ForecastPage() {
                 <Button
                   variant="contained"
                   onClick={handleForecast}
-                  disabled={isLoading || forecastsRunning}
+                  disabled={localIsLoading || forecastsRunning}
                   sx={{
                     borderRadius: "12px",
-                    background: "linear-gradient(45deg, #10A37F, #00ff88)",
-                    color: "#121212",
+                    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.secondary})`,
+                    color: theme.palette.common.black,
                     px: 3,
-                    "&:hover": { background: "linear-gradient(45deg, #00ff88, #10A37F)" },
+                    "&:hover": {
+                      background: `linear-gradient(45deg, ${theme.palette.primary.secondary}, ${theme.palette.primary.main})`,
+                    },
                   }}
                 >
-                  {(isLoading || forecastsRunning) ? <CircularProgress size={24} sx={{ color: "#121212" }} /> : "Построить прогноз"}
+                  {(localIsLoading || forecastsRunning) ? (
+                    <CircularProgress size={24} sx={{ color: theme.palette.common.black }} />
+                  ) : (
+                    "Построить прогноз"
+                  )}
                 </Button>
               </Box>
-            </Paper>
+            </GlassPaper>
             {forecastResults.length > 0 && (
-              <Paper
+              <GlassPaper
                 sx={{
-                  background: "rgba(255, 255, 255, 0.05)",
                   m: 2,
                   borderRadius: "16px",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  border: `1px solid ${alpha(theme.palette.common.white, 0.1)}`,
                   backdropFilter: "blur(12px)",
                   boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
                   p: 3,
@@ -840,24 +884,25 @@ export default function ForecastPage() {
                     onClick={handleOpenCsvDialog}
                     sx={{
                       borderRadius: "12px",
-                      background: "linear-gradient(45deg, #10A37F, #00ff88)",
-                      color: "#121212",
+                      background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.secondary})`,
+                      color: theme.palette.common.black,
                       px: 3,
-                      "&:hover": { background: "linear-gradient(45deg, #00ff88, #10A37F)" },
+                      "&:hover": {
+                        background: `linear-gradient(45deg, ${theme.palette.primary.secondary}, ${theme.palette.primary.main})`,
+                      },
                     }}
                   >
                     Скачать (All Models)
                   </Button>
                 </Box>
-              </Paper>
+              </GlassPaper>
             )}
             {forecastResults.length > 0 && (
-              <Paper
+              <GlassPaper
                 sx={{
-                  background: "rgba(255, 255, 255, 0.05)",
                   m: 2,
                   borderRadius: "16px",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  border: `1px solid ${alpha(theme.palette.common.white, 0.1)}`,
                   backdropFilter: "blur(12px)",
                   boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
                   p: 3,
@@ -884,16 +929,15 @@ export default function ForecastPage() {
                   (() => {
                     const curModel = forecastResults[modelTab];
                     const modelColorMap = {
-                      Prophet: "#ffd6ab",
-                      XGBoost: "#ff6382",
-                      SARIMA: "#ff9000",
-                      LSTM: "#a569bd",
-                      GRU: "#00bcd4",
+                      Prophet: theme.palette.info.main,
+                      XGBoost: theme.palette.error.main,
+                      SARIMA: theme.palette.primary.secondary,
+                      LSTM: theme.palette.primary.main,
+                      GRU: theme.palette.primary.main,
                     };
-                    const color = modelColorMap[curModel.modelName] || "#36A2EB";
+                    const color = modelColorMap[curModel.modelName] || theme.palette.info.main;
                     const subTab = modelSubTabs[modelTab] || 0;
-                    const handleSubTabChange = (e, val) =>
-                      handleModelSubTabChange(modelTab, val);
+                    const handleSubTabChange = (e, val) => handleModelSubTabChange(modelTab, val);
                     const metricsAll = computeMetricsOnStandardized(curModel.forecastAll);
                     const metricsTrain = computeMetricsOnStandardized(curModel.forecastTrain);
                     const metricsTest = computeMetricsOnStandardized(curModel.forecastTest);
@@ -964,17 +1008,17 @@ export default function ForecastPage() {
                           <Box sx={{ height: 400, position: "relative", pt: 5 }}>
                             <Line data={chartHorizon} options={chartOptions} />
                             {curModel.status === "PENDING" && <SpinnerOverlay />}
-                              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2, pt: 3, pb: 10 }}>
-                                <Typography sx={{ mt: 2 }}>
-                                  Прогноз будущего (факт отсутствует).
-                                </Typography>
-                              </Box>
+                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2, pt: 3, pb: 10 }}>
+                              <Typography sx={{ mt: 2 }}>
+                                Прогноз будущего (факт отсутствует).
+                              </Typography>
+                            </Box>
                           </Box>
                         )}
                       </Box>
                     );
                   })()}
-              </Paper>
+              </GlassPaper>
             )}
           </Box>
           <Slide direction="left" in={modelsOpen}>
@@ -984,9 +1028,9 @@ export default function ForecastPage() {
                 top: 16,
                 right: 16,
                 width: "320px",
-                background: "rgba(255, 255, 255, 0.05)",
+                background: theme.custom.headerBackground,
                 borderRadius: "16px",
-                border: "1px solid rgba(255,255,255,0.1)",
+                border: `1px solid ${alpha(theme.palette.common.white, 0.1)}`,
                 backdropFilter: "blur(12px)",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
                 height: "calc(100vh - 72px)",
@@ -997,7 +1041,7 @@ export default function ForecastPage() {
                 msOverflowStyle: "none",
               }}
             >
-              <Typography variant="h6" sx={{ color: "#fff", mb: 2 }}>
+              <Typography variant="h6" sx={{ color: theme.palette.common.white, mb: 2 }}>
                 Модели
               </Typography>
               <ProphetBlock
@@ -1070,29 +1114,29 @@ export default function ForecastPage() {
           maxWidth="md"
           PaperProps={{
             sx: {
-              background: "rgba(32, 32, 32, 0.9)",
+              background: alpha(theme.palette.background.paper, 0.9),
               backdropFilter: "blur(12px)",
               borderRadius: "16px",
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: `1px solid ${alpha(theme.palette.common.white, 0.1)}`,
               boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
             },
           }}
         >
           <DialogTitle
             sx={{
-              color: "#fff",
+              color: theme.palette.common.white,
               fontWeight: 700,
-              background: "linear-gradient(45deg, #10A37F 30%, #00ff88 100%)",
+              background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.secondary} 100%)`,
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
             }}
           >
             Сохранить результаты
           </DialogTitle>
-          <DialogContent dividers sx={{ color: "#fff" }}>
+          <DialogContent dividers sx={{ color: theme.palette.common.white }}>
             {/* Секция выбора категориальных переменных */}
             <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 1, color: "#14c59a" }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, color: theme.palette.primary.main }}>
                 Категориальные переменные
               </Typography>
               {categoricalCandidates.length > 0 ? (
@@ -1101,11 +1145,7 @@ export default function ForecastPage() {
                     <Chip
                       key={candidate.column}
                       label={candidate.column}
-                      variant={
-                        csvCategoricalCols.includes(candidate.column)
-                          ? "filled"
-                          : "outlined"
-                      }
+                      variant={csvCategoricalCols.includes(candidate.column) ? "filled" : "outlined"}
                       onClick={() => {
                         setCsvCategoricalCols((prev) =>
                           prev.includes(candidate.column)
@@ -1114,27 +1154,27 @@ export default function ForecastPage() {
                         );
                       }}
                       sx={{
-                        borderColor: "#14c59a",
+                        borderColor: theme.palette.primary.main,
                         color: csvCategoricalCols.includes(candidate.column)
-                          ? "#121212"
-                          : "#14c59a",
+                          ? theme.palette.common.black
+                          : theme.palette.primary.main,
                         bgcolor: csvCategoricalCols.includes(candidate.column)
-                          ? "#14c59a"
+                          ? theme.palette.primary.main
                           : "transparent",
-                        "&:hover": { bgcolor: "#14c59a33" },
+                        "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                       }}
                     />
                   ))}
                 </Box>
               ) : (
-                <Typography variant="body2" sx={{ color: "#aaa" }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
                   Нет доступных категориальных переменных
                 </Typography>
               )}
             </Box>
             {/* Выбор формата файла */}
             <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 1, color: "#14c59a" }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, color: theme.palette.primary.main }}>
                 Формат файла
               </Typography>
               <RadioGroup
@@ -1147,26 +1187,26 @@ export default function ForecastPage() {
               >
                 <FormControlLabel
                   value="csv"
-                  control={<Radio sx={{ color: "#14c59a", "&.Mui-checked": { color: "#40bd82" } }} />}
+                  control={<Radio sx={{ color: theme.palette.primary.main, "&.Mui-checked": { color: theme.palette.success.main } }} />}
                   label="CSV"
-                  sx={{ color: "#fff" }}
+                  sx={{ color: theme.palette.common.white }}
                 />
                 <FormControlLabel
                   value="xlsx"
-                  control={<Radio sx={{ color: "#14c59a", "&.Mui-checked": { color: "#40bd82" } }} />}
+                  control={<Radio sx={{ color: theme.palette.primary.main, "&.Mui-checked": { color: theme.palette.success.main } }} />}
                   label="Excel"
-                  sx={{ color: "#fff" }}
+                  sx={{ color: theme.palette.common.white }}
                 />
               </RadioGroup>
             </Box>
             {/* Выбор столбцов */}
             <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" sx={{ mb: 1, color: "#14c59a" }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, color: theme.palette.primary.main }}>
                 Выберите столбцы
               </Typography>
               <Box
                 sx={{
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  border: `1px solid ${alpha(theme.palette.common.white, 0.1)}`,
                   borderRadius: "8px",
                   p: 2,
                   maxHeight: 200,
@@ -1174,7 +1214,7 @@ export default function ForecastPage() {
                   "&::-webkit-scrollbar": { width: "8px" },
                   "&::-webkit-scrollbar-track": { background: "transparent" },
                   "&::-webkit-scrollbar-thumb": {
-                    backgroundColor: "#14c59a33",
+                    backgroundColor: alpha(theme.palette.primary.main, 0.4),
                     borderRadius: "4px",
                     border: "2px solid transparent",
                     backgroundClip: "content-box",
@@ -1195,31 +1235,31 @@ export default function ForecastPage() {
                               : prev.csvSelectedCols.filter((c) => c !== col),
                           }))
                         }
-                        sx={{ color: "#14c59a", "&.Mui-checked": { color: "#40bd82" } }}
+                        sx={{ color: theme.palette.primary.main, "&.Mui-checked": { color: theme.palette.success.main } }}
                       />
                     }
                     label={col}
-                    sx={{ color: "#fff", width: "100%", m: 0 }}
+                    sx={{ color: theme.palette.common.white, width: "100%", m: 0 }}
                   />
                 ))}
               </Box>
             </Box>
             {computedPreviewData.length > 0 && (
               <Box>
-                <Typography variant="subtitle1" sx={{ mb: 1, color: "#14c59a" }}>
+                <Typography variant="subtitle1" sx={{ mb: 1, color: theme.palette.primary.main }}>
                   Предпросмотр данных
                 </Typography>
-                <Paper sx={{ background: "rgba(255,255,255,0.05)", p: 1 }}>
+                <Paper sx={{ background: alpha(theme.palette.common.white, 0.05), p: 1 }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
-                      <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                      <tr style={{ borderBottom: `1px solid ${alpha(theme.palette.common.white, 0.1)}` }}>
                         {[...csvSelectedCols, ...csvCategoricalCols].map((col) => (
                           <th
                             key={col}
                             style={{
                               padding: "8px",
                               textAlign: "left",
-                              color: "#14c59a",
+                              color: theme.palette.primary.main,
                               fontSize: "0.8rem",
                             }}
                           >
@@ -1230,13 +1270,13 @@ export default function ForecastPage() {
                     </thead>
                     <tbody>
                       {computedPreviewData.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                        <tr key={i} style={{ borderBottom: `1px solid ${alpha(theme.palette.common.white, 0.1)}` }}>
                           {[...csvSelectedCols, ...csvCategoricalCols].map((col) => (
                             <td
                               key={col}
                               style={{
                                 padding: "8px",
-                                color: "#fff",
+                                color: theme.palette.common.white,
                                 fontSize: "0.8rem",
                               }}
                             >
@@ -1251,15 +1291,15 @@ export default function ForecastPage() {
               </Box>
             )}
           </DialogContent>
-          <DialogActions sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+          <DialogActions sx={{ p: 2, borderTop: `1px solid ${alpha(theme.palette.common.white, 0.1)}` }}>
             <Button
               onClick={handleCloseCsvDialog}
               sx={{
-                color: "#14c59a",
-                border: "1px solid #14c59a",
+                color: theme.palette.primary.main,
+                border: `1px solid ${theme.palette.primary.main}`,
                 borderRadius: "8px",
                 px: 3,
-                "&:hover": { bgcolor: "#14c59a22" },
+                "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.2) },
               }}
             >
               Отмена
@@ -1267,12 +1307,15 @@ export default function ForecastPage() {
             <Button
               onClick={handleDownloadSelectedCols}
               sx={{
-                background: "linear-gradient(45deg, #10A37F, #00ff88)",
-                color: "#121212",
+                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.secondary})`,
+                color: theme.palette.common.black,
                 borderRadius: "8px",
                 px: 3,
                 ml: 2,
-                "&:hover": { background: "linear-gradient(45deg, #00ff88, #10A37F)", boxShadow: "0 0 8px rgba(16, 163, 127, 0.5)" },
+                "&:hover": {
+                  background: `linear-gradient(45deg, ${theme.palette.primary.secondary}, ${theme.palette.primary.main})`,
+                  boxShadow: `0 0 8px ${alpha(theme.palette.primary.main, 0.5)}`,
+                },
               }}
             >
               Скачать

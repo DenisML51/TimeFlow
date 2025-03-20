@@ -1,4 +1,4 @@
-import React, {useState, useContext, useEffect} from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   Container,
   TextField,
@@ -7,17 +7,17 @@ import {
   Box,
   CircularProgress,
   Dialog,
-  DialogContent
+  DialogContent,
+  alpha
 } from "@mui/material";
+import { darken, useTheme } from "@mui/material/styles";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { motion } from "framer-motion";
-import {ParticleBackground} from "../components/home/ParticleBackground";
+import { ParticleBackground } from "../components/home/ParticleBackground";
 import { TbLogin, TbCheck, TbAlertCircle } from "react-icons/tb";
-import {Canvas} from "@react-three/fiber";
-
-
+import { Canvas } from "@react-three/fiber";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -27,6 +27,7 @@ const Login = () => {
   const [dialogContent, setDialogContent] = useState({});
   const navigate = useNavigate();
   const { fetchUser } = useContext(AuthContext);
+  const theme = useTheme();
 
   useEffect(() => {
     if (dialogOpen) {
@@ -55,7 +56,7 @@ const Login = () => {
         icon: <TbCheck size={40} />,
         title: "Добро пожаловать!",
         message: response.data.message,
-        color: "#10A37F",
+        color: theme.palette.primary.main,
         onClose: () => navigate("/dashboard")
       });
     } catch (error) {
@@ -63,7 +64,7 @@ const Login = () => {
         icon: <TbAlertCircle size={40} />,
         title: "Ошибка входа",
         message: error.response?.data?.message || "Неверные учетные данные",
-        color: "#ff4444"
+        color: theme.palette.error.main
       });
     } finally {
       setLoading(false);
@@ -85,7 +86,7 @@ const Login = () => {
         overflow: "hidden"
       }}
     >
-        <Canvas camera={{ position: [0, 0, 1] }} style={{ position: 'fixed', top: 0, left: 0 }}>
+      <Canvas camera={{ position: [0, 0, 1] }} style={{ position: "fixed", top: 0, left: 0 }}>
         <ParticleBackground />
       </Canvas>
 
@@ -99,11 +100,11 @@ const Login = () => {
             component="form"
             onSubmit={handleLogin}
             sx={{
-              background: "rgba(30, 30, 30, 0.8)",
+              background: alpha(theme.palette.background.paper, 0.8),
               backdropFilter: "blur(12px)",
               padding: { xs: "20px", sm: "40px" },
               borderRadius: "24px",
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: `1px solid ${theme.custom?.paperBorder || alpha(theme.palette.text.primary, 0.1)}`,
               boxShadow: "0 24px 48px rgba(0,0,0,0.4)",
               position: "relative",
               overflow: "hidden",
@@ -114,7 +115,10 @@ const Login = () => {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: "linear-gradient(45deg, #10A37F20 0%, transparent 100%)",
+                background: `linear-gradient(45deg, ${alpha(
+                  theme.palette.primary.main,
+                  0.2
+                )} 0%, transparent 100%)`,
                 pointerEvents: "none"
               }
             }}
@@ -125,7 +129,7 @@ const Login = () => {
                 textAlign: "center",
                 mb: 4,
                 fontWeight: 700,
-                background: "linear-gradient(45deg, #10A37F 30%, #00ff88 100%)",
+                background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.secondary} 100%)`,
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent"
               }}
@@ -138,23 +142,23 @@ const Login = () => {
                 fullWidth
                 label="Имя пользователя"
                 margin="normal"
-                variant="filled"
+
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 sx={{
                   "& .MuiFilledInput-root": {
                     borderRadius: "6px",
-                    background: "rgba(255,255,255,0.05)",
+                    background: alpha(theme.palette.background.paper, 0.05),
                     transition: "0.3s",
-                    "&:hover": { background: "rgba(255,255,255,0.08)" },
+                    "&:hover": { background: alpha(theme.palette.background.paper, 0.08) },
                     "&.Mui-focused": {
-                      background: "rgba(255,255,255,0.1)",
-                      boxShadow: "0 0 0 2px #10A37F"
+                      background: alpha(theme.palette.background.paper, 0.1),
+                      boxShadow: `0 0 0 2px ${theme.palette.primary.main}`
                     }
                   },
                   "& .MuiInputLabel-root": {
-                    color: "#aaa",
-                    "&.Mui-focused": { color: "#10A37F" }
+                    color: theme.palette.text.secondary,
+                    "&.Mui-focused": { color: theme.palette.primary.main }
                   }
                 }}
               />
@@ -166,23 +170,23 @@ const Login = () => {
                 type="password"
                 label="Пароль"
                 margin="normal"
-                variant="filled"
+
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 sx={{
                   "& .MuiFilledInput-root": {
                     borderRadius: "6px",
-                    background: "rgba(255,255,255,0.05)",
+                    background: alpha(theme.palette.background.paper, 0.05),
                     transition: "0.3s",
-                    "&:hover": { background: "rgba(255,255,255,0.08)" },
+                    "&:hover": { background: alpha(theme.palette.background.paper, 0.08) },
                     "&.Mui-focused": {
-                      background: "rgba(255,255,255,0.1)",
-                      boxShadow: "0 0 0 2px #10A37F"
+                      background: alpha(theme.palette.background.paper, 0.1),
+                      boxShadow: `0 0 0 2px ${theme.palette.primary.main}`
                     }
                   },
                   "& .MuiInputLabel-root": {
-                    color: "#aaa",
-                    "&.Mui-focused": { color: "#10A37F" }
+                    color: theme.palette.text.secondary,
+                    "&.Mui-focused": { color: theme.palette.primary.main }
                   }
                 }}
               />
@@ -197,12 +201,12 @@ const Login = () => {
                   mt: 3,
                   py: 2,
                   borderRadius: "12px",
-                  background: "#10A37F",
+                  background: theme.palette.primary.main,
                   fontSize: "16px",
                   fontWeight: 600,
-                  color: "#ffffff",
-                  "&:hover": { background: "#0f8f6f" },
-                  "& .MuiCircularProgress-root": { color: "white" }
+                  color: theme.palette.common.white,
+                  "&:hover": { background: darken(theme.palette.primary.main, 0.1) },
+                  "& .MuiCircularProgress-root": { color: theme.palette.common.white }
                 }}
               >
                 {loading ? (
@@ -229,9 +233,9 @@ const Login = () => {
         PaperProps={{
           sx: {
             borderRadius: "24px",
-            background: "rgba(30,30,30,0.9)",
+            background: alpha(theme.palette.background.paper, 0.9),
             backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
             boxShadow: "0 16px 32px rgba(0,0,0,0.4)"
           }
         }}
@@ -244,7 +248,7 @@ const Login = () => {
             <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
               {dialogContent.title}
             </Typography>
-            <Typography variant="body1" sx={{ color: "#aaa" }}>
+            <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
               {dialogContent.message}
             </Typography>
           </motion.div>

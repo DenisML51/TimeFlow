@@ -12,6 +12,8 @@ import {
   CircularProgress,
   Tabs,
   Tab,
+  useTheme,
+  alpha,
 } from "@mui/material";
 import { Line } from "react-chartjs-2";
 import { motion } from "framer-motion";
@@ -31,25 +33,30 @@ import {
 } from "chart.js";
 
 // Регистрируем компоненты Chart.js
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 /**
  * Генерация синтетических данных:
- *  - Даты: первый день каждого месяца с 2020-01-01 по 2023-12-01
+ *  - Даты: первый день каждого месяца с 2018-01-01 по 2023-12-01
  *  - y_fact: линейный тренд + сезонность (синус) + случайный шум
  */
 const generateSyntheticData = () => {
   const data = [];
   const startYear = 2018;
-  const endYear = 2024; // генерируем данные с 2018 по 2021 год (можно изменить по необходимости)
+  const endYear = 2024;
   let index = 0;
   for (let year = startYear; year < endYear; year++) {
     for (let month = 0; month < 12; month++) {
-      // Создаем дату первого числа месяца
       const currentDate = new Date(year, month, 1);
-      // Форматируем в "YYYY-MM-DD"
       const dateStr = currentDate.toISOString().split("T")[0];
-      // Вычисляем значение с линейным трендом, сезонностью (по месяцу) и случайным шумом
       const trend = 100 + index * 2;
       const seasonal = 10 * Math.sin((2 * Math.PI * (month + 1)) / 12);
       const noise = Math.random() * 5;
@@ -60,10 +67,8 @@ const generateSyntheticData = () => {
   return data;
 };
 
-
-
 const Demo = () => {
-  // Локальный факт – синтетические данные
+  const theme = useTheme();
   const syntheticData = useMemo(() => generateSyntheticData(), []);
 
   // Общие параметры прогноза
@@ -83,22 +88,19 @@ const Demo = () => {
   const [sarimaParams] = useState({ p: 1, d: 1, q: 1, s: 12 });
 
   // Результаты, полученные от бэкенда
-  // Каждый элемент: { modelName, forecastAll, forecastTrain, forecastTest, forecastHorizon }
   const [forecastResults, setForecastResults] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Переключение вкладок: 0 = All, 1 = Train, 2 = Test, 3 = Horizon
   const [commonTab, setCommonTab] = useState(0);
 
-  // Для отладки: выводим в консоль первые и последние строки синтетических данных
   console.log("Synthetic data (first 5 rows):", syntheticData.slice(0, 5));
   console.log("Synthetic data (last 5 rows):", syntheticData.slice(-5));
 
   // Функция запроса для одной модели
   const requestForecast = async (modelName, uniqueParams) => {
-    // Преобразуем каждое значение y_fact в число
     const sortedData = [...syntheticData]
-      .map(item => ({ ...item, y_fact: Number(item.y_fact) }))
+      .map((item) => ({ ...item, y_fact: Number(item.y_fact) }))
       .sort((a, b) => new Date(a.ds) - new Date(b.ds));
 
     const payload = {
@@ -114,11 +116,14 @@ const Demo = () => {
     };
     console.log(`Requesting forecast for ${modelName}:`, payload);
     try {
-      const resp = await axios.post("http://localhost:8000/api/forecast_demo", payload, {
-        withCredentials: true,
-      });
+      const resp = await axios.post(
+        "http://localhost:8000/api/forecast_demo",
+        payload,
+        { withCredentials: true }
+      );
       console.log(`Response for ${modelName}:`, resp.data);
-      const { forecast_all, forecast_train, forecast_test, forecast_horizon } = resp.data;
+      const { forecast_all, forecast_train, forecast_test, forecast_horizon } =
+        resp.data;
       return {
         modelName,
         forecastAll: forecast_all || [],
@@ -132,8 +137,6 @@ const Demo = () => {
     }
   };
 
-
-  // Обработчик построения прогноза – для всех активных моделей
   const handleBuildForecast = async () => {
     setLoading(true);
     const promises = [];
@@ -149,15 +152,8 @@ const Demo = () => {
     setLoading(false);
   };
 
-  /**
-   * Формирование общего набора дат и наборов данных для графика.
-   * Мы:
-   * 1. Собираем все даты из локальных данных (syntheticData) и из выбранного сегмента для каждой модели.
-   * 2. Формируем базовую «фактическую» линию из локальных данных.
-   * 3. Для каждой модели, если в выбранном сегменте есть данные, добавляем линию прогноза (и, если есть, линию факта от бэкенда).
-   */
+  // Формирование данных для графика
   const combinedChartData = useMemo(() => {
-    // Если прогноз не построен, возвращаем только локальный факт.
     if (forecastResults.length === 0) {
       return {
         labels: syntheticData.map((d) => d.ds),
@@ -165,8 +161,8 @@ const Demo = () => {
           {
             label: "Факт (локальный)",
             data: syntheticData.map((d) => Number(d.y_fact)),
-            borderColor: "#14c59a",
-            backgroundColor: "#14c59a",
+            borderColor: theme.palette.primary.main,
+            backgroundColor: theme.palette.primary.main,
             borderWidth: 2,
             pointRadius: 2,
             fill: false,
@@ -175,7 +171,6 @@ const Demo = () => {
       };
     }
 
-    // Собираем все даты: из локальных данных и из выбранного сегмента каждой модели.
     const allDatesSet = new Set(syntheticData.map((d) => d.ds));
     forecastResults.forEach((modelRes) => {
       let segment = [];
@@ -185,27 +180,32 @@ const Demo = () => {
       else if (commonTab === 3) segment = modelRes.forecastHorizon;
       segment.forEach((row) => allDatesSet.add(row.ds));
     });
-    const labels = Array.from(allDatesSet).sort((a, b) => new Date(a) - new Date(b));
+    const labels = Array.from(allDatesSet).sort(
+      (a, b) => new Date(a) - new Date(b)
+    );
 
-    // Формируем базовую линию (локальный факт)
-    const localFactMap = new Map(syntheticData.map((d) => [d.ds, d.y_fact]));
+    const localFactMap = new Map(
+      syntheticData.map((d) => [d.ds, d.y_fact])
+    );
     const datasets = [
       {
         label: "Факт (локальный)",
-        data: labels.map((ds) => (localFactMap.has(ds) ? localFactMap.get(ds) : null)),
-        borderColor: "#14c59a",
-        backgroundColor: "#14c59a",
+        data: labels.map((ds) =>
+          localFactMap.has(ds) ? localFactMap.get(ds) : null
+        ),
+        borderColor: theme.palette.primary.main,
+        backgroundColor: theme.palette.primary.main,
         borderWidth: 2,
         pointRadius: 2,
         fill: false,
       },
     ];
 
-    // Добавляем данные для каждой модели
+    // Используем цвета из темы для моделей
     const modelColorMap = {
-      Prophet: "#36A2EB",
-      XGBoost: "#ff6382",
-      SARIMA: "#f8fd68",
+      Prophet: theme.palette.info?.main || "#36A2EB",
+      XGBoost: theme.palette.error.main,
+      SARIMA: theme.palette.success?.main || "#f8fd68",
     };
 
     forecastResults.forEach((modelRes) => {
@@ -216,7 +216,7 @@ const Demo = () => {
       else if (commonTab === 3) segment = modelRes.forecastHorizon;
 
       if (!segment.length) return;
-      const color = modelColorMap[modelRes.modelName] || "#36A2EB";
+      const color = modelColorMap[modelRes.modelName] || theme.palette.info.main;
 
       const factMap = new Map();
       const forecastMap = new Map();
@@ -225,23 +225,25 @@ const Demo = () => {
         if (row.y_forecast !== undefined) forecastMap.set(row.ds, row.y_forecast);
       });
 
-      // Если в сегменте есть фактические данные от бэкенда, добавляем их отдельно
       if (factMap.size > 0) {
         datasets.push({
           label: `Факт (${modelRes.modelName})`,
-          data: labels.map((ds) => (factMap.has(ds) ? factMap.get(ds) : null)),
-          borderColor: "#e1e1e1",
-          backgroundColor: "#e1e1e1",
+          data: labels.map((ds) =>
+            factMap.has(ds) ? factMap.get(ds) : null
+          ),
+          borderColor: alpha(theme.palette.text.primary, 0.7),
+          backgroundColor: alpha(theme.palette.text.primary, 0.7),
           borderWidth: 2,
           pointRadius: 2,
           fill: false,
         });
       }
 
-      // Линия прогноза
       datasets.push({
         label: `Прогноз (${modelRes.modelName})`,
-        data: labels.map((ds) => (forecastMap.has(ds) ? forecastMap.get(ds) : null)),
+        data: labels.map((ds) =>
+          forecastMap.has(ds) ? forecastMap.get(ds) : null
+        ),
         borderColor: color,
         backgroundColor: "transparent",
         borderDash: [5, 5],
@@ -252,32 +254,33 @@ const Demo = () => {
     });
 
     return { labels, datasets };
-  }, [forecastResults, syntheticData, commonTab]);
+  }, [forecastResults, syntheticData, commonTab, theme]);
 
-  // Настройки графика (аналогично полной версии)
   const chartOptions = useMemo(
     () => ({
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: "#fff" } } },
+      plugins: {
+        legend: { labels: { color: theme.palette.text.primary } },
+      },
       scales: {
         x: {
           ticks: {
-            color: "#fff",
+            color: theme.palette.text.primary,
             callback: function (value) {
               const label = this.getLabelForValue(value);
               return label ? label.slice(0, 10) : "";
             },
           },
-          grid: { color: "rgba(255,255,255,0.1)" },
+          grid: { color: alpha(theme.palette.text.primary, 0.1) },
         },
         y: {
-          ticks: { color: "#fff" },
-          grid: { color: "rgba(255,255,255,0.1)" },
+          ticks: { color: theme.palette.text.primary },
+          grid: { color: alpha(theme.palette.text.primary, 0.1) },
         },
       },
     }),
-    []
+    [theme]
   );
 
   return (
@@ -289,18 +292,23 @@ const Demo = () => {
       style={{ position: "relative", minHeight: "100vh" }}
     >
       {/* Фоновая анимация */}
-      <Canvas camera={{ position: [0, 0, 1] }} style={{ position: "fixed", top: 0, left: 0 }}>
+      <Canvas
+        camera={{ position: [0, 0, 1] }}
+        style={{ position: "fixed", top: 0, left: 0 }}
+      >
         <ParticleBackground />
       </Canvas>
       <Box sx={{ position: "relative", zIndex: 1, p: 4 }}>
         <Container maxWidth="lg">
           {/* Заголовок */}
-          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
+          <Box
+            sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}
+          >
             <Typography
               variant="h4"
               sx={{
                 fontWeight: 700,
-                background: "linear-gradient(45deg, #10A37F 30%, #00ff88 100%)",
+                background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.secondary} 100%)`,
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
               }}
@@ -309,19 +317,29 @@ const Demo = () => {
             </Typography>
           </Box>
           <Box sx={{ mb: 4 }}>
-            <Typography variant="body1" sx={{ color: "text.secondary", mb: 2 }}>
-              Демонстрационная версия сайта с синтетическими данными за 4 года. Здесь можно активировать модели и построить прогноз на основе синтетических данных.
+            <Typography
+              variant="body1"
+              sx={{ color: theme.palette.text.secondary, mb: 2 }}
+            >
+              Демонстрационная версия сайта с синтетическими данными за 4 года.
+              Здесь можно активировать модели и построить прогноз на основе синтетических
+              данных.
             </Typography>
           </Box>
 
           {/* Общие параметры прогноза */}
           <GlassPaperDemo>
-            <Typography variant="h6" sx={{ mb: 2, color: "#fff" }}>
+            <Typography
+              variant="h6"
+              sx={{ mb: 2, color: theme.palette.primary.main }}
+            >
               Общие параметры прогноза
             </Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6} md={3}>
-                <Typography gutterBottom>Горизонт: {horizon} мес.</Typography>
+                <Typography gutterBottom>
+                  Горизонт: {horizon} мес.
+                </Typography>
                 <Slider
                   value={horizon}
                   onChange={(e, val) => setHorizon(val)}
@@ -329,11 +347,13 @@ const Demo = () => {
                   max={24}
                   step={1}
                   valueLabelDisplay="auto"
-                  sx={{ color: "#10A37F" }}
+                  sx={{ color: theme.palette.primary.main }}
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <Typography gutterBottom>History: {historySize} мес.</Typography>
+                <Typography gutterBottom>
+                  History: {historySize} мес.
+                </Typography>
                 <Slider
                   value={historySize}
                   onChange={(e, val) => setHistorySize(val)}
@@ -341,7 +361,7 @@ const Demo = () => {
                   max={24}
                   step={1}
                   valueLabelDisplay="auto"
-                  sx={{ color: "#10A37F" }}
+                  sx={{ color: theme.palette.primary.main }}
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
@@ -349,13 +369,18 @@ const Demo = () => {
                 <Select
                   value={freq}
                   onChange={(e) => setFreq(e.target.value)}
-                  sx={{ backgroundColor: "#2c2c2c", color: "#fff" }}
+                  sx={{
+
+                    color: theme.palette.text.primary,
+                  }}
                 >
                   <MenuItem value="ME">Конец месяца</MenuItem>
                 </Select>
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
-                <Typography gutterBottom>Уровень доверия: {confidenceLevel}%</Typography>
+                <Typography gutterBottom>
+                  Уровень доверия: {confidenceLevel}%
+                </Typography>
                 <Slider
                   value={confidenceLevel}
                   onChange={(e, val) => setConfidenceLevel(val)}
@@ -363,7 +388,7 @@ const Demo = () => {
                   max={99}
                   step={1}
                   valueLabelDisplay="auto"
-                  sx={{ color: "#10A37F" }}
+                  sx={{ color: theme.palette.primary.main }}
                 />
               </Grid>
             </Grid>
@@ -372,7 +397,10 @@ const Demo = () => {
           {/* Модели прогнозирования */}
           <Box sx={{ mt: 4 }}>
             <GlassPaperDemo>
-              <Typography variant="h6" sx={{ mb: 2, color: "#fff" }}>
+              <Typography
+                variant="h6"
+                sx={{ mb: 2, color: theme.palette.primary.main }}
+              >
                 Модели прогнозирования
               </Typography>
               <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
@@ -383,9 +411,13 @@ const Demo = () => {
                     borderRadius: "12px",
                     px: 3,
                     py: 1,
-                    borderColor: "#10A37F",
-                    color: prophetActive ? "#fff" : "#10A37F",
-                    background: prophetActive ? "#10A37F" : "transparent",
+                    borderColor: theme.palette.primary.main,
+                    color: prophetActive
+                      ? theme.palette.common.white
+                      : theme.palette.primary.main,
+                    background: prophetActive
+                      ? theme.palette.primary.main
+                      : "transparent",
                   }}
                 >
                   Prophet
@@ -397,9 +429,13 @@ const Demo = () => {
                     borderRadius: "12px",
                     px: 3,
                     py: 1,
-                    borderColor: "#10A37F",
-                    color: xgboostActive ? "#fff" : "#10A37F",
-                    background: xgboostActive ? "#10A37F" : "transparent",
+                    borderColor: theme.palette.primary.main,
+                    color: xgboostActive
+                      ? theme.palette.common.white
+                      : theme.palette.primary.main,
+                    background: xgboostActive
+                      ? theme.palette.primary.main
+                      : "transparent",
                   }}
                 >
                   XGBoost
@@ -411,9 +447,13 @@ const Demo = () => {
                     borderRadius: "12px",
                     px: 3,
                     py: 1,
-                    borderColor: "#10A37F",
-                    color: sarimaActive ? "#fff" : "#10A37F",
-                    background: sarimaActive ? "#10A37F" : "transparent",
+                    borderColor: theme.palette.primary.main,
+                    color: sarimaActive
+                      ? theme.palette.common.white
+                      : theme.palette.primary.main,
+                    background: sarimaActive
+                      ? theme.palette.primary.main
+                      : "transparent",
                   }}
                 >
                   SARIMA
@@ -428,18 +468,28 @@ const Demo = () => {
               variant="contained"
               onClick={handleBuildForecast}
               endIcon={<TbRocket />}
-              disabled={loading || (!prophetActive && !xgboostActive && !sarimaActive)}
+              disabled={
+                loading ||
+                (!prophetActive && !xgboostActive && !sarimaActive)
+              }
               sx={{
                 px: 8,
                 py: 2.5,
                 borderRadius: "12px",
                 fontSize: "1.1rem",
                 fontWeight: 600,
-                background: "linear-gradient(135deg, #10A37F 0%, #00FF88 100%)",
-                boxShadow: "0 8px 32px rgba(16,163,127,0.3)",
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.secondary} 100%)`,
+                boxShadow: `0 8px 32px ${alpha(
+                  theme.palette.primary.main,
+                  0.3
+                )}`,
               }}
             >
-              {loading ? <CircularProgress size={24} sx={{ color: "#fff" }} /> : "Построить прогноз"}
+              {loading ? (
+                <CircularProgress size={24} sx={{ color: theme.palette.common.white }} />
+              ) : (
+                "Построить прогноз"
+              )}
             </Button>
           </Box>
 
@@ -458,10 +508,7 @@ const Demo = () => {
               <Tab label="Horizon" />
             </Tabs>
             <Box sx={{ height: 500 }}>
-              <Line
-                data={combinedChartData}
-                options={chartOptions}
-              />
+              <Line data={combinedChartData} options={chartOptions} />
             </Box>
           </GlassPaperDemo>
         </Container>
@@ -470,20 +517,23 @@ const Demo = () => {
   );
 };
 
-const GlassPaperDemo = ({ children, sx }) => (
-  <Box
-    sx={{
-      background: "rgba(255,255,255,0.05)",
-      borderRadius: "16px",
-      border: "1px solid rgba(255,255,255,0.1)",
-      backdropFilter: "blur(12px)",
-      boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
-      p: 3,
-      ...sx,
-    }}
-  >
-    {children}
-  </Box>
-);
+const GlassPaperDemo = ({ children, sx }) => {
+  const theme = useTheme();
+  return (
+    <Box
+      sx={{
+        background: alpha(theme.palette.background.paper, 0.05),
+        borderRadius: "16px",
+        border: `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
+        backdropFilter: "blur(12px)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+        p: 3,
+        ...sx,
+      }}
+    >
+      {children}
+    </Box>
+  );
+};
 
 export default Demo;

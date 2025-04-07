@@ -51,7 +51,6 @@ export const ParticleBackground22 = (props) => {
   const theme = useTheme();
   const groupRef = useRef();
   const materialRef = useRef();
-  // Увеличен радиус для более современного распределения
   const [sphere] = React.useState(() =>
     random.inSphere(new Float32Array(6000), { radius: 2.0 })
   );
@@ -62,7 +61,6 @@ export const ParticleBackground22 = (props) => {
       groupRef.current.rotation.y -= delta / 15;
     }
     if (materialRef.current) {
-      // Плавное пульсирование размера частиц
       materialRef.current.size = 0.005 + 0.003 * Math.sin(state.clock.elapsedTime * 2);
     }
   });
@@ -90,7 +88,6 @@ export const ParticleBackground7865 = () => {
   100% { background-position: 0% 50%; }
 `;
   return (
-    // Html с пропсом fullscreen рендерит содержимое как полноэкранный overlay
     <Html fullscreen>
       <Box
         sx={{
@@ -115,7 +112,6 @@ export const ParticleBackground2 = (props) => {
   const ref = useRef();
   const initialPositions = useRef();
 
-  // Инициализация частиц в плоской плоскости
   const [sphere] = React.useState(() => {
     const positions = random.inBox(new Float32Array(6000 * 3), { sides: [8, 0.01, 8] });
     initialPositions.current = positions.slice();
@@ -156,7 +152,6 @@ export const ParticleBackground4 = (props) => {
   const ref = useRef();
   const initialPositions = useRef();
 
-  // Увеличиваем количество частиц и добавляем начальное смещение по Y
   const [particles] = React.useState(() => {
     const positions = random.inBox(new Float32Array(15000 * 3), {
       sides: [6, 1.5, 6],
@@ -201,7 +196,6 @@ export const ParticleBackground4 = (props) => {
 
 export const ParticleBackground5 = () => {
   const theme = useTheme();
-  // Вычисляем случайные значения один раз при монтировании
   const lines = React.useMemo(
     () =>
       [...Array(12)].map((_, i) => ({

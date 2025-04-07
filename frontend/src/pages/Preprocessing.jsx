@@ -64,7 +64,6 @@ ChartJS.register(
   Legend
 );
 
-// Компонент NumberInput с кнопками уменьшения и увеличения
 const NumberInput = ({ value, onChange, min, max, step = 1, sx, ...props }) => {
   const theme = useTheme();
 
@@ -114,7 +113,6 @@ const NumberInput = ({ value, onChange, min, max, step = 1, sx, ...props }) => {
   );
 };
 
-// Компонент статистической карточки
 const StatCard = ({ title, value, tooltip }) => {
   const theme = useTheme();
   return (
@@ -192,29 +190,25 @@ const SelectedColumnsPage = () => {
     secondPageState,
     setSecondPageState,
     setIsDirty,
-    saveSessionNow, // получаем функцию сохранения из контекста
+    saveSessionNow,
   } = useContext(DashboardContext);
   const [timeSeriesTests, setTimeSeriesTests] = useState(null);
   const [imputedData, setImputedData] = useState(null);
 
   const [, setShow] = useState(true);
 
-  // При размонтировании страницы сохраняем состояние
   useEffect(() => {
     return () => {
-      // При уходе со страницы вызываем сохранение сессии
       saveSessionNow();
     };
   }, [saveSessionNow]);
 
   const handleBack = () => {
     setShow(false);
-    // Перед навигацией можно вызвать сохранение, если требуется:
     saveSessionNow();
     setTimeout(() => navigate(-1), 300);
   };
 
-  // Формирование данных для выбранных столбцов
   const dataForDisplay = useMemo(() => {
     return filteredData.map((row) => {
       const newRow = {};
@@ -225,7 +219,6 @@ const SelectedColumnsPage = () => {
     });
   }, [filteredData, selectedColumns]);
 
-  // Локальная сортировка
   const sortedData = useMemo(() => {
     if (!secondPageState.localSortColumn || !secondPageState.localSortDirection)
       return dataForDisplay;
@@ -247,7 +240,6 @@ const SelectedColumnsPage = () => {
     secondPageState.localSortDirection,
   ]);
 
-  // Ручное выполнение заполнения пропусков на бэкенде
   const handleImputation = () => {
     if (secondPageState.processingSteps.imputation) {
       const payload = {
@@ -273,16 +265,13 @@ const SelectedColumnsPage = () => {
     }
   };
 
-  // Используем данные после импутации (если есть) иначе sortedData
   const processedData = secondPageState.processingSteps.imputation && imputedData ? imputedData : sortedData;
 
-  // Остальные этапы обработки выполняются с processedData
   const finalDataResult = useMemo(() => {
     let data = [...processedData];
     let seasonalValues = null;
     let trendValues = null;
 
-    // 2. Фильтрация выбросов (без изменений)
     if (secondPageState.processingSteps.outliers) {
       const outlierMethod = secondPageState.outlierMethod || "std";
       const targetValues = data.map((row) => Number(row[selectedColumns[1]]));
@@ -308,7 +297,6 @@ const SelectedColumnsPage = () => {
       }
     }
 
-    // 3. Сглаживание (без изменений)
     if (secondPageState.processingSteps.smoothing && secondPageState.smoothingWindow > 1) {
       const smoothingMethod = secondPageState.smoothingMethod || "movingAverage";
       if (smoothingMethod === "movingAverage") {
@@ -337,7 +325,6 @@ const SelectedColumnsPage = () => {
       }
     }
 
-    // 4. Преобразование (без изменений)
     if (secondPageState.processingSteps.transformation && secondPageState.transformation !== "none") {
       if (secondPageState.transformation === "log") {
         data = data.map((row) => ({
@@ -379,7 +366,6 @@ const SelectedColumnsPage = () => {
       }
     }
 
-    // 5. Декомпозиция (без изменений)
     if (secondPageState.processingSteps.decomposition && secondPageState.decompositionWindow > 1) {
       let trend = [];
       for (let i = 0; i < data.length; i++) {
@@ -399,7 +385,6 @@ const SelectedColumnsPage = () => {
       }
     }
 
-    // 6. Нормализация (без изменений)
     if (secondPageState.processingSteps.normalization) {
       const values = data.map((row) => Number(row[selectedColumns[1]]));
       const minVal = Math.min(...values);
@@ -420,7 +405,6 @@ const SelectedColumnsPage = () => {
       : Number(row[selectedColumns[1]])
   );
 
-  // Формирование данных для графика
   let chartData;
   if (
     secondPageState.processingSteps.decomposition &&
@@ -539,7 +523,6 @@ const SelectedColumnsPage = () => {
     };
   }
 
-  // Описательная статистика
   const computeStats = (data) => {
     if (!data || data.length === 0) return null;
     const numericData = data.filter((x) => !isNaN(x));
@@ -570,7 +553,6 @@ const SelectedColumnsPage = () => {
       ]
     : [];
 
-  // Функция для запуска тестов временного ряда через бэкенд
   const handleRunTimeSeriesTests = async () => {
     try {
       const response = await axios.post(
@@ -584,7 +566,6 @@ const SelectedColumnsPage = () => {
     }
   };
 
-  // Сортировка по клику на заголовке таблицы
   const handleSort = (col) => {
     setSecondPageState((prev) => {
       let newDirection = "asc";
@@ -613,7 +594,6 @@ const SelectedColumnsPage = () => {
       </Canvas>
 
       <Box sx={{ position: "relative", minHeight: "100vh" }}>
-        {/* Header Section */}
         <Box sx={{ display: "flex", justifyContent: "space-between", m: 2, pt: 2 }}>
           <Button
             variant="contained"
@@ -661,7 +641,6 @@ const SelectedColumnsPage = () => {
           <CategoricalDataBlock filteredData={filteredData} selectedColumns={selectedColumns} filters={filters} />
         </Box>
 
-        {/* Основной контент и боковая панель предобработки */}
         <Box sx={{ position: "relative", mt: 2, p: 2 }}>
           <Box
             sx={{
@@ -781,7 +760,6 @@ const SelectedColumnsPage = () => {
                 </Grid>
               </Box>
 
-              {/* Блок статистических тестов */}
               <Box sx={{ mt: 4 }}>
                 <Typography variant="h6" sx={{ color: theme.palette.common.white, textAlign: "center", mb: 2 }}>
                   Тесты временного ряда
@@ -885,7 +863,6 @@ const SelectedColumnsPage = () => {
             </GlassPaper>
           </Box>
 
-          {/* Боковая панель предобработки */}
           <Slide direction="right" in={secondPageState.preprocessingOpen} mountOnEnter unmountOnExit>
             <Box sx={{ position: "absolute", top: 16, left: 16, width: "300px", height: "97.5%", boxSizing: "border-box" }}>
               <GlassPaper
@@ -944,7 +921,6 @@ const SelectedColumnsPage = () => {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                       {section.key === "imputation" && (
                         <Box sx={{ mt: 1 }}>
-                          {/* Строка для задания частоты с кнопкой запуска */}
                           <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                             <Typography variant="caption" sx={{ color: theme.palette.common.white }}>
                               Частота:
@@ -969,7 +945,6 @@ const SelectedColumnsPage = () => {
                               Заполнить
                             </Button>
                           </Box>
-                          {/* Строка для выбора метода */}
                           <Box sx={{ display: "flex", alignItems: "center" }}>
                             <Typography variant="caption" sx={{ color: theme.palette.common.white }}>
                               Метод:
@@ -993,7 +968,6 @@ const SelectedColumnsPage = () => {
                               <MenuItem value="constant">Константа</MenuItem>
                             </Select>
                           </Box>
-                          {/* Если выбран метод "Константа", выводим поле ввода ниже */}
                           {secondPageState.imputationMethod === "constant" && (
                             <Box sx={{ mt: 1 }}>
                               <NumberInput
